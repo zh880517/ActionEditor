@@ -47,9 +47,7 @@ public static class FileUtil
         }
         else
         {
-            string dir = Path.GetDirectoryName(filePath);
-            if (!Directory.Exists(dir))
-                Directory.CreateDirectory(dir);
+            CheckDirectory(filePath);
         }
         File.WriteAllText(filePath, context, encoding);
     }
