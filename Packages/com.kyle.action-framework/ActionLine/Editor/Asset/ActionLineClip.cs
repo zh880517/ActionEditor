@@ -11,7 +11,7 @@ namespace ActionLine
 
         [DisplayName("开始帧")]
         public int StartFrame;
-        [DisplayName("长度")]
-        public int Length = 1;
+        [DisplayName("帧长度")]
+        public int FrameCount = 1;
     }
 }

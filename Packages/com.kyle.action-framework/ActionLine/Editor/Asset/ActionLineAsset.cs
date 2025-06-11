@@ -10,7 +10,7 @@ namespace ActionLine
     {
         [SerializeField, ReadOnly]
         private List<ActionLineClip> clips = new List<ActionLineClip>();
-        [DisplayName("Ö¡Êý")]
+        [DisplayName("Ö¡Êý"), ReadOnly]
         public int FrameCount;
 
         public IReadOnlyList<ActionLineClip> Clips => clips;
