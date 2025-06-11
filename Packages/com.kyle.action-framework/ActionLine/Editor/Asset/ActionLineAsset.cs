@@ -4,13 +4,13 @@ using UnityEngine;
 namespace ActionLine
 {
     /* 
-     * ´´½¨Ê±ĞèÒªÉèÖÃ hideFlags = HideFlags.DontSave£¬±à¼­Ê±²»»á½«³¡¾°ÉèÖÃÎªdirty
+     * åˆ›å»ºæ—¶éœ€è¦è®¾ç½® hideFlags = HideFlags.DontSaveï¼Œç¼–è¾‘æ—¶ä¸ä¼šå°†åœºæ™¯è®¾ç½®ä¸ºdirty
      */
     public class ActionLineAsset : ScriptableObject
     {
         [SerializeField, ReadOnly]
         private List<ActionLineClip> clips = new List<ActionLineClip>();
-        [DisplayName("Ö¡Êı"), ReadOnly]
+        [DisplayName("å¸§æ•°"), ReadOnly]
         public int FrameCount;
 
         public IReadOnlyList<ActionLineClip> Clips => clips;
