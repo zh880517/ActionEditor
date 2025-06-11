@@ -1,5 +1,6 @@
 
 using Newtonsoft.Json;
+using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Serialization;
 using System.Collections.Generic;
 using System.Linq;
@@ -31,7 +32,7 @@ public class NetJsonUtil
             var property = base.CreateProperty(member, MemberSerialization.OptOut);
             if (member.MemberType != System.Reflection.MemberTypes.Field)
             {
-                property.ShouldSerialize =  _ => false;
+                property.ShouldSerialize = _ => false;
             }
             return property;
         }
@@ -44,7 +45,9 @@ public class NetJsonUtil
         ContractResolver = new JsonPublicContractResolver()
     };
 
-    public static string ToJson<T>(T val, bool indented = true , bool onlyPublicField = true)
+    private static JsonSerializer _PublicFieldSerializer = JsonSerializer.Create(_jsonSerializerPublicFieldSettings);
+
+    public static string ToJson<T>(T val, bool indented = true, bool onlyPublicField = true)
     {
         return JsonConvert.SerializeObject(val, indented ? Formatting.Indented : Formatting.None, onlyPublicField ? _jsonSerializerPublicFieldSettings : _jsonSerializerWriteableSettings);
     }
@@ -52,5 +55,42 @@ public class NetJsonUtil
     public static T FromJson<T>(string json)
     {
         return JsonConvert.DeserializeObject<T>(json);
+    }
+
+    public static void SerializeToBson<T>(T obj, System.IO.Stream stream)
+    {
+#pragma warning disable CS0618
+        using (var writer = new BsonWriter(stream))
+        {
+            _PublicFieldSerializer.Serialize(writer, obj);
+        }
+#pragma warning restore CS0618
+    }
+
+    public static byte[] SerializeToBson<T>(T obj)
+    {
+        using (var stream = new System.IO.MemoryStream())
+        {
+            SerializeToBson(obj, stream);
+            return stream.ToArray();
+        }
+    }
+
+    public static T DeserializeFromBson<T>(System.IO.Stream stream)
+    {
+#pragma warning disable CS0618
+        using (var reader = new BsonReader(stream))
+        {
+            return _PublicFieldSerializer.Deserialize<T>(reader);
+        }
+#pragma warning restore CS0618
+    }
+
+    public static T DeserializeFromBson<T>(byte[] data)
+    {
+        using (var stream = new System.IO.MemoryStream(data))
+        {
+            return DeserializeFromBson<T>(stream);
+        }
     }
 }

@@ -2,7 +2,8 @@
     "name": "ActionFramework.Common.Editor",
     "rootNamespace": "",
     "references": [
-        "GUID:edca0bc4151401e458d0a30a4e81774a"
+        "GUID:edca0bc4151401e458d0a30a4e81774a",
+        "GUID:1a3c3c2d70996d24db691060927dddc4"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -2,6 +2,7 @@
     "name": "Action.ActionLine.Editor",
     "rootNamespace": "",
     "references": [
+        "GUID:edca0bc4151401e458d0a30a4e81774a",
         "GUID:78650eeaeedfff648b22393d48018b34"
     ],
     "includePlatforms": [],
