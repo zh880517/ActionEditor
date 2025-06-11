@@ -16,13 +16,24 @@ public class NetJsonUtil
         }
     }
 
-    private static JsonSerializerSettings _jsonSerializerWriteableSettings = new JsonSerializerSettings
+    private static readonly JsonSerializerSettings _jsonSerializerWriteableSettings = new JsonSerializerSettings
     {
         TypeNameHandling = TypeNameHandling.Auto,
         TypeNameAssemblyFormatHandling = TypeNameAssemblyFormatHandling.Full,
         DefaultValueHandling = DefaultValueHandling.Ignore,
         ContractResolver = new JsonPropertyContractResolver()
     };
+
+
+    private static JsonSerializerSettings _jsonSerializerPublicFieldSettings = new JsonSerializerSettings
+    {
+        TypeNameHandling = TypeNameHandling.Auto,
+        DefaultValueHandling = DefaultValueHandling.Ignore,
+        ContractResolver = new JsonPublicContractResolver()
+    };
+
+    private static readonly JsonSerializer _publicFieldSerializer = JsonSerializer.Create(_jsonSerializerPublicFieldSettings);
+    private static readonly JsonSerializer _writeableSerializer = JsonSerializer.Create(_jsonSerializerWriteableSettings);
 
 
     class JsonPublicContractResolver : DefaultContractResolver
@@ -37,16 +48,6 @@ public class NetJsonUtil
             return property;
         }
     }
-
-    private static JsonSerializerSettings _jsonSerializerPublicFieldSettings = new JsonSerializerSettings
-    {
-        TypeNameHandling = TypeNameHandling.Auto,
-        DefaultValueHandling = DefaultValueHandling.Ignore,
-        ContractResolver = new JsonPublicContractResolver()
-    };
-
-    private static JsonSerializer _PublicFieldSerializer = JsonSerializer.Create(_jsonSerializerPublicFieldSettings);
-
     public static string ToJson<T>(T val, bool indented = true, bool onlyPublicField = true)
     {
         return JsonConvert.SerializeObject(val, indented ? Formatting.Indented : Formatting.None, onlyPublicField ? _jsonSerializerPublicFieldSettings : _jsonSerializerWriteableSettings);
@@ -57,17 +58,18 @@ public class NetJsonUtil
         return JsonConvert.DeserializeObject<T>(json);
     }
 
-    public static void SerializeToBson<T>(T obj, System.IO.Stream stream)
+    public static void SerializeToBson<T>(T obj, System.IO.Stream stream, bool onlyPublicField = true)
     {
 #pragma warning disable CS0618
         using (var writer = new BsonWriter(stream))
         {
-            _PublicFieldSerializer.Serialize(writer, obj);
+            var serializer = onlyPublicField ? _publicFieldSerializer : _writeableSerializer;
+            serializer.Serialize(writer, obj);
         }
 #pragma warning restore CS0618
     }
 
-    public static byte[] SerializeToBson<T>(T obj)
+    public static byte[] SerializeToBson<T>(T obj, bool onlyPublicField = true)
     {
         using (var stream = new System.IO.MemoryStream())
         {
@@ -81,7 +83,7 @@ public class NetJsonUtil
 #pragma warning disable CS0618
         using (var reader = new BsonReader(stream))
         {
-            return _PublicFieldSerializer.Deserialize<T>(reader);
+            return _publicFieldSerializer.Deserialize<T>(reader);
         }
 #pragma warning restore CS0618
     }
