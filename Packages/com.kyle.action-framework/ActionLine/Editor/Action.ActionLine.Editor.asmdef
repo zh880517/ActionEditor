@@ -1,0 +1,16 @@
+{
+    "name": "Action.ActionLine.Editor",
+    "rootNamespace": "",
+    "references": [
+        "GUID:78650eeaeedfff648b22393d48018b34"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
