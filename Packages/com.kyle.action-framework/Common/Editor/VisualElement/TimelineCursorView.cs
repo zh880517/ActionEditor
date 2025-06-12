@@ -4,6 +4,7 @@ using UnityEngine.UIElements;
 
 public class TimelineCursorView : ImmediateModeElement
 {
+    private float startOffset = 10;
     private float frameWidth = 10;
     private int currentFrame = 0;
     private float titleHeight = 20;
@@ -12,6 +13,19 @@ public class TimelineCursorView : ImmediateModeElement
     private bool showFrameRange = false;
     private int startFrame = 0;
     private int length = 0;
+
+    public float StartOffset
+    {
+        get { return startOffset; }
+        set
+        {
+            if (startOffset != value)
+            {
+                startOffset = value;
+                MarkDirtyRepaint();
+            }
+        }
+    }
 
     public float FrameWidth
     {
@@ -86,7 +100,7 @@ public class TimelineCursorView : ImmediateModeElement
 
     protected override void ImmediateRepaint()
     {
-        float x = currentFrame * frameWidth;
+        float x = currentFrame * frameWidth + startOffset;
         Vector2 size = contentRect.size;
         
         Handles.DrawLine(new Vector2(x, 0), new Vector2(x, size.y));
@@ -95,8 +109,8 @@ public class TimelineCursorView : ImmediateModeElement
         {
             using (new Handles.DrawingScope(new Color(0, 0, 0, 0.5f)))
             {
-                float startX = startFrame * frameWidth;
-                float endX = (startFrame + length) * frameWidth;
+                float startX = startFrame * frameWidth + startOffset;
+                float endX = startX + length * frameWidth;
                 Handles.DrawDottedLine(new Vector2(startX, 0), new Vector2(startX, size.y), 4);
                 Handles.DrawDottedLine(new Vector2(endX, 0), new Vector2(endX, size.y), 4);
             }

@@ -4,6 +4,7 @@ using UnityEngine.UIElements;
 
 public class TimelineTickMarkView : ImmediateModeElement
 {
+    private float startOffset = 10;
     private float frameWidth = 10;
     private float scale = 1.0f;
     private float frameRate = 30;
@@ -12,6 +13,22 @@ public class TimelineTickMarkView : ImmediateModeElement
     private float titleHeight = 20;
     private TimelineCursorView cursorView;
     private bool isDragging = false;
+
+    public float StartOffset
+    {
+        get { return startOffset; }
+        set
+        {
+            if (startOffset != value)
+            {
+                startOffset = value;
+                MarkDirtyRepaint();
+                if (cursorView != null)
+                    cursorView.StartOffset = startOffset;
+            }
+        }
+    }
+
     public bool IsFrameMode
     {
         get { return frameMode; }
@@ -99,6 +116,7 @@ public class TimelineTickMarkView : ImmediateModeElement
     }
 
     public System.Action<int> OnFrameSelected;
+    public System.Action<int> OnDragFrame;
 
     public TimelineTickMarkView()
     {
@@ -116,6 +134,7 @@ public class TimelineTickMarkView : ImmediateModeElement
         {
             cursorView.FrameWidth = frameWidth * scale;
             cursorView.TitleHeight = titleHeight;
+            cursorView.StartOffset = startOffset ;
         }
     }
 
@@ -124,7 +143,8 @@ public class TimelineTickMarkView : ImmediateModeElement
         if (evt.button != 0)
             return;
         Vector2 localPos = evt.localMousePosition;
-        if(localPos.y <= titleHeight)
+        localPos.x -= startOffset;
+        if (localPos.y <= titleHeight)
         {
             int frame = Mathf.FloorToInt(localPos.x / (frameWidth * scale));
             if (frame >= 0 && (frameCount <= 0 || frame < frameCount))
@@ -136,13 +156,21 @@ public class TimelineTickMarkView : ImmediateModeElement
     }
     private void OnMouseMove(MouseMoveEvent evt)
     {
-        if (isDragging)
+        if (evt.button != 0)
+            return;
+        Vector2 localPos = evt.localMousePosition;
+        localPos.x -= startOffset;
+        int frame = Mathf.FloorToInt(localPos.x / (frameWidth * scale));
+        if(frame >= 0 )
         {
-            Vector2 localPos = evt.localMousePosition;
-            int frame = Mathf.FloorToInt(localPos.x / (frameWidth * scale));
-            if(frame >= 0 && (frameCount <= 0 || frame < frameCount))
+            if(isDragging )
             {
-                OnFrameSelect(frame);
+                if(frameCount <= 0 || frame < frameCount)
+                    OnFrameSelect(frame);
+            }
+            else
+            {
+                OnDragFrame?.Invoke(frame);
             }
         }
     }
@@ -179,21 +207,21 @@ public class TimelineTickMarkView : ImmediateModeElement
         {
             if (frameCount > 0)
             {
-                var rect = new Rect(0, titleHeight * 0.5f, frameCount * finalFrameWidth, titleHeight * 0.5f);
+                var rect = new Rect(startOffset, titleHeight * 0.5f, frameCount * finalFrameWidth, titleHeight * 0.5f);
                 Color color = new Color32(65, 105, 255, 150);
                 Handles.DrawSolidRectangleWithOutline(rect, color, Color.clear);
                 using (new Handles.DrawingScope(color))
                 {
-                    float endX = frameCount * finalFrameWidth;
+                    float endX = frameCount * finalFrameWidth + startOffset;
                     Handles.DrawLine(new Vector2(endX, 0), new Vector2(endX, size.y));
                 }
             }
             if (frameMode)
             {
-                int frameLength = Mathf.FloorToInt(size.x / finalFrameWidth);
+                int frameLength = Mathf.FloorToInt((size.x - startOffset) / finalFrameWidth);
                 for (int i = 0; i < frameLength; ++i)
                 {
-                    float x = i * finalFrameWidth;
+                    float x = i * finalFrameWidth + startOffset;
                     if (i % step == 0)
                     {
                         using (new Handles.DrawingScope(Color.white))
@@ -216,10 +244,10 @@ public class TimelineTickMarkView : ImmediateModeElement
             else
             {
                 float stepWidth = finalFrameWidth * frameRate * 0.1f;
-                int steps = Mathf.FloorToInt(size.x / stepWidth);
+                int steps = Mathf.FloorToInt((size.x - startOffset) / stepWidth);
                 for (int i = 0; i < steps; ++i)
                 {
-                    float x = i * stepWidth;
+                    float x = i * stepWidth + startOffset;
                     if (i % step == 0)
                     {
                         using (new Handles.DrawingScope(Color.white))

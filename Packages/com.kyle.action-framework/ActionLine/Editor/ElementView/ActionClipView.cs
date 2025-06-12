@@ -14,10 +14,14 @@ namespace ActionLine.EditorView
             var left = new MouseCursorRect();
             left.Cursor = MouseCursor.ResizeHorizontal;
             left.AlignParentLeft(5);
+            left.RegisterCallback<MouseDownEvent>(evt => OnMouseDown(evt.button, - 1));
+            left.RegisterCallback<MouseUpEvent>(evt => OnMouseUp(evt.button, -1));
             Add(left);
             var right = new MouseCursorRect();
             right.Cursor = MouseCursor.ResizeHorizontal;
             right.AlignParentRight(5);
+            right.RegisterCallback<MouseDownEvent>(evt => OnMouseDown(evt.button, 1));
+            right.RegisterCallback<MouseUpEvent>(evt => OnMouseUp(evt.button, 1));
             Add(right);
 
             colorElement.AlignParentBottom(4);
@@ -27,6 +31,9 @@ namespace ActionLine.EditorView
             nameLabel.StretchToParentSize();
             nameLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
             Add(nameLabel);
+
+            RegisterCallback<MouseDownEvent>(evt => OnMouseDown(evt.button, 0));
+            RegisterCallback<MouseUpEvent>(evt => OnMouseUp(evt.button, 0));
         }
 
         public void SetClipColor(Color color)
@@ -47,6 +54,16 @@ namespace ActionLine.EditorView
                 this.ShowOutLine(Color.clear, 0f);
         }
 
+        private void OnMouseDown(int button, int type)
+        {
+            //Clip的拖拽事件由TimelineTickMarkView的OnDragFrame响应，此处只处理鼠标按下事件
+            //通知上层View Clip被点击
+        }
+
+        private void OnMouseUp(int button, int type)
+        {
+            //通知上层View Clip被释放
+        }
     }
 
 }

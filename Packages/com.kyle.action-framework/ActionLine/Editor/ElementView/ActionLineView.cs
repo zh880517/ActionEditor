@@ -3,7 +3,7 @@ namespace ActionLine.EditorView
 {
     public class ActionLineView : VisualElement
     {
-        private TwoPaneSplitView splitView;
+        private readonly TwoPaneSplitView splitView;
         public ActionLineView()
         {
             splitView = new TwoPaneSplitView(0, 500, TwoPaneSplitViewOrientation.Horizontal);
