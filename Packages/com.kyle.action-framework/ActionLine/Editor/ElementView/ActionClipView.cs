@@ -6,33 +6,51 @@ namespace ActionLine.EditorView
 {
     public class ActionClipView : VisualElement
     {
+        private readonly VisualElement colorElement = new VisualElement();
+        private readonly Label nameLabel = new Label();
         public ActionClipView()
         {
-            style.flexDirection = FlexDirection.Row;
-            style.borderBottomWidth = 4;
-            style.borderBottomColor = Color.white;
-
+            style.backgroundColor = ActionLineStyles.GrayBackGroundColor;
             var left = new VisualElement();
-            left.style.position = Position.Absolute;
-            left.style.left = 0;
-            left.style.top = 0;
-            left.style.bottom = 0;
-            left.style.width = 5;
+            left.AlignParentLeft(5);
             left.SetCursor(MouseCursor.ResizeHorizontal);
+            Add(left);
 
             var right = new VisualElement();
             right.style.position = Position.Absolute;
-            right.style.right = 0;
-            right.style.top = 0;
-            right.style.bottom = 0;
-            right.style.width = 5;
+            right.AlignParentRight(5);
             right.SetCursor(MouseCursor.ResizeHorizontal);
+            Add(right);
+
+            colorElement.AlignParentBottom(4);
+            colorElement.style.backgroundColor = Color.white;
+            colorElement.pickingMode = PickingMode.Ignore;
+            Add(colorElement);
+
+            nameLabel.StretchToParentSize();
+            nameLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
+            nameLabel.pickingMode = PickingMode.Ignore;
+            Add(nameLabel);
         }
 
         public void SetClipColor(Color color)
         {
-            style.backgroundColor = color;
+            colorElement.style.backgroundColor = color;
         }
+
+        public void SetClipName(string name)
+        {
+            nameLabel.text = name;
+        }
+
+        public void ShowOutLine(bool show)
+        {
+            if(show)
+                this.ShowOutLine(Color.white, 1f);
+            else
+                this.ShowOutLine(Color.clear, 0f);
+        }
+
     }
 
 }
