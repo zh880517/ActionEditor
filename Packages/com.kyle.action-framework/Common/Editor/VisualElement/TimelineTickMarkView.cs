@@ -2,7 +2,7 @@
 using UnityEngine;
 using UnityEngine.UIElements;
 
-public class TimelineBarView : IMGUIContainer
+public class TimelineTickMarkView : ImmediateModeElement
 {
     private float frameWidth = 10;
     private float scale = 1.0f;
@@ -10,6 +10,8 @@ public class TimelineBarView : IMGUIContainer
     private bool frameMode = true;
     private int frameCount = 0;
     private float titleHeight = 20;
+    private TimelineCursorView cursorView;
+    private bool isDragging = false;
     public bool IsFrameMode
     {
         get { return frameMode; }
@@ -32,6 +34,8 @@ public class TimelineBarView : IMGUIContainer
             {
                 frameWidth = value;
                 MarkDirtyRepaint();
+                if (cursorView != null)
+                    cursorView.FrameWidth = frameWidth * scale;
             }
         }
     }
@@ -45,6 +49,8 @@ public class TimelineBarView : IMGUIContainer
             {
                 scale = value;
                 MarkDirtyRepaint();
+                if (cursorView != null)
+                    cursorView.FrameWidth = frameWidth * scale;
             }
         }
     }
@@ -84,17 +90,79 @@ public class TimelineBarView : IMGUIContainer
             {
                 titleHeight = value;
                 MarkDirtyRepaint();
+                if (cursorView != null)
+                {
+                    cursorView.TitleHeight = titleHeight;
+                }
             }
         }
     }
 
-    public TimelineBarView()
+    public System.Action<int> OnFrameSelected;
+
+    public TimelineTickMarkView()
     {
-        onGUIHandler = OnGUI;
+        RegisterCallback<MouseDownEvent>(OnMouseDown);
+        RegisterCallback<MouseMoveEvent>(OnMouseMove);
+        RegisterCallback<MouseUpEvent>(OnMouseUp);
+    }
+
+    public void SetCursorView(TimelineCursorView cursor)
+    {
+        if (cursorView == cursor)
+            return;
+        cursorView = cursor;
+        if (cursorView != null)
+        {
+            cursorView.FrameWidth = frameWidth * scale;
+            cursorView.TitleHeight = titleHeight;
+        }
+    }
+
+    private void OnMouseDown(MouseDownEvent evt)
+    {
+        if (evt.button != 0)
+            return;
+        Vector2 localPos = evt.localMousePosition;
+        if(localPos.y <= titleHeight)
+        {
+            int frame = Mathf.FloorToInt(localPos.x / (frameWidth * scale));
+            if (frame >= 0 && (frameCount <= 0 || frame < frameCount))
+            {
+                isDragging = true;
+                OnFrameSelect(frame);
+            }
+        }
+    }
+    private void OnMouseMove(MouseMoveEvent evt)
+    {
+        if (isDragging)
+        {
+            Vector2 localPos = evt.localMousePosition;
+            int frame = Mathf.FloorToInt(localPos.x / (frameWidth * scale));
+            if(frame >= 0 && (frameCount <= 0 || frame < frameCount))
+            {
+                OnFrameSelect(frame);
+            }
+        }
+    }
+
+    private void OnFrameSelect(int frame)
+    {
+        OnFrameSelected?.Invoke(frame);
+        if (cursorView != null)
+        {
+            cursorView.CurrentFrame = frame;
+        }
+    }
+
+    private void OnMouseUp(MouseUpEvent evt)
+    {
+        isDragging = false;
     }
 
 
-    private void OnGUI()
+    protected override void ImmediateRepaint()
     {
         Vector2 size = localBound.size;
         Color lineColore = Color.gray;
@@ -134,9 +202,7 @@ public class TimelineBarView : IMGUIContainer
                         }
                         Handles.DrawLine(new Vector2(x, size.y), new Vector2(x, titleHeight));
                         GUIContent content = new GUIContent( i.ToString());
-                        Vector2 lablesize = EditorStyles.label.CalcSize(content); 
-                        lablesize.x += 2; // Add some padding
-                        GUI.Label(new Rect(new Vector2(x + 2, 0), lablesize), content);
+                        Handles.Label(new Vector2(x + 2, 0), content, EditorStyles.label);
                     }
                     else if(i % minStep == 0)
                     {
@@ -162,9 +228,7 @@ public class TimelineBarView : IMGUIContainer
                         }
                         Handles.DrawLine(new Vector2(x, size.y), new Vector2(x, titleHeight));
                         GUIContent content = new GUIContent(string.Format("{0:F2}", i * 0.5f));
-                        Vector2 lablesize = EditorStyles.label.CalcSize(content);
-                        lablesize.x += 2; // Add some padding
-                        GUI.Label(new Rect(new Vector2(x + 2, 0), lablesize), content);
+                        Handles.Label(new Vector2(x + 2, 0), content, EditorStyles.label);
                     }
                     else if (i % minStep == 0)
                     {

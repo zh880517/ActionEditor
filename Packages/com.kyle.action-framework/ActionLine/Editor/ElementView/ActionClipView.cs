@@ -11,25 +11,21 @@ namespace ActionLine.EditorView
         public ActionClipView()
         {
             style.backgroundColor = ActionLineStyles.GrayBackGroundColor;
-            var left = new VisualElement();
+            var left = new MouseCursorRect();
+            left.Cursor = MouseCursor.ResizeHorizontal;
             left.AlignParentLeft(5);
-            left.SetCursor(MouseCursor.ResizeHorizontal);
             Add(left);
-
-            var right = new VisualElement();
-            right.style.position = Position.Absolute;
+            var right = new MouseCursorRect();
+            right.Cursor = MouseCursor.ResizeHorizontal;
             right.AlignParentRight(5);
-            right.SetCursor(MouseCursor.ResizeHorizontal);
             Add(right);
 
             colorElement.AlignParentBottom(4);
             colorElement.style.backgroundColor = Color.white;
-            colorElement.pickingMode = PickingMode.Ignore;
             Add(colorElement);
 
             nameLabel.StretchToParentSize();
             nameLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
-            nameLabel.pickingMode = PickingMode.Ignore;
             Add(nameLabel);
         }
 
