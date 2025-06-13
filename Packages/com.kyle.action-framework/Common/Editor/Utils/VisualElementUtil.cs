@@ -52,7 +52,7 @@ public static class VisualElementUtil
     }
 
     //设置鼠标进入VisualElement时的鼠标样式，如果有其它pickmode没有设置为ignore的VisualElement在上面，鼠标进入该区域无法切换光标样式，此时需要使用CursorRect
-    public static void SetCursor(this VisualElement element, UnityEditor.MouseCursor cursor)
+    public static void SetCursorType(this VisualElement element, UnityEditor.MouseCursor cursor)
     {
         object objCursor = new UnityEngine.UIElements.Cursor();
         PropertyInfo fields = typeof(UnityEngine.UIElements.Cursor).GetProperty("defaultCursorId", BindingFlags.NonPublic | BindingFlags.Instance);

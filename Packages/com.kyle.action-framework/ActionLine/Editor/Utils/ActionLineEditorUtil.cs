@@ -2,7 +2,7 @@
 using UnityEditor;
 using UnityEngine;
 
-namespace ActionLine
+namespace ActionLine.EditorView
 {
     public static class ActionLineEditorUtil
     {

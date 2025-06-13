@@ -94,6 +94,10 @@ public class TimelineTickMarkView : ImmediateModeElement
             {
                 frameCount = value;
                 MarkDirtyRepaint();
+                if (cursorView != null)
+                {
+                    cursorView.FrameCount = frameCount;
+                }
             }
         }
     }
@@ -118,13 +122,6 @@ public class TimelineTickMarkView : ImmediateModeElement
     public System.Action<int> OnFrameSelected;
     public System.Action<int> OnDragFrame;
 
-    public TimelineTickMarkView()
-    {
-        RegisterCallback<MouseDownEvent>(OnMouseDown);
-        RegisterCallback<MouseMoveEvent>(OnMouseMove);
-        RegisterCallback<MouseUpEvent>(OnMouseUp);
-    }
-
     public void SetCursorView(TimelineCursorView cursor)
     {
         if (cursorView == cursor)
@@ -137,58 +134,6 @@ public class TimelineTickMarkView : ImmediateModeElement
             cursorView.StartOffset = startOffset ;
         }
     }
-
-    private void OnMouseDown(MouseDownEvent evt)
-    {
-        if (evt.button != 0)
-            return;
-        Vector2 localPos = evt.localMousePosition;
-        localPos.x -= startOffset;
-        if (localPos.y <= titleHeight)
-        {
-            int frame = Mathf.FloorToInt(localPos.x / (frameWidth * scale));
-            if (frame >= 0 && (frameCount <= 0 || frame < frameCount))
-            {
-                isDragging = true;
-                OnFrameSelect(frame);
-            }
-        }
-    }
-    private void OnMouseMove(MouseMoveEvent evt)
-    {
-        if (evt.button != 0)
-            return;
-        Vector2 localPos = evt.localMousePosition;
-        localPos.x -= startOffset;
-        int frame = Mathf.FloorToInt(localPos.x / (frameWidth * scale));
-        if(frame >= 0 )
-        {
-            if(isDragging )
-            {
-                if(frameCount <= 0 || frame < frameCount)
-                    OnFrameSelect(frame);
-            }
-            else
-            {
-                OnDragFrame?.Invoke(frame);
-            }
-        }
-    }
-
-    private void OnFrameSelect(int frame)
-    {
-        OnFrameSelected?.Invoke(frame);
-        if (cursorView != null)
-        {
-            cursorView.CurrentFrame = frame;
-        }
-    }
-
-    private void OnMouseUp(MouseUpEvent evt)
-    {
-        isDragging = false;
-    }
-
 
     protected override void ImmediateRepaint()
     {
@@ -230,7 +175,7 @@ public class TimelineTickMarkView : ImmediateModeElement
                         }
                         Handles.DrawLine(new Vector2(x, size.y), new Vector2(x, titleHeight));
                         GUIContent content = new GUIContent( i.ToString());
-                        Handles.Label(new Vector2(x + 2, 0), content, EditorStyles.label);
+                        Handles.Label(new Vector2(x + 2, 4), content, EditorStyles.label);
                     }
                     else if(i % minStep == 0)
                     {
@@ -256,7 +201,7 @@ public class TimelineTickMarkView : ImmediateModeElement
                         }
                         Handles.DrawLine(new Vector2(x, size.y), new Vector2(x, titleHeight));
                         GUIContent content = new GUIContent(string.Format("{0:F2}", i * 0.5f));
-                        Handles.Label(new Vector2(x + 2, 0), content, EditorStyles.label);
+                        Handles.Label(new Vector2(x + 2, 4), content, EditorStyles.label);
                     }
                     else if (i % minStep == 0)
                     {

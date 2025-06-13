@@ -20,21 +20,23 @@ public class VisualElementTest : EditorWindow
         var floatField = new FloatField("Ëõ·Å");
         floatField.value = 1.0f;
         rootVisualElement.Add(floatField);
-        var timelineBar = new TimelineTickMarkView();
-        timelineBar.style.left = 5;
-        timelineBar.FrameCount = 52;
-        timelineBar.style.flexGrow = 1;
-        rootVisualElement.Add(timelineBar);
-        var cursorView = new TimelineCursorView();
-        timelineBar.SetCursorView(cursorView);
-        timelineBar.Add(cursorView);
-        cursorView.StretchToParentSize();
-        cursorView.ShowFrameRange(12, 10);
-        cursorView.CurrentFrame = 20;
-        floatField.RegisterValueChangedCallback(evt =>
-        {
-            timelineBar.Scale = evt.newValue;
-        });
-
+        //var timelineBar = new TimelineTickMarkView();
+        //timelineBar.style.left = 5;
+        //timelineBar.FrameCount = 52;
+        //timelineBar.style.flexGrow = 1;
+        //rootVisualElement.Add(timelineBar);
+        //var cursorView = new TimelineCursorView();
+        //timelineBar.SetCursorView(cursorView);
+        //timelineBar.Add(cursorView);
+        //cursorView.StretchToParentSize();
+        //cursorView.ShowFrameRange(12, 10);
+        //cursorView.CurrentFrame = 20;
+        //floatField.RegisterValueChangedCallback(evt =>
+        //{
+        //    timelineBar.Scale = evt.newValue;
+        //});
+        var trackScrollView = new TrackScrollView();
+        trackScrollView.style.flexGrow = 1;
+        rootVisualElement.Add(trackScrollView);
     }
 }

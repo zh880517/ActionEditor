@@ -8,8 +8,12 @@ namespace ActionLine.EditorView
         private readonly Image icon = new Image();
         private readonly Label titleLabel = new Label();
         private readonly VisualElement customArea = new VisualElement();
+        private VisualElement custom;
         private readonly IconButton visableButton = new IconButton();
         public System.Action OnVisableClick;
+        public ActionLineClip BindClip;
+        public TrackTitleGroupView Root;
+
         public TrackTitleView()
         {
             style.flexDirection = FlexDirection.Row;
@@ -26,13 +30,26 @@ namespace ActionLine.EditorView
             Add(customArea);
             Add(visableButton);
             visableButton.clicked += ()=> OnVisableClick?.Invoke();
+            RegisterCallback<MouseDownEvent>((evt)=>Root?.OnClipMouseDown(this, evt));
+            RegisterCallback<MouseUpEvent>((evt)=>Root?.OnClipMouseUp(this, evt));
+            RegisterCallback<MouseEnterEvent>((evt)=>Root?.OnClipMouseEnter(this, evt));
         }
 
         public void SetStyle(Color color, Texture iconImg)
         {
             icon.image = iconImg;
-            bool showIcon = iconImg != null;
             style.borderLeftColor = color;
+        }
+
+        public void UpdateByBindClip()
+        {
+            if (BindClip == null)
+                return;
+
+            var clipTypeInfo = ActionClipTypeUtil.GetTypeInfo(BindClip.GetType());
+            SetStyle(clipTypeInfo.ClipColor, clipTypeInfo.Icon);
+            SetTitle(BindClip.name);
+            SetVisableButton(!BindClip.Disable);
         }
 
         public void SetTitle(string title)
@@ -52,10 +69,14 @@ namespace ActionLine.EditorView
             }
         }
 
-        public void AddCustomElement(VisualElement element)
+        public void SetCustomElement(VisualElement element)
         {
-            customArea.Add(element);
+            if (custom == element)
+                return;
+            custom?.RemoveFromHierarchy();
+            if(element != null)
+                customArea.Add(element);
+            custom = element;
         }
-
     }
 }
