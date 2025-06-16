@@ -4,8 +4,10 @@ using UnityEngine.UIElements;
 
 public class TimelineCursorView : ImmediateModeElement
 {
-    private float startOffset = 10;
+    private float headerInterval = 0;
+    private float horizontalOffset = 0;
     private float frameWidth = 10;
+    private float scale = 1.0f;
     private int currentFrame = 0;
     private int frameCount = 0;
     private float titleHeight = 20;
@@ -14,16 +16,40 @@ public class TimelineCursorView : ImmediateModeElement
     private bool showFrameRange = false;
     private int startFrame = 0;
     private int length = 0;
-    private bool isDragging = false;
-
-    public float StartOffset
+    public float HeaderInterval
     {
-        get { return startOffset; }
+        get { return headerInterval; }
         set
         {
-            if (startOffset != value)
+            if (headerInterval != value)
             {
-                startOffset = value;
+                headerInterval = value;
+                MarkDirtyRepaint();
+            }
+        }
+    }
+
+    public float Scale
+    {
+        get { return scale; }
+        set
+        {
+            if (scale != value)
+            {
+                scale = value;
+                MarkDirtyRepaint();
+            }
+        }
+    }
+
+    public float HorizontalOffset
+    {
+        get { return horizontalOffset; }
+        set
+        {
+            if (horizontalOffset != value)
+            {
+                horizontalOffset = value;
                 MarkDirtyRepaint();
             }
         }
@@ -96,9 +122,7 @@ public class TimelineCursorView : ImmediateModeElement
     public System.Action<int> OnDragFrame;
     public TimelineCursorView()
     {
-        RegisterCallback<MouseDownEvent>(OnMouseDown);
-        RegisterCallback<MouseMoveEvent>(OnMouseMove);
-        RegisterCallback<MouseUpEvent>(OnMouseUp);
+        pickingMode = PickingMode.Ignore;
     }
 
     public void ShowFrameRange(int start, int length)
@@ -121,56 +145,10 @@ public class TimelineCursorView : ImmediateModeElement
         }
     }
 
-    private void OnMouseDown(MouseDownEvent evt)
-    {
-        if (evt.button != 0)
-            return;
-        Vector2 localPos = evt.localMousePosition;
-        localPos.x -= startOffset;
-        if (localPos.y <= titleHeight)
-        {
-            int frame = Mathf.FloorToInt(localPos.x / frameWidth);
-            if (frame >= 0 && (frameCount <= 0 || frame < frameCount))
-            {
-                isDragging = true;
-                OnFrameSelect(frame);
-            }
-        }
-    }
-    private void OnMouseMove(MouseMoveEvent evt)
-    {
-        if (!isDragging || evt.button != 0)
-            return;
-        Vector2 localPos = evt.localMousePosition;
-        localPos.x -= startOffset;
-        int frame = Mathf.FloorToInt(localPos.x / frameWidth);
-        if (frame >= 0)
-        {
-            if (isDragging)
-            {
-                if (frameCount <= 0 || frame < frameCount)
-                    OnFrameSelect(frame);
-            }
-            else
-            {
-                OnDragFrame?.Invoke(frame);
-            }
-        }
-    }
-    private void OnFrameSelect(int frame)
-    {
-        currentFrame = frame;
-        OnFrameSelected?.Invoke(frame);
-        MarkDirtyRepaint();
-    }
-    private void OnMouseUp(MouseUpEvent evt)
-    {
-        isDragging = false;
-    }
-
     protected override void ImmediateRepaint()
     {
-        float x = currentFrame * frameWidth + startOffset;
+        float finalWidth = frameWidth * scale;
+        float x = currentFrame * finalWidth + headerInterval - (horizontalOffset * scale);
         Vector2 size = contentRect.size;
         
         Handles.DrawLine(new Vector2(x, 0), new Vector2(x, size.y));
@@ -179,8 +157,8 @@ public class TimelineCursorView : ImmediateModeElement
         {
             using (new Handles.DrawingScope(new Color(0, 0, 0, 0.5f)))
             {
-                float startX = startFrame * frameWidth + startOffset;
-                float endX = startX + length * frameWidth;
+                float startX = startFrame * finalWidth + headerInterval - (horizontalOffset * scale); ;
+                float endX = startX + length * finalWidth;
                 Handles.DrawDottedLine(new Vector2(startX, 0), new Vector2(startX, size.y), 4);
                 Handles.Label(new Vector2(startX, 4), startFrame.ToString());
                 Handles.DrawDottedLine(new Vector2(endX, 0), new Vector2(endX, size.y), 4);
