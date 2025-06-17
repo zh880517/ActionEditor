@@ -18,6 +18,7 @@ namespace ActionLine.EditorView
         private float viewScale = 1.0f;
 
         public System.Action<float> OnScaleChanged;
+        public System.Action<float> OnVerticalScrollChanged;
 
         public TrackScrollView()
         {
@@ -34,6 +35,7 @@ namespace ActionLine.EditorView
             // 水平滚动条
             horizontalSlider.AlignParentBottom(20);
             horizontalSlider.style.right = 20;
+            horizontalSlider.style.left = 20;
             horizontalSlider.value = new Vector2(0, 100);
             horizontalSlider.lowLimit = 0;
             horizontalSlider.highLimit = 100;
@@ -43,6 +45,7 @@ namespace ActionLine.EditorView
             // 中心显示区域
             var center = new VisualElement();
             Add(center);
+            center.style.overflow = Overflow.Hidden;
             center.style.position = Position.Absolute;
             center.style.left = 0;
             center.style.right = 20;
@@ -55,12 +58,13 @@ namespace ActionLine.EditorView
             //时间轴
             center.Add(timelineTickMarkView);
             timelineTickMarkView.StretchToParentSize();
+            timelineTickMarkView.TitleHeight = ActionLineStyles.TitleBarHeight;
             timelineTickMarkView.SetCursorView(cursorView);
             timelineTickMarkView.HeaderInterval = ActionLineStyles.TrackHeaderInterval;
             //轨道裁剪区域
             center.Add(trackClipArea);
             trackClipArea.StretchToParentSize();
-            trackClipArea.style.top = timelineTickMarkView.TitleHeight;
+            trackClipArea.style.top = ActionLineStyles.TitleBarHeight;
             trackClipArea.style.overflow = Overflow.Hidden;
             // 轨道组
             trackClipArea.Add(trackGroup);
@@ -167,10 +171,12 @@ namespace ActionLine.EditorView
             {
                 verticalSlider.slider.SetValueWithoutNotify(0);
                 trackGroup.style.top = 0;
+                OnVerticalScrollChanged?.Invoke(0);
                 return;
             }
             float y = range * evt.newValue * 0.01f;
             trackGroup.style.top = -y;
+            OnVerticalScrollChanged?.Invoke(y);
         }
 
         private void OnScaleChange(bool updateSlider = true)

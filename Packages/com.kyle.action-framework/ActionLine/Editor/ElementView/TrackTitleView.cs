@@ -10,8 +10,7 @@ namespace ActionLine.EditorView
         private readonly VisualElement customArea = new VisualElement();
         private VisualElement custom;
         private readonly IconButton visableButton = new IconButton();
-        public System.Action OnVisableClick;
-        public ActionLineClip BindClip;
+        public System.Action<TrackTitleView> OnVisableClick;
         public TrackTitleGroupView Root;
 
         public TrackTitleView()
@@ -29,7 +28,7 @@ namespace ActionLine.EditorView
             customArea.style.flexDirection = FlexDirection.Row;
             Add(customArea);
             Add(visableButton);
-            visableButton.clicked += ()=> OnVisableClick?.Invoke();
+            visableButton.clicked += ()=> OnVisableClick?.Invoke(this);
             RegisterCallback<MouseDownEvent>((evt)=>Root?.OnClipMouseDown(this, evt));
             RegisterCallback<MouseUpEvent>((evt)=>Root?.OnClipMouseUp(this, evt));
             RegisterCallback<MouseEnterEvent>((evt)=>Root?.OnClipMouseEnter(this, evt));
@@ -39,17 +38,6 @@ namespace ActionLine.EditorView
         {
             icon.image = iconImg;
             style.borderLeftColor = color;
-        }
-
-        public void UpdateByBindClip()
-        {
-            if (BindClip == null)
-                return;
-
-            var clipTypeInfo = ActionClipTypeUtil.GetTypeInfo(BindClip.GetType());
-            SetStyle(clipTypeInfo.ClipColor, clipTypeInfo.Icon);
-            SetTitle(BindClip.name);
-            SetVisableButton(!BindClip.Disable);
         }
 
         public void SetTitle(string title)

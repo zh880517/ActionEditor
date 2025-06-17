@@ -29,6 +29,7 @@ namespace ActionLine.EditorView
                 int indeInQueue = clipBGs.Count;
                 bg.RegisterCallback<MouseDownEvent>(evt => OnClickBackGround(indeInQueue, evt), TrickleDown.TrickleDown);
                 Add(bg);
+                bg.style.display = DisplayStyle.None;
                 clipBGs.Add(bg);
             }
             var clipBG = clipBGs[index];
@@ -41,6 +42,11 @@ namespace ActionLine.EditorView
             {
                 clipView.RemoveFromHierarchy();
                 clipBG.Add(clipView);
+                clipBG.style.display = DisplayStyle.Flex;
+            }
+            else
+            {
+                clipBG.style.display = DisplayStyle.None;
             }
         }
 

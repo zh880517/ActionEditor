@@ -24,10 +24,17 @@ public class PlayButtonsView : VisualElement
     public System.Action<PlayEventType> OnPlayEvent;
     public System.Action<int> OnFrameChanged;
     public Vector2Int FrameRange = new Vector2Int(0, int.MaxValue);
+    private static readonly Color borderColor = new Color32(25, 25, 25, 255);
     public PlayButtonsView()
     {
         style.flexDirection = FlexDirection.Row;
-
+        style.borderBottomColor = borderColor;
+        style.borderBottomWidth = 1;
+        style.borderBottomColor = borderColor;
+        style.borderLeftWidth = 1;
+        style.borderLeftColor = borderColor;
+        style.borderRightWidth = 2;
+        style.borderRightColor = borderColor;
 
         firstKey.tooltip = "第一帧";
         SetButtonStyle(firstKey);
@@ -65,10 +72,13 @@ public class PlayButtonsView : VisualElement
         Add(frameField);
     }
 
+
     private void SetButtonStyle(IconButton button)
     {
-        button.style.marginLeft = 2;
+        //button.style.marginLeft = 2;
         button.style.width = 30;
+        button.style.borderRightColor = borderColor;
+        button.style.borderRightWidth = 1;
     }
 
     public void SetPlayState(bool isPlaying)
