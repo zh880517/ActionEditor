@@ -8,20 +8,39 @@ namespace ActionLine.EditorView
     {
         private readonly VisualElement colorElement = new VisualElement();
         private readonly Label nameLabel = new Label();
+        public int Index;
+        public int StartFrame;
+        public int EndFrame;
         public ActionClipView()
         {
             style.backgroundColor = ActionLineStyles.GrayBackGroundColor;
             var left = new MouseCursorRect();
             left.Cursor = MouseCursor.ResizeHorizontal;
             left.AlignParentLeft(5);
-            left.RegisterCallback<MouseDownEvent>(evt => OnMouseDown(evt.button, - 1));
-            left.RegisterCallback<MouseUpEvent>(evt => OnMouseUp(evt.button, -1));
+            left.RegisterCallback<MouseDownEvent>(evt => 
+            {
+                left.CaptureMouse();
+                OnMouseDown(evt.button, -1);
+            });
+            left.RegisterCallback<MouseUpEvent>(evt => 
+            {
+                left.ReleaseMouse();
+                OnMouseUp(evt.button, -1);
+            });
             Add(left);
             var right = new MouseCursorRect();
             right.Cursor = MouseCursor.ResizeHorizontal;
             right.AlignParentRight(5);
-            right.RegisterCallback<MouseDownEvent>(evt => OnMouseDown(evt.button, 1));
-            right.RegisterCallback<MouseUpEvent>(evt => OnMouseUp(evt.button, 1));
+            right.RegisterCallback<MouseDownEvent>(evt => 
+            {
+                right.CaptureMouse();
+                OnMouseDown(evt.button, 1);
+            });
+            right.RegisterCallback<MouseUpEvent>(evt => 
+            {
+                right.ReleaseMouse();
+                OnMouseUp(evt.button, 1); 
+            });
             Add(right);
 
             colorElement.AlignParentBottom(4);
@@ -32,8 +51,16 @@ namespace ActionLine.EditorView
             nameLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
             Add(nameLabel);
 
-            RegisterCallback<MouseDownEvent>(evt => OnMouseDown(evt.button, 0));
-            RegisterCallback<MouseUpEvent>(evt => OnMouseUp(evt.button, 0));
+            RegisterCallback<MouseDownEvent>(evt => 
+            {
+                this.CaptureMouse();
+                OnMouseDown(evt.button, 0);
+            });
+            RegisterCallback<MouseUpEvent>(evt => 
+            {
+                this.ReleaseMouse();
+                OnMouseUp(evt.button, 0); 
+            });
         }
 
         public void SetClipColor(Color color)

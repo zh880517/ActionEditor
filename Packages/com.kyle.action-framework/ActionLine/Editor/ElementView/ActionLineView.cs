@@ -5,9 +5,12 @@ namespace ActionLine.EditorView
     {
         private readonly TrackTitleScrollView trackTitle = new TrackTitleScrollView();
         private readonly TrackScrollView trackScroll = new TrackScrollView();
-
+        private readonly ActionLineEditorContext editorContext = new ActionLineEditorContext();
+        public ActionLineAsset Asset { get; private set; }
         public TrackTitleScrollView Title => trackTitle;
         public TrackScrollView Track=> trackScroll;
+
+        public float Scale => trackScroll.Scale;
 
         public ActionLineView()
         {
@@ -17,6 +20,16 @@ namespace ActionLine.EditorView
             splitView.Add(trackScroll);
             splitView.style.flexGrow = 1;
             splitView.style.flexShrink = 1;
+        }
+
+        public void Update(ActionLineAsset asset)
+        {
+            if(asset != Asset)
+            {
+                editorContext.Clear(this);
+                Asset = asset;
+            }
+            editorContext.Update(this);
         }
     }
 }

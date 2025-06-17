@@ -48,6 +48,7 @@ namespace ActionLine.EditorView
                 else
                 {
                     titleView.style.display = DisplayStyle.None;
+                    titleView.SetCustomElement(null);
                 }
             }
         }

@@ -14,8 +14,10 @@ namespace ActionLine.EditorView
         private bool hasGeometryChange;
 
         public TimelineTickMarkView TickMarkView => timelineTickMarkView;
-        public TrackGroupView TrackGroup => trackGroup;
+        public TrackGroupView Group => trackGroup;
         private float viewScale = 1.0f;
+        private float horizontalOffset = 0;
+        public float Scale => viewScale;
 
         public System.Action<float> OnScaleChanged;
         public System.Action<float> OnVerticalScrollChanged;
@@ -67,15 +69,11 @@ namespace ActionLine.EditorView
             trackClipArea.style.top = ActionLineStyles.TitleBarHeight;
             trackClipArea.style.overflow = Overflow.Hidden;
             // 轨道组
+            trackGroup.FrameToPosition = FrameToPosition;
             trackClipArea.Add(trackGroup);
             //时间轴游标
             center.Add(cursorView);
             cursorView.StretchToParentSize();
-
-            for (int i = 0; i < 20; i++)
-            {
-                trackGroup.InsertClip(i, null);
-            }
         }
 
         public void SetFrameCount(int frameCount)
@@ -99,7 +97,6 @@ namespace ActionLine.EditorView
             float framePosition = ActionLineStyles.FrameInTrackPosition(frame, viewScale);
             float viewVisualWidth = trackClipArea.localBound.size.x;
             float viewWidth = viewVisualWidth / viewScale;
-            float horizontalOffset = timelineTickMarkView.HorizontalOffset;
             float offset = Mathf.Min(40, viewVisualWidth * 0.1f);
             if (framePosition > horizontalOffset && framePosition < viewWidth + horizontalOffset)
             {
@@ -156,10 +153,9 @@ namespace ActionLine.EditorView
                 return;
             }
             viewScale = newScale;
+            horizontalOffset = (evt.newValue.x * 0.01f) * trackWidth; 
+            timelineTickMarkView.HorizontalOffset = horizontalOffset;
             OnScaleChange(false);
-            float startX = (evt.newValue.x * 0.01f) * trackWidth;
-            timelineTickMarkView.HorizontalOffset = startX;
-            //trackGroup只做上下滚动，不做左右滚动，左右滚动通过控制Clip的位置来实现
         }
 
         private void OnVerticalScroll(ChangeEvent<float> evt)
@@ -182,6 +178,7 @@ namespace ActionLine.EditorView
         private void OnScaleChange(bool updateSlider = true)
         {
             timelineTickMarkView.Scale = viewScale;
+            trackGroup.UpdateClipPosition();
             if (updateSlider && hasGeometryChange)
             {
                 UpdateHorizontalSliderRange();
@@ -193,7 +190,6 @@ namespace ActionLine.EditorView
         {
             float trackWidth = GetUnScaleTrackWidth();
             Vector2 viewSize = trackClipArea.localBound.size;
-            float horizontalOffset = timelineTickMarkView.HorizontalOffset;
             float x = horizontalOffset / trackWidth * 100f;
             float y = ((viewSize.x / viewScale) + horizontalOffset) / trackWidth * 100f;
 
@@ -204,6 +200,11 @@ namespace ActionLine.EditorView
         {
             hasGeometryChange = true;
             UpdateHorizontalSliderRange();
+        }
+
+        private float FrameToPosition(int frame)
+        {
+            return ActionLineStyles.FrameInTrackPosition(frame, viewScale) - horizontalOffset * viewScale;
         }
     }
 }

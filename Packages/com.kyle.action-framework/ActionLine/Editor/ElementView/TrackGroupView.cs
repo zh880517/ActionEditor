@@ -6,8 +6,15 @@ namespace ActionLine.EditorView
 {
     public class TrackGroupView : VisualElement
     {
-        private readonly List<VisualElement> clipBGs = new List<VisualElement>();
+        private struct ClipUnit
+        {
+            public ActionClipView ClipView;
+            public VisualElement BG;
+        }
+        private readonly List<ClipUnit> clips = new List<ClipUnit>();
+        private int visableCount = 0;
 
+        public System.Func<int, float> FrameToPosition;
         public TrackGroupView()
         {
             style.flexDirection = FlexDirection.Column;
@@ -16,9 +23,57 @@ namespace ActionLine.EditorView
             style.flexShrink = 0;
         }
 
-        public void InsertClip(int index, VisualElement clipView)
+        public ActionClipView GetClipView(int index)
         {
-            while (clipBGs.Count <= index)
+            EnsureCapacity(index + 1);
+            var unit = clips[index];
+            return unit.ClipView;
+        }
+
+        public void SetVisableCount(int count)
+        {
+            if (count == visableCount)
+                return;
+            visableCount = count;
+            EnsureCapacity(count);
+            for (int i = 0; i < clips.Count; i++)
+            {
+                var clipUnit = clips[i];
+                if (i < count)
+                {
+                    clipUnit.BG.style.display = DisplayStyle.Flex;
+                }
+                else
+                {
+                    clipUnit.BG.style.display = DisplayStyle.None;
+                }
+            }
+        }
+
+        public void UpdateClipPosition()
+        {
+            for (int i = 0; i < visableCount; i++)
+            {
+                var unit = clips[i];
+                float start = FrameToPosition(unit.ClipView.StartFrame);
+                float end = FrameToPosition(unit.ClipView.EndFrame);
+                unit.ClipView.style.left = start;
+                unit.ClipView.style.width = start - end;
+            }
+        }
+
+        public void SetClipBGColor(int index, Color color)
+        {
+            if (index >= 0 && index < clips.Count)
+            {
+                var clip = clips[index];
+                clip.BG.style.backgroundColor = color;
+            }
+        }
+
+        private void EnsureCapacity(int count)
+        {
+            while (clips.Count < count)
             {
                 VisualElement bg = new VisualElement();
                 bg.style.marginTop = ActionLineStyles.TrackInterval;
@@ -26,36 +81,13 @@ namespace ActionLine.EditorView
                 bg.style.left = 0;
                 bg.style.right = 0;
                 bg.style.backgroundColor = ActionLineStyles.GrayBackGroundColor;
-                int indeInQueue = clipBGs.Count;
-                bg.RegisterCallback<MouseDownEvent>(evt => OnClickBackGround(indeInQueue, evt), TrickleDown.TrickleDown);
+                int indexInQueue = clips.Count;
+                bg.RegisterCallback<MouseDownEvent>(evt => OnClickBackGround(indexInQueue, evt), TrickleDown.TrickleDown);
                 Add(bg);
                 bg.style.display = DisplayStyle.None;
-                clipBGs.Add(bg);
-            }
-            var clipBG = clipBGs[index];
-            if(clipBG.childCount > 0)
-            {
-               var child = clipBG.ElementAt(0);
-                child.RemoveFromHierarchy();
-            }
-            if (clipView != null)
-            {
-                clipView.RemoveFromHierarchy();
-                clipBG.Add(clipView);
-                clipBG.style.display = DisplayStyle.Flex;
-            }
-            else
-            {
-                clipBG.style.display = DisplayStyle.None;
-            }
-        }
-
-        public void SetClipBGColor(int index, Color color)
-        {
-            if (index >= 0 && index < clipBGs.Count)
-            {
-                var clipBG = clipBGs[index];
-                clipBG.style.backgroundColor = color;
+                ActionClipView clip = new ActionClipView { Index = indexInQueue };
+                bg.Add(clip);
+                clips.Add(new ClipUnit { ClipView = clip, BG = bg });
             }
         }
 

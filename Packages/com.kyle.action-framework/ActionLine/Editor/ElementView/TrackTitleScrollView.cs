@@ -8,7 +8,7 @@ namespace ActionLine.EditorView
         private readonly VisualElement trackClipArea = new VisualElement();
         private readonly TrackTitleGroupView trackTitleGroup = new TrackTitleGroupView();
 
-        public TrackTitleGroupView TrackTitleGroup => trackTitleGroup;
+        public TrackTitleGroupView Group => trackTitleGroup;
         public PlayButtonsView PlayButtons => buttonsView;
         public TrackTitleScrollView()
         {
