@@ -244,7 +244,7 @@ public class TimelineTickMarkView : ImmediateModeElement
         {
             if (frameCount > 0)
             {
-                var rect = new Rect(finalHeaderOffset, titleHeight * 0.5f, frameCount * finalFrameWidth, titleHeight * 0.5f);
+                var rect = new Rect(-finalHeaderOffset, titleHeight * 0.5f, frameCount * finalFrameWidth, titleHeight * 0.5f);
                 Color color = new Color32(65, 105, 255, 150);
                 Handles.DrawSolidRectangleWithOutline(rect, color, Color.clear);
                 using (new Handles.DrawingScope(color))

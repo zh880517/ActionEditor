@@ -7,14 +7,16 @@ namespace ActionLine.EditorView
     {
         private readonly TimelineTickMarkView timelineTickMarkView = new TimelineTickMarkView();
         private readonly TimelineCursorView cursorView = new TimelineCursorView();
-        private readonly MinMaxSlider minMaxSlider = new MinMaxSlider();
-        private readonly Scroller scroller = new Scroller(0, 100, null, SliderDirection.Vertical);
+        private readonly MinMaxSlider horizontalSlider = new MinMaxSlider();
+        private readonly Scroller verticalSlider = new Scroller(0, 100, null, SliderDirection.Vertical);
         private readonly VisualElement trackClipArea = new VisualElement();
         private readonly TrackGroupView trackGroup = new TrackGroupView();
 
         public TimelineTickMarkView TickMarkView => timelineTickMarkView;
         public TrackGroupView TrackGroup => trackGroup;
-        private float scale = 1.0f;
+        private float viewScale = 1.0f;
+
+        public System.Action<float> OnScaleChanged;
 
         public TrackScrollView()
         {
@@ -23,19 +25,19 @@ namespace ActionLine.EditorView
             style.flexGrow = 1;
 
             // 垂直滚动条样式
-            scroller.AlignParentRight(20);
-            scroller.style.bottom = 20;
-            scroller.RegisterCallback<ChangeEvent<float>>(OnVerticalScroll);
-            Add(scroller);
+            verticalSlider.AlignParentRight(20);
+            verticalSlider.style.bottom = 20;
+            verticalSlider.RegisterCallback<ChangeEvent<float>>(OnVerticalScroll);
+            Add(verticalSlider);
 
             // 水平滚动条
-            minMaxSlider.AlignParentBottom(20);
-            minMaxSlider.style.right = 20;
-            minMaxSlider.value = new Vector2(0, 100);
-            minMaxSlider.lowLimit = 0;
-            minMaxSlider.highLimit = 100;
-            minMaxSlider.RegisterValueChangedCallback(OnHorizontalScroll);
-            Add(minMaxSlider);
+            horizontalSlider.AlignParentBottom(20);
+            horizontalSlider.style.right = 20;
+            horizontalSlider.value = new Vector2(0, 100);
+            horizontalSlider.lowLimit = 0;
+            horizontalSlider.highLimit = 100;
+            horizontalSlider.RegisterValueChangedCallback(OnHorizontalScroll);
+            Add(horizontalSlider);
 
             // 中心显示区域
             var center = new VisualElement();
@@ -73,43 +75,51 @@ namespace ActionLine.EditorView
 
         public void SetFrameCount(int frameCount)
         {
+            if (frameCount <= 0)
+            {
+                throw new System.ArgumentOutOfRangeException(nameof(frameCount), "Frame count must be greater than zero.");
+            }
             timelineTickMarkView.FrameCount = frameCount;
-            if (frameCount > 0)
-            {
-                trackGroup.style.width = frameCount * ActionLineStyles.FrameWidth * scale + ActionLineStyles.TrackTailInterval;
-            }
-            else
-            {
-                trackGroup.style.right = 0;
-            }
+            trackGroup.style.width = frameCount * ActionLineStyles.FrameWidth * viewScale + ActionLineStyles.TrackTailInterval;
+            MarkDirtyRepaint();
+        }
+
+        public void SetScale(float scale)
+        {
+            viewScale = Mathf.Clamp(scale, 0.1f, 10f);
+            OnScaleChange();
         }
 
         private void OnWheelEvent(WheelEvent evt)
         {
             float v = Mathf.Sign(evt.delta.y) * 0.1f;
-            scale -= v;
-            scale = Mathf.Clamp(scale, 0.1f, 10f);
-            UpdateScale();
+            viewScale -= v;
+            viewScale = Mathf.Clamp(viewScale, 0.1f, 10f);
+            OnScaleChange();
         }
 
         private float GetUnScaleTrackWidth()
         {
-            if (timelineTickMarkView.FrameCount > 0)
-            {
-                return timelineTickMarkView.FrameCount * ActionLineStyles.FrameWidth + ActionLineStyles.TrackTailInterval + ActionLineStyles.TrackHeaderInterval;
-            }
-            return trackClipArea.localBound.size.x;
+            return timelineTickMarkView.FrameCount * ActionLineStyles.FrameWidth + ActionLineStyles.TrackTailInterval + ActionLineStyles.TrackHeaderInterval;
         }
 
         private void OnHorizontalScroll(ChangeEvent<Vector2> evt)
         {
+            float trackWidth = GetUnScaleTrackWidth();
             Vector2 viewSize = trackClipArea.localBound.size;
-            Vector2 trackGroupSize = trackGroup.localBound.size;
-            float newScale = (evt.newValue.y - evt.newValue.x);
-
-            float startX = (evt.newValue.x * 0.01f) * trackGroupSize.x;
+            float viewShowRate = viewSize.x / trackWidth;
+            float newViewShowRate = (evt.newValue.y - evt.newValue.x) * 0.01f;
+            float newScale = viewShowRate / newViewShowRate;
+            if(newScale < 0.1f || newScale > 10)
+            {
+                horizontalSlider.SetValueWithoutNotify(evt.previousValue);
+                return;
+            }
+            viewScale = newScale;
+            OnScaleChange(false);
+            float startX = (evt.newValue.x * 0.01f) * trackWidth;
             timelineTickMarkView.HorizontalOffset = startX;
-            trackGroup.style.left = -startX;
+            //trackGroup只做上下滚动，不做左右滚动，左右滚动通过控制Clip的位置来实现
         }
 
         private void OnVerticalScroll(ChangeEvent<float> evt)
@@ -119,7 +129,7 @@ namespace ActionLine.EditorView
             float range = trackGroupSize.y - viewSize.y;
             if(range < 0)
             {
-                scroller.slider.SetValueWithoutNotify(0);
+                verticalSlider.slider.SetValueWithoutNotify(0);
                 trackGroup.style.top = 0;
                 return;
             }
@@ -127,13 +137,30 @@ namespace ActionLine.EditorView
             trackGroup.style.top = -y;
         }
 
-        private void UpdateScale()
+        private void OnScaleChange(bool updateSlider = true)
         {
-            timelineTickMarkView.Scale = scale;
+            timelineTickMarkView.Scale = viewScale;
+            if (updateSlider)
+            {
+                UpdateHorizontalSliderRange();
+            }
+            OnScaleChanged?.Invoke(viewScale);
+        }
+
+        private void UpdateHorizontalSliderRange()
+        {
+            float trackWidth = GetUnScaleTrackWidth();
+            Vector2 viewSize = trackClipArea.localBound.size;
+            float horizontalOffset = timelineTickMarkView.HorizontalOffset;
+            float x = horizontalOffset / trackWidth * 100f;
+            float y = ((viewSize.x / viewScale) + horizontalOffset) / trackWidth * 100f;
+
+            horizontalSlider.SetValueWithoutNotify(new Vector2(x, y));
         }
 
         private void OnGeometryChanged(GeometryChangedEvent evt)
         {
+            UpdateHorizontalSliderRange();
         }
     }
 }

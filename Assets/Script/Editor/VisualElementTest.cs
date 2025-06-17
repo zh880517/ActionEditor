@@ -38,5 +38,10 @@ public class VisualElementTest : EditorWindow
         var trackScrollView = new TrackScrollView();
         trackScrollView.style.flexGrow = 1;
         rootVisualElement.Add(trackScrollView);
+        trackScrollView.SetFrameCount(500);
+        trackScrollView.OnScaleChanged = scale =>
+        {
+            floatField.value = scale;
+        };
     }
 }
