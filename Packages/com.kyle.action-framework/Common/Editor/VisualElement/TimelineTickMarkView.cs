@@ -232,11 +232,11 @@ public class TimelineTickMarkView : ImmediateModeElement
         Color lineColore = Color.gray;
         lineColore.a = 0.5f;
         int step = 10;
-        step = Mathf.FloorToInt(step / scale);
+        step = Mathf.CeilToInt(step / scale);
         step -= step % 5;
         step = Mathf.Max(5, step);
         int halfStep = step / 2;
-        int minStep = Mathf.FloorToInt(step / 10f);
+        int minStep = Mathf.CeilToInt(step / 10f);
         minStep = Mathf.Max(1, minStep);
         float finalFrameWidth = frameWidth * scale;
         float finalHeaderOffset = horizontalOffset * scale - headerInterval;

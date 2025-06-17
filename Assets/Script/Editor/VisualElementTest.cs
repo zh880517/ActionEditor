@@ -20,6 +20,8 @@ public class VisualElementTest : EditorWindow
         var floatField = new FloatField("Ëõ·Å");
         floatField.value = 1.0f;
         rootVisualElement.Add(floatField);
+        var intField = new IntegerField("Ö¡Êý");
+        rootVisualElement.Add(intField);
         //var timelineBar = new TimelineTickMarkView();
         //timelineBar.style.left = 5;
         //timelineBar.FrameCount = 52;
@@ -43,5 +45,10 @@ public class VisualElementTest : EditorWindow
         {
             floatField.value = scale;
         };
+
+        intField.RegisterValueChangedCallback(evt =>
+        {
+            trackScrollView.FitFrameInView(evt.newValue);
+        });
     }
 }

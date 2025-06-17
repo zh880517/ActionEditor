@@ -11,6 +11,7 @@ namespace ActionLine.EditorView
         private readonly Scroller verticalSlider = new Scroller(0, 100, null, SliderDirection.Vertical);
         private readonly VisualElement trackClipArea = new VisualElement();
         private readonly TrackGroupView trackGroup = new TrackGroupView();
+        private bool hasGeometryChange;
 
         public TimelineTickMarkView TickMarkView => timelineTickMarkView;
         public TrackGroupView TrackGroup => trackGroup;
@@ -81,7 +82,42 @@ namespace ActionLine.EditorView
             }
             timelineTickMarkView.FrameCount = frameCount;
             trackGroup.style.width = frameCount * ActionLineStyles.FrameWidth * viewScale + ActionLineStyles.TrackTailInterval;
-            MarkDirtyRepaint();
+            if (hasGeometryChange)
+            {
+                UpdateHorizontalSliderRange();
+            }
+        }
+
+        public void FitFrameInView(int frame)
+        {
+            if (!hasGeometryChange)
+                return;
+            float framePosition = ActionLineStyles.FrameInTrackPosition(frame, viewScale);
+            float viewVisualWidth = trackClipArea.localBound.size.x;
+            float viewWidth = viewVisualWidth / viewScale;
+            float horizontalOffset = timelineTickMarkView.HorizontalOffset;
+            float offset = Mathf.Min(40, viewVisualWidth * 0.1f);
+            if (framePosition > horizontalOffset && framePosition < viewWidth + horizontalOffset)
+            {
+                // 如果帧位置在当前视图范围内，则不需要滚动
+                return;
+            }
+            if (framePosition < horizontalOffset)
+            {
+                float x = (framePosition - offset) / GetUnScaleTrackWidth();
+                var previousValue = horizontalSlider.value;
+                x *= 100;
+                x = Mathf.Max(0, x);
+                horizontalSlider.value = new Vector2(x, x + (previousValue.y - previousValue.x));
+            }
+            else
+            {
+                float x = (framePosition - viewWidth + offset) / GetUnScaleTrackWidth();
+                var previousValue = horizontalSlider.value;
+                x *= 100;
+                x = Mathf.Max(0, x);
+                horizontalSlider.value = new Vector2(x, x + (previousValue.y - previousValue.x));
+            }
         }
 
         public void SetScale(float scale)
@@ -140,7 +176,7 @@ namespace ActionLine.EditorView
         private void OnScaleChange(bool updateSlider = true)
         {
             timelineTickMarkView.Scale = viewScale;
-            if (updateSlider)
+            if (updateSlider && hasGeometryChange)
             {
                 UpdateHorizontalSliderRange();
             }
@@ -160,6 +196,7 @@ namespace ActionLine.EditorView
 
         private void OnGeometryChanged(GeometryChangedEvent evt)
         {
+            hasGeometryChange = true;
             UpdateHorizontalSliderRange();
         }
     }
