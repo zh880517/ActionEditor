@@ -19,11 +19,14 @@ namespace ActionLine.EditorView
             style.borderLeftWidth = 5;
             style.borderLeftColor = Color.white;
 
+            icon.pickingMode = PickingMode.Ignore;
             icon.style.width = 16;
             icon.style.height = 16;
             Add(icon);
+            titleLabel.pickingMode = PickingMode.Ignore;
             titleLabel.style.unityTextAlign = TextAnchor.MiddleLeft;
             Add(titleLabel);
+            custom.pickingMode = PickingMode.Ignore;
             customArea.style.flexGrow = 1;
             customArea.style.flexDirection = FlexDirection.Row;
             Add(customArea);
@@ -31,7 +34,7 @@ namespace ActionLine.EditorView
             visableButton.clicked += () => OnVisableClick?.Invoke(this);
             RegisterCallback<MouseDownEvent>(OnMouseDown);
             RegisterCallback<MouseUpEvent>(OnMouseUp);
-            RegisterCallback<MouseEnterEvent>(OnMouseEnter);
+            RegisterCallback<MouseMoveEvent>(OnMouseMove);
         }
 
         public void SetStyle(Color color, Texture iconImg)
@@ -59,17 +62,17 @@ namespace ActionLine.EditorView
 
         public void SetCustomElement(VisualElement element)
         {
-            if (custom == element)
-                return;
-            custom?.RemoveFromHierarchy();
             if (element != null)
                 customArea.Add(element);
-            custom = element;
         }
 
         private void OnMouseDown(MouseDownEvent evt)
         {
-            using (var mouseDownEvent = TrackTitleMouseDownEvent.GetPooled(evt.button, Index, evt.mousePosition))
+            if (evt.button == 0)
+            {
+                this.CaptureMouse();
+            }
+            using (var mouseDownEvent = TrackTitleMouseDownEvent.GetPooled(evt.button, Index, evt.mousePosition, evt.modifiers))
             {
                 SendEvent(mouseDownEvent);
             }
@@ -77,18 +80,22 @@ namespace ActionLine.EditorView
 
         private void OnMouseUp(MouseUpEvent evt)
         {
-            using (var mouseUpEvent = TrackTitleMouseUpEvent.GetPooled(evt.button, Index, evt.mousePosition))
+            this.ReleaseMouse();
+            using (var mouseUpEvent = TrackTitleMouseUpEvent.GetPooled(evt.button, Index, evt.mousePosition, evt.modifiers))
             {
                 SendEvent(mouseUpEvent);
             }
         }
 
-        private void OnMouseEnter(MouseEnterEvent evt)
+        private void OnMouseMove(MouseMoveEvent evt)
         {
-            using (var mouseMoveEvent = TrackTitleMouseEnterEvent.GetPooled(evt.button, Index, evt.mousePosition))
+            if (evt.pressedButtons == 0)
+                return;
+            using (var mouseMoveEvent = TrackTitleMouseMoveEvent.GetPooled(evt.button, Index, evt.mousePosition, evt.modifiers))
             {
                 SendEvent(mouseMoveEvent);
             }
         }
+
     }
 }

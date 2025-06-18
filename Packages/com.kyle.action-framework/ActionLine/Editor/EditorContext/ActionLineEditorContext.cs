@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.UIElements;
 namespace ActionLine.EditorView
 {
     public class ActionLineEditorContext : ScriptableObject
@@ -11,11 +12,6 @@ namespace ActionLine.EditorView
             public float Scale;
             public Vector2 Position;
         }
-
-        private readonly List<ActionClipEditorContext> clipEditors = new List<ActionClipEditorContext>();
-        private readonly List<ActionClipData> clips = new List<ActionClipData>();
-        private ActionLineView view;
-
         [SerializeField]
         private ViewPortData viewPortData = new ViewPortData
         {
@@ -25,19 +21,31 @@ namespace ActionLine.EditorView
 
         [SerializeField]
         private ActionLineAsset target;
-        public List<int> SelectedClips = new List<int>();
-        public List<int> SelectedTracks = new List<int>();
+        public List<ActionClipData> SelectedClips = new List<ActionClipData>();
+        public List<ActionClipData> SelectedTracks = new List<ActionClipData>();
+
+        private readonly List<ActionClipEditorContext> clipEditors = new List<ActionClipEditorContext>();
+        private readonly List<ActionClipData> clips = new List<ActionClipData>();
+        private readonly List<EditorAction> actions = new List<EditorAction>();
+        private ActionLineView view;
+
         public IReadOnlyList<ActionClipData> Clips => clips;
         public ActionLineAsset Target => target;
+        public ActionLineView View => view;
 
         public void SetView(ActionLineView actionLineView)
         {
             if (view != actionLineView)
             {
                 view = actionLineView;
+                view.AddManipulator(new ClipManipulator(this));
                 Clear();
                 if (target)
                     Update();
+                if(actions.Count == 0)
+                {
+                    InitEditorAction();
+                }
             }
         }
 
@@ -50,6 +58,26 @@ namespace ActionLine.EditorView
                 RefreshViewPort();
                 Update();
             }
+        }
+
+        public void ShowContextMenue(ActionModeType mode)
+        {
+            bool hasInherit = SelectedClips.Exists(x => x.IsInherit);
+            GenericMenu menu = new GenericMenu();
+            foreach (var item in actions)
+            {
+                if(!item.Visable(mode))
+                    continue;
+                if (item.IsValid(mode))
+                {
+                    menu.AddItem(new GUIContent(item.MenuPath, item.Icon), item.IsOn(mode), () => item.Execute(mode));
+                }
+                else
+                {
+                    menu.AddDisabledItem(new GUIContent(item.MenuPath));
+                }
+            }
+            menu.ShowAsContext();
         }
 
         public void RefreshViewPort()
@@ -131,6 +159,20 @@ namespace ActionLine.EditorView
             view.Title.Group.SetVisableCount(0);
         }
 
+        protected void RegisterAction<T>() where T : EditorAction, new()
+        {
+            if (actions.Exists(x => x.GetType() == typeof(T)))
+                return; //已经注册过了
+            var action = new T();
+            action.Context = this;
+            actions.Add(action);
+        }
+
+        protected virtual void InitEditorAction()
+        {
+
+        }
+
         private void UpdateClip(ActionClipEditorContext context, int index)
         {
             context.TitleView = view.Title.Group.GetTitleView(index);
@@ -143,12 +185,9 @@ namespace ActionLine.EditorView
             context.ClipView = view.Track.Group.GetClipView(index);
             context.ClipView.SetClipColor(clipTypeInfo.ClipColor);
             context.ClipView.SetClipName(context.Editor.GetClipShowName(context.Data.Clip));
-
+            context.ClipView.SetCustomElement(context.CustomContent);
             context.ClipView.StartFrame = context.Data.Clip.StartFrame;
-            int endFrame = context.Data.Clip.StartFrame + context.Data.Clip.FrameCount;
-            if (context.Data.Clip.FrameCount <= 0)
-                endFrame = target.FrameCount;
-            context.ClipView.EndFrame = endFrame;
+            context.ClipView.EndFrame = context.Data.Clip.StartFrame + context.Data.Clip.Length;
         }
 
     }

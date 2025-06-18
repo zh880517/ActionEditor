@@ -51,10 +51,12 @@ namespace ActionLine.EditorView
             });
             Add(right);
 
+            colorElement.pickingMode = PickingMode.Ignore;
             colorElement.AlignParentBottom(4);
             colorElement.style.backgroundColor = Color.white;
             Add(colorElement);
 
+            nameLabel.pickingMode = PickingMode.Ignore;
             nameLabel.StretchToParentSize();
             nameLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
             Add(nameLabel);
@@ -85,6 +87,15 @@ namespace ActionLine.EditorView
             nameLabel.text = name;
         }
 
+        public void SetCustomElement(VisualElement customElement)
+        {
+            if (customElement != null)
+            {
+                Add(customElement);
+                customElement.StretchToParentSize();
+            }
+        }
+
         public void ShowOutLine(bool show)
         {
             if(show)
@@ -95,7 +106,7 @@ namespace ActionLine.EditorView
 
         private void OnMouseDown(MouseDownEvent mde, int type)
         {
-            using (var evt = ClipMouseDownEvent.GetPooled(mde.button, type, Index, mde.mousePosition))
+            using (var evt = ClipMouseDownEvent.GetPooled(mde.button, type, Index, mde.mousePosition, mde.modifiers))
             {
                 SendEvent(evt);
             }
@@ -103,7 +114,7 @@ namespace ActionLine.EditorView
 
         private void OnMouseUp(MouseUpEvent mue, int type)
         {
-            using (var evt = ClipMouseUpEvent.GetPooled(mue.button, type, Index, mue.mousePosition))
+            using (var evt = ClipMouseUpEvent.GetPooled(mue.button, type, Index, mue.mousePosition, mue.modifiers))
             {
                 SendEvent(evt);
             }
@@ -111,9 +122,11 @@ namespace ActionLine.EditorView
 
         private void OnMouseMove(MouseMoveEvent evt, int type)
         {
-            using(var newEvt = ClipMouseMoveEvent.GetPooled(evt.button, type, Index, evt.mousePosition))
+            if (evt.pressedButtons == 0)
+                return;
+            using(var newEvt = ClipMouseMoveEvent.GetPooled(evt.button, type, Index, evt.mousePosition, evt.modifiers))
             {
-
+                SendEvent(newEvt);
             }
         }
     }

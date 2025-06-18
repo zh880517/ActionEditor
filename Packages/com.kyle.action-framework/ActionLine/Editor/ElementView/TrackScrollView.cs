@@ -28,6 +28,7 @@ namespace ActionLine.EditorView
 
         public TrackScrollView()
         {
+            pickingMode = PickingMode.Ignore;
             style.overflow = Overflow.Hidden;
             style.flexDirection = FlexDirection.Column;
             style.flexGrow = 1;
@@ -50,6 +51,7 @@ namespace ActionLine.EditorView
 
             // 中心显示区域
             var center = new VisualElement();
+            center.pickingMode = PickingMode.Ignore;
             Add(center);
             center.style.overflow = Overflow.Hidden;
             center.style.position = Position.Absolute;
@@ -68,6 +70,7 @@ namespace ActionLine.EditorView
             timelineTickMarkView.SetCursorView(cursorView);
             timelineTickMarkView.HeaderInterval = ActionLineStyles.TrackHeaderInterval;
             //轨道裁剪区域
+            trackClipArea.pickingMode = PickingMode.Ignore;
             center.Add(trackClipArea);
             trackClipArea.StretchToParentSize();
             trackClipArea.style.top = ActionLineStyles.TitleBarHeight;

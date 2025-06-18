@@ -3,7 +3,6 @@ using UnityEditor;
 using UnityEngine;
 namespace ActionLine
 {
-
     /* 
      * 创建时需要设置 hideFlags = HideFlags.DontSave，编辑时不会将场景设置为dirty
      */
@@ -20,11 +19,21 @@ namespace ActionLine
         [SerializeField, ReadOnly]
         private List<ActionLineClip> enableClips = new List<ActionLineClip>();
         [DisplayName("帧数"), ReadOnly]
-        public int FrameCount;
+        private int frameCount = 1;
+        public int FrameCount=> (frameCount > 0 || !source) ? frameCount : source.frameCount;
+        public int SelfFrameCount => frameCount;
         public bool IsVariant => source != null;
         public IReadOnlyList<ActionLineClip> Clips => clips;
 
         public ActionLineAsset Source => source;
+
+        public void SetFrameCount(int count)
+        {
+            if(!source)
+                frameCount = Mathf.Max(1, count);
+            frameCount = count;
+            EditorUtility.SetDirty(this);
+        }
 
         public void SetSource(ActionLineAsset newSource)
         {

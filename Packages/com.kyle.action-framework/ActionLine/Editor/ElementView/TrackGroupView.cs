@@ -17,6 +17,7 @@ namespace ActionLine.EditorView
         public System.Func<int, float> FrameToPosition;
         public TrackGroupView()
         {
+            pickingMode = PickingMode.Ignore;
             style.flexDirection = FlexDirection.Column;
             style.height = Length.Auto();
         }
@@ -81,6 +82,7 @@ namespace ActionLine.EditorView
                 bg.style.backgroundColor = ActionLineStyles.GrayBackGroundColor;
                 bg.style.flexGrow = 0;
                 bg.style.flexShrink = 0;
+                bg.pickingMode = PickingMode.Ignore;
                 int indexInQueue = clips.Count;
                 bg.RegisterCallback<MouseDownEvent>(evt => OnClickBackGround(indexInQueue, evt), TrickleDown.TrickleDown);
                 bg.style.display = DisplayStyle.None;

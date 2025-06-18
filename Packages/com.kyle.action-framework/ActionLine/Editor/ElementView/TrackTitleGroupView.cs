@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SocialPlatforms;
 using UnityEngine.UIElements;
 
 namespace ActionLine.EditorView
@@ -23,8 +24,16 @@ namespace ActionLine.EditorView
         public int GetTrackIndexByMousePosition(Vector2 mousePosition)
         {
             var local = this.WorldToLocal(mousePosition);
-            int index = Mathf.FloorToInt(local.y / (ActionLineStyles.ClipHeight + ActionLineStyles.TrackInterval));
-            return Mathf.Clamp(index, 0, visableCount - 1);
+            for (int i = 0; i < visableCount; i++)
+            {
+                var titleView = trackTitles[i];
+                var layout = titleView.layout;
+                if(layout.yMin > local.y)
+                    return i - 1;
+                if (layout.yMax > local.y)
+                    return i;
+            }
+            return visableCount;
         }
 
         public void SetVisableCount(int count)
@@ -72,9 +81,21 @@ namespace ActionLine.EditorView
 
         public void ShowDragLineAfter(int index)
         {
-            float top = (ActionLineStyles.ClipHeight + ActionLineStyles.TrackInterval) * index;
-            dragLine.style.top = top;
-            dragLine.style.display = DisplayStyle.Flex;
+            if(index < 0 || visableCount == 0)
+            {
+                dragLine.style.top = 0;
+                dragLine.style.display = DisplayStyle.Flex;
+                return;
+            }
+            if(index >= visableCount)
+            {
+                var last = trackTitles[visableCount - 1];
+                dragLine.style.top = last.layout.yMax;
+                dragLine.style.display = DisplayStyle.Flex;
+                return;
+            }
+            var titleView = trackTitles[index];
+            dragLine.style.top = titleView.layout.yMax;
         }
         public void HideDragLine()
         {
