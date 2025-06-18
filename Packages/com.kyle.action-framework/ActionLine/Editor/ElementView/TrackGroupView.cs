@@ -19,8 +19,6 @@ namespace ActionLine.EditorView
         {
             style.flexDirection = FlexDirection.Column;
             style.height = Length.Auto();
-            style.flexGrow = 0;
-            style.flexShrink = 0;
         }
 
         public ActionClipView GetClipView(int index)
@@ -81,10 +79,12 @@ namespace ActionLine.EditorView
                 bg.style.left = 0;
                 bg.style.right = 0;
                 bg.style.backgroundColor = ActionLineStyles.GrayBackGroundColor;
+                bg.style.flexGrow = 0;
+                bg.style.flexShrink = 0;
                 int indexInQueue = clips.Count;
                 bg.RegisterCallback<MouseDownEvent>(evt => OnClickBackGround(indexInQueue, evt), TrickleDown.TrickleDown);
-                Add(bg);
                 bg.style.display = DisplayStyle.None;
+                Add(bg);
                 ActionClipView clip = new ActionClipView { Index = indexInQueue };
                 bg.Add(clip);
                 clips.Add(new ClipUnit { ClipView = clip, BG = bg });

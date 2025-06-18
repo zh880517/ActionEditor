@@ -21,9 +21,7 @@ public class PlayButtonsView : VisualElement
     private readonly IntegerField frameField = new IntegerField();
     private bool isPlaying;
 
-    public System.Action<PlayEventType> OnPlayEvent;
-    public System.Action<int> OnFrameChanged;
-    public Vector2Int FrameRange = new Vector2Int(0, int.MaxValue);
+    public int MaxFrame = int.MaxValue;
     private static readonly Color borderColor = new Color32(25, 25, 25, 255);
     public PlayButtonsView()
     {
@@ -39,37 +37,45 @@ public class PlayButtonsView : VisualElement
         firstKey.tooltip = "第一帧";
         SetButtonStyle(firstKey);
         firstKey.SetBuildinIcon("Animation.FirstKey");
-        firstKey.clicked += () => OnPlayEvent?.Invoke(PlayEventType.FirstKey);
+        firstKey.clicked += () => OnPlayEvent(PlayEventType.FirstKey);
         Add(firstKey);
 
         preKey.tooltip = "上一帧";
         SetButtonStyle(preKey);
         preKey.SetBuildinIcon("Animation.PrevKey");
-        preKey.clicked += () => OnPlayEvent?.Invoke(PlayEventType.PreKey);
+        preKey.clicked += () => OnPlayEvent(PlayEventType.PreKey);
         Add(preKey);
 
         play.tooltip = "播放/暂停";
         SetButtonStyle(play);
         play.SetBuildinIcon("Animation.Play");
-        play.clicked += () => OnPlayEvent?.Invoke(isPlaying ? PlayEventType.Pause : PlayEventType.Play);
+        play.clicked += () => OnPlayEvent(isPlaying ? PlayEventType.Pause : PlayEventType.Play);
         Add(play);
 
         nextKey.tooltip = "下一帧";
         SetButtonStyle(nextKey);
         nextKey.SetBuildinIcon("Animation.NextKey");
-        nextKey.clicked += () => OnPlayEvent?.Invoke(PlayEventType.NextKey);
+        nextKey.clicked += () => OnPlayEvent(PlayEventType.NextKey);
         Add(nextKey);
 
         lastKey.tooltip = "最后一帧";
         SetButtonStyle(lastKey);
         lastKey.SetBuildinIcon("Animation.LastKey");
-        lastKey.clicked += () => OnPlayEvent?.Invoke(PlayEventType.LastKey);
+        lastKey.clicked += () => OnPlayEvent(PlayEventType.LastKey);
         Add(lastKey);
 
         frameField.tooltip = "当前帧";
         frameField.style.width = 50;
         frameField.RegisterValueChangedCallback(OnFrameFieldChanged);
         Add(frameField);
+    }
+
+    private void OnPlayEvent(PlayEventType type)
+    {
+        using (var evt = PlayButtonChangeEvent.GetPooled(type))
+        {
+            SendEvent(evt);
+        }
     }
 
 
@@ -89,20 +95,24 @@ public class PlayButtonsView : VisualElement
 
     public void SetFrame(int frame)
     {
-        if (frame < FrameRange.x || frame > FrameRange.y)
+        if (frame > MaxFrame)
         {
-            return;
+            frame = MaxFrame;
         }
         frameField.SetValueWithoutNotify(frame);
     }
 
     private void OnFrameFieldChanged(ChangeEvent<int> evt)
     {
-        if (evt.newValue < FrameRange.x || evt.newValue > FrameRange.y)
+        int frame = evt.newValue;
+        if (evt.newValue > MaxFrame)
         {
-            frameField.SetValueWithoutNotify(evt.previousValue);
-            return;
+            frame = MaxFrame;
+            frameField.SetValueWithoutNotify(frame);
         }
-        OnFrameChanged?.Invoke(evt.newValue);
+        using (var newEvt = FrameIndexChangeEvent.GetPooled(frame))
+        {
+            SendEvent(newEvt);
+        }
     }
 }

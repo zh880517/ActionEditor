@@ -136,9 +136,6 @@ public class TimelineTickMarkView : ImmediateModeElement
         }
     }
 
-    public System.Action<int> OnFrameSelected;
-    public System.Action<int> OnDragFrame;
-
     public TimelineTickMarkView()
     {
         RegisterCallback<MouseDownEvent>(OnMouseDown);
@@ -187,7 +184,7 @@ public class TimelineTickMarkView : ImmediateModeElement
         FramePointByMouse = Mathf.FloorToInt(localPos.x / (frameWidth * scale));
         if (!isDragging || evt.button != 0)
             return;
-        if ((evt.pressedButtons & 1) == 0)
+        if ((evt.pressedButtons & 1) == 0 && isDragging)
         {
             //如果此时鼠标没有按下，则说明在区域外松开了鼠标
             isDragging = false;
@@ -199,10 +196,6 @@ public class TimelineTickMarkView : ImmediateModeElement
             {
                 if (frameCount <= 0 || FramePointByMouse < frameCount)
                     OnFrameSelect(FramePointByMouse);
-            }
-            else
-            {
-                OnDragFrame?.Invoke(FramePointByMouse);
             }
         }
     }
@@ -222,8 +215,10 @@ public class TimelineTickMarkView : ImmediateModeElement
     {
         if(cursorView != null)
             cursorView.CurrentFrame = frame;
-
-        OnFrameSelected?.Invoke(frame);
+        using (var evt = FrameIndexChangeEvent.GetPooled(frame))
+        {
+            SendEvent(evt);
+        }
         MarkDirtyRepaint();
     }
     protected override void ImmediateRepaint()

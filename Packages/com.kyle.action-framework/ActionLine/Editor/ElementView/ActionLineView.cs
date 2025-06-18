@@ -1,3 +1,4 @@
+using UnityEngine;
 using UnityEngine.UIElements;
 namespace ActionLine.EditorView
 {
@@ -20,6 +21,10 @@ namespace ActionLine.EditorView
             splitView.Add(trackScroll);
             splitView.style.flexGrow = 1;
             splitView.style.flexShrink = 1;
+            trackScroll.OnVerticalScrollChanged += (value) =>
+            {
+                trackTitle.Group.style.top = -value;
+            };
         }
 
         public void Update(ActionLineAsset asset)
@@ -30,6 +35,8 @@ namespace ActionLine.EditorView
                 Asset = asset;
             }
             editorContext.Update(this);
+            trackScroll.SetFrameCount(Asset.FrameCount);
+            trackTitle.PlayButtons.MaxFrame = Asset.FrameCount - 1;
         }
     }
 }

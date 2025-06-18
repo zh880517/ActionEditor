@@ -8,6 +8,7 @@ namespace ActionLine.EditorView
     {
         private readonly VisualElement dragLine = new VisualElement();
         private readonly List<TrackTitleView> trackTitles = new List<TrackTitleView>();
+        private int visableCount = 0;
         public TrackTitleGroupView()
         {
             style.flexDirection = FlexDirection.Column;
@@ -15,29 +16,23 @@ namespace ActionLine.EditorView
             dragLine.style.width = 2;
             dragLine.style.backgroundColor = Color.white;
             dragLine.style.display = DisplayStyle.None;
-            style.flexGrow = 1;
-            style.flexShrink = 1;
+            style.height = Length.Auto();
             Add(dragLine);
         }
 
-        public void OnClipMouseDown(TrackTitleView clip, MouseDownEvent evt)
+        public int GetTrackIndexByMousePosition(Vector2 mousePosition)
         {
-
-        }
-        public void OnClipMouseUp(TrackTitleView clip, MouseUpEvent evt)
-        {
-            dragLine.style.display = DisplayStyle.None;
-        }
-
-        public void OnClipMouseEnter(TrackTitleView clip, MouseEnterEvent evt)
-        {
-            dragLine.style.top = clip.layout.max.y;
-            dragLine.style.display = DisplayStyle.Flex;
+            var local = this.WorldToLocal(mousePosition);
+            int index = Mathf.FloorToInt(local.y / (ActionLineStyles.ClipHeight + ActionLineStyles.TrackInterval));
+            return Mathf.Clamp(index, 0, visableCount - 1);
         }
 
         public void SetVisableCount(int count)
         {
+            if (visableCount == count)
+                return;
             EnsureCapacity(count);
+            visableCount = count;
             for (int i = 0; i < trackTitles.Count; i++)
             {
                 TrackTitleView titleView = trackTitles[i];
@@ -64,25 +59,21 @@ namespace ActionLine.EditorView
             while (trackTitles.Count < count)
             {
                 TrackTitleView titleView = new TrackTitleView();
-                titleView.Root = this;
+                titleView.Index = trackTitles.Count;
                 trackTitles.Add(titleView);
                 titleView.style.height = ActionLineStyles.ClipHeight;
                 titleView.style.marginTop = ActionLineStyles.TrackInterval;
                 titleView.style.display = DisplayStyle.None;
+                titleView.style.flexGrow = 0;
+                titleView.style.flexShrink = 0;
                 Add(titleView);
             }
         }
 
-        public void ShowDragLineAfter(TrackTitleView clip)
+        public void ShowDragLineAfter(int index)
         {
-            if (clip != null)
-            {
-                dragLine.style.top = clip.layout.max.y;
-            }
-            else
-            {
-                dragLine.style.top = 0;
-            }
+            float top = (ActionLineStyles.ClipHeight + ActionLineStyles.TrackInterval) * index;
+            dragLine.style.top = top;
             dragLine.style.display = DisplayStyle.Flex;
         }
         public void HideDragLine()

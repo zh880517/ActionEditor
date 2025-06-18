@@ -29,5 +29,6 @@ namespace ActionLine.EditorView
             trackClipArea.Add(trackTitleGroup);
             Add(trackClipArea);
         }
+
     }
 }

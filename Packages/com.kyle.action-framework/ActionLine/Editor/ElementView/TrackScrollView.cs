@@ -127,6 +127,16 @@ namespace ActionLine.EditorView
             OnScaleChange();
         }
 
+        public int GetFrameInTrackByMousePosition(Vector2 position)
+        {
+            var local = trackGroup.WorldToLocal(position);
+            local.x /= viewScale;
+            local.x += horizontalOffset;
+            local.x -= ActionLineStyles.TrackHeaderInterval;
+
+            return Mathf.FloorToInt(local.x / ActionLineStyles.FrameWidth);
+        }
+
         private void OnWheelEvent(WheelEvent evt)
         {
             float v = Mathf.Sign(evt.delta.y) * 0.1f;

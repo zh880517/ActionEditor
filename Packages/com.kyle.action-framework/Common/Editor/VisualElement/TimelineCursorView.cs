@@ -118,8 +118,6 @@ public class TimelineCursorView : ImmediateModeElement
             }
         }
     }
-    public System.Action<int> OnFrameSelected;
-    public System.Action<int> OnDragFrame;
     public TimelineCursorView()
     {
         pickingMode = PickingMode.Ignore;

@@ -20,12 +20,16 @@ namespace ActionLine.EditorView
             left.RegisterCallback<MouseDownEvent>(evt => 
             {
                 left.CaptureMouse();
-                OnMouseDown(evt.button, -1);
+                OnMouseDown(evt, -1);
+            });
+            left.RegisterCallback<MouseMoveEvent>(evt =>
+            {
+                OnMouseMove(evt, -1);
             });
             left.RegisterCallback<MouseUpEvent>(evt => 
             {
                 left.ReleaseMouse();
-                OnMouseUp(evt.button, -1);
+                OnMouseUp(evt, -1);
             });
             Add(left);
             var right = new MouseCursorRect();
@@ -34,12 +38,16 @@ namespace ActionLine.EditorView
             right.RegisterCallback<MouseDownEvent>(evt => 
             {
                 right.CaptureMouse();
-                OnMouseDown(evt.button, 1);
+                OnMouseDown(evt, 1);
+            });
+            right.RegisterCallback<MouseMoveEvent>(evt =>
+            {
+                OnMouseMove(evt, 1);
             });
             right.RegisterCallback<MouseUpEvent>(evt => 
             {
                 right.ReleaseMouse();
-                OnMouseUp(evt.button, 1); 
+                OnMouseUp(evt, 1); 
             });
             Add(right);
 
@@ -54,12 +62,16 @@ namespace ActionLine.EditorView
             RegisterCallback<MouseDownEvent>(evt => 
             {
                 this.CaptureMouse();
-                OnMouseDown(evt.button, 0);
+                OnMouseDown(evt, 0);
+            });
+            RegisterCallback<MouseMoveEvent>(evt =>
+            {
+                OnMouseMove(evt, 0);
             });
             RegisterCallback<MouseUpEvent>(evt => 
             {
                 this.ReleaseMouse();
-                OnMouseUp(evt.button, 0); 
+                OnMouseUp(evt, 0); 
             });
         }
 
@@ -81,15 +93,28 @@ namespace ActionLine.EditorView
                 this.ShowOutLine(Color.clear, 0f);
         }
 
-        private void OnMouseDown(int button, int type)
+        private void OnMouseDown(MouseDownEvent mde, int type)
         {
-            //Clip的拖拽事件由TimelineTickMarkView的OnDragFrame响应，此处只处理鼠标按下事件
-            //通知上层View Clip被点击
+            using (var evt = ClipMouseDownEvent.GetPooled(mde.button, type, Index, mde.mousePosition))
+            {
+                SendEvent(evt);
+            }
         }
 
-        private void OnMouseUp(int button, int type)
+        private void OnMouseUp(MouseUpEvent mue, int type)
         {
-            //通知上层View Clip被释放
+            using (var evt = ClipMouseUpEvent.GetPooled(mue.button, type, Index, mue.mousePosition))
+            {
+                SendEvent(evt);
+            }
+        }
+
+        private void OnMouseMove(MouseMoveEvent evt, int type)
+        {
+            using(var newEvt = ClipMouseMoveEvent.GetPooled(evt.button, type, Index, evt.mousePosition))
+            {
+
+            }
         }
     }
 

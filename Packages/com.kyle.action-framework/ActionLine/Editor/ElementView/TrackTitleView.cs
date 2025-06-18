@@ -11,7 +11,7 @@ namespace ActionLine.EditorView
         private VisualElement custom;
         private readonly IconButton visableButton = new IconButton();
         public System.Action<TrackTitleView> OnVisableClick;
-        public TrackTitleGroupView Root;
+        public int Index;
 
         public TrackTitleView()
         {
@@ -28,10 +28,10 @@ namespace ActionLine.EditorView
             customArea.style.flexDirection = FlexDirection.Row;
             Add(customArea);
             Add(visableButton);
-            visableButton.clicked += ()=> OnVisableClick?.Invoke(this);
-            RegisterCallback<MouseDownEvent>((evt)=>Root?.OnClipMouseDown(this, evt));
-            RegisterCallback<MouseUpEvent>((evt)=>Root?.OnClipMouseUp(this, evt));
-            RegisterCallback<MouseEnterEvent>((evt)=>Root?.OnClipMouseEnter(this, evt));
+            visableButton.clicked += () => OnVisableClick?.Invoke(this);
+            RegisterCallback<MouseDownEvent>(OnMouseDown);
+            RegisterCallback<MouseUpEvent>(OnMouseUp);
+            RegisterCallback<MouseEnterEvent>(OnMouseEnter);
         }
 
         public void SetStyle(Color color, Texture iconImg)
@@ -62,9 +62,35 @@ namespace ActionLine.EditorView
             if (custom == element)
                 return;
             custom?.RemoveFromHierarchy();
-            if(element != null)
+            if (element != null)
                 customArea.Add(element);
             custom = element;
+        }
+
+        private void OnMouseDown(MouseDownEvent evt)
+        {
+            this.CaptureMouse();
+            using (var mouseDownEvent = TrackTitleMouseDownEvent.GetPooled(evt.button, Index, evt.mousePosition))
+            {
+                SendEvent(mouseDownEvent);
+            }
+        }
+
+        private void OnMouseUp(MouseUpEvent evt)
+        {
+            this.ReleaseMouse();
+            using (var mouseUpEvent = TrackTitleMouseUpEvent.GetPooled(evt.button, Index, evt.mousePosition))
+            {
+                SendEvent(mouseUpEvent);
+            }
+        }
+
+        private void OnMouseEnter(MouseEnterEvent evt)
+        {
+            using (var mouseMoveEvent = TrackTitleMouseMoveEvent.GetPooled(evt.button, Index, evt.mousePosition))
+            {
+                SendEvent(mouseMoveEvent);
+            }
         }
     }
 }
