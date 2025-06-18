@@ -4,6 +4,9 @@ namespace ActionLine
 {
     public class ActionLineClip : ScriptableObject
     {
+        [ReadOnly]
+        public ActionLineAsset Owner;
+
         [DisplayName("禁用")]
         public bool Disable;
         [DisplayName("描述")]

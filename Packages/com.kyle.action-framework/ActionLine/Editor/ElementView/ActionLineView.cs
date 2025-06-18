@@ -6,12 +6,12 @@ namespace ActionLine.EditorView
     {
         private readonly TrackTitleScrollView trackTitle = new TrackTitleScrollView();
         private readonly TrackScrollView trackScroll = new TrackScrollView();
-        private readonly ActionLineEditorContext editorContext = new ActionLineEditorContext();
-        public ActionLineAsset Asset { get; private set; }
         public TrackTitleScrollView Title => trackTitle;
-        public TrackScrollView Track=> trackScroll;
+        public TrackScrollView Track => trackScroll;
 
         public float Scale => trackScroll.Scale;
+        public float HorizontalOffset => trackScroll.HorizontalOffset;
+        public float VerticalOffset => trackScroll.VerticalOffset;
 
         public ActionLineView()
         {
@@ -27,16 +27,10 @@ namespace ActionLine.EditorView
             };
         }
 
-        public void Update(ActionLineAsset asset)
+        public void SetViewPort(float scale, float horizontalOffset, float verticalOffset)
         {
-            if(asset != Asset)
-            {
-                editorContext.Clear(this);
-                Asset = asset;
-            }
-            editorContext.Update(this);
-            trackScroll.SetFrameCount(Asset.FrameCount);
-            trackTitle.PlayButtons.MaxFrame = Asset.FrameCount - 1;
+            trackScroll.SetViewPort(scale, horizontalOffset, verticalOffset);
+            trackTitle.style.top = -verticalOffset;
         }
     }
 }

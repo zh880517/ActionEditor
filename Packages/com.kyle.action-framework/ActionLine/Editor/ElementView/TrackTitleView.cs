@@ -69,7 +69,6 @@ namespace ActionLine.EditorView
 
         private void OnMouseDown(MouseDownEvent evt)
         {
-            this.CaptureMouse();
             using (var mouseDownEvent = TrackTitleMouseDownEvent.GetPooled(evt.button, Index, evt.mousePosition))
             {
                 SendEvent(mouseDownEvent);
@@ -78,7 +77,6 @@ namespace ActionLine.EditorView
 
         private void OnMouseUp(MouseUpEvent evt)
         {
-            this.ReleaseMouse();
             using (var mouseUpEvent = TrackTitleMouseUpEvent.GetPooled(evt.button, Index, evt.mousePosition))
             {
                 SendEvent(mouseUpEvent);
@@ -87,7 +85,7 @@ namespace ActionLine.EditorView
 
         private void OnMouseEnter(MouseEnterEvent evt)
         {
-            using (var mouseMoveEvent = TrackTitleMouseMoveEvent.GetPooled(evt.button, Index, evt.mousePosition))
+            using (var mouseMoveEvent = TrackTitleMouseEnterEvent.GetPooled(evt.button, Index, evt.mousePosition))
             {
                 SendEvent(mouseMoveEvent);
             }

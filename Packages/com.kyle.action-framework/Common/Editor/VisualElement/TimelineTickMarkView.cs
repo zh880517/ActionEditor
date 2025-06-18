@@ -14,7 +14,6 @@ public class TimelineTickMarkView : ImmediateModeElement
     private float titleHeight = 20;
     private TimelineCursorView cursorView;
     private bool isDragging = false;
-    public int FramePointByMouse { get; private set; } = -1; // 鼠标点击的帧点
 
     public float HeaderInterval
     {
@@ -141,7 +140,6 @@ public class TimelineTickMarkView : ImmediateModeElement
         RegisterCallback<MouseDownEvent>(OnMouseDown);
         RegisterCallback<MouseMoveEvent>(OnMouseMove);
         RegisterCallback<MouseUpEvent>(OnMouseUp);
-        RegisterCallback<MouseLeaveEvent>(evt => FramePointByMouse = -1);
     }
 
     public void SetCursorView(TimelineCursorView cursor)
@@ -160,28 +158,24 @@ public class TimelineTickMarkView : ImmediateModeElement
     }
     private void OnMouseDown(MouseDownEvent evt)
     {
-        Vector2 localPos = evt.localMousePosition;
-        localPos.x -= headerInterval;
-        localPos.x += (horizontalOffset * scale);
-        FramePointByMouse = Mathf.FloorToInt(localPos.x / (frameWidth * scale));
         if (evt.button != 0)
             return;
         this.CaptureMouse();
+        Vector2 localPos = evt.localMousePosition;
+        localPos.x -= headerInterval;
+        localPos.x += (horizontalOffset * scale);
         if (localPos.y <= titleHeight)
         {
-            if (FramePointByMouse >= 0 && (frameCount <= 0 || FramePointByMouse < frameCount))
+            int frame = Mathf.FloorToInt(localPos.x / (frameWidth * scale));
+            if (frame >= 0 && (frameCount <= 0 || frame < frameCount))
             {
                 isDragging = true;
-                OnFrameSelect(FramePointByMouse);
+                OnFrameSelect(frame);
             }
         }
     }
     private void OnMouseMove(MouseMoveEvent evt)
     {
-        Vector2 localPos = evt.localMousePosition;
-        localPos.x -= headerInterval;
-        localPos.x += (horizontalOffset * scale);
-        FramePointByMouse = Mathf.FloorToInt(localPos.x / (frameWidth * scale));
         if (!isDragging || evt.button != 0)
             return;
         if ((evt.pressedButtons & 1) == 0 && isDragging)
@@ -190,12 +184,16 @@ public class TimelineTickMarkView : ImmediateModeElement
             isDragging = false;
             return;
         }
-        if (FramePointByMouse >= 0)
+        Vector2 localPos = evt.localMousePosition;
+        localPos.x -= headerInterval;
+        localPos.x += (horizontalOffset * scale);
+        int frame = Mathf.FloorToInt(localPos.x / (frameWidth * scale));
+        if (frame >= 0)
         {
             if (isDragging)
             {
-                if (frameCount <= 0 || FramePointByMouse < frameCount)
-                    OnFrameSelect(FramePointByMouse);
+                if (frameCount <= 0 || frame < frameCount)
+                    OnFrameSelect(frame);
             }
         }
     }

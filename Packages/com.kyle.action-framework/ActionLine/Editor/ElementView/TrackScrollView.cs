@@ -17,7 +17,11 @@ namespace ActionLine.EditorView
         public TrackGroupView Group => trackGroup;
         private float viewScale = 1.0f;
         private float horizontalOffset = 0;
+        private float verticalOffset = 0;
         public float Scale => viewScale;
+        public float HorizontalOffset => horizontalOffset;
+        public float VerticalOffset => verticalOffset;
+
 
         public System.Action<float> OnScaleChanged;
         public System.Action<float> OnVerticalScrollChanged;
@@ -121,9 +125,19 @@ namespace ActionLine.EditorView
             }
         }
 
-        public void SetScale(float scale)
+        public void SetViewPort(float scale, float hOffset, float vOffset)
         {
             viewScale = Mathf.Clamp(scale, 0.1f, 10f);
+            horizontalOffset = Mathf.Max(0, hOffset);
+            timelineTickMarkView.HorizontalOffset = horizontalOffset;
+
+            verticalOffset = Mathf.Max(0, vOffset);
+            Vector2 trackGroupSize = trackGroup.localBound.size;
+            Vector2 viewSize = trackClipArea.localBound.size;
+            float range = trackGroupSize.y - viewSize.y;
+            verticalSlider.slider.SetValueWithoutNotify((verticalOffset * 100) / range);
+            trackGroup.style.top = -verticalOffset;
+
             OnScaleChange();
         }
 
@@ -177,11 +191,13 @@ namespace ActionLine.EditorView
             {
                 verticalSlider.slider.SetValueWithoutNotify(0);
                 trackGroup.style.top = 0;
+                verticalOffset = 0;
                 OnVerticalScrollChanged?.Invoke(0);
                 return;
             }
             float y = range * evt.newValue * 0.01f;
             trackGroup.style.top = -y;
+            verticalOffset = y;
             OnVerticalScrollChanged?.Invoke(y);
         }
 
