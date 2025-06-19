@@ -37,5 +37,10 @@ namespace ActionLine.EditorView
                 return null;
             return instance.dates.Find(it => it.AssetType == type);
         }
+
+        public static bool HasCopyData(MonoScript type)
+        {
+            return instance.dates.Exists(it => it.AssetType == type);
+        }
     }
 }

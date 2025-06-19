@@ -12,6 +12,21 @@
             context.RefreshSelectState();
         }
 
+        public static void SelectAll(this ActionLineEditorContext context, bool clip = true, bool track = true)
+        {
+            if (clip)
+            {
+                context.SelectedClips.Clear();
+                context.SelectedClips.AddRange(context.Clips);
+            }
+            if (track)
+            {
+                context.SelectedTracks.Clear();
+                context.SelectedTracks.AddRange(context.Clips);
+            }
+            context.RefreshSelectState();
+        }
+
         public static void SelectClip(this ActionLineEditorContext context, int index, bool multi)
         {
             var data = context.Clips[index];

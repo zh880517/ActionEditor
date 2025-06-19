@@ -36,8 +36,6 @@ namespace ActionLine.EditorView
         protected virtual void OnEnable()
         {
             hideFlags = HideFlags.HideAndDontSave;
-            InitEditorAction();
-            actions.Sort((x, y) => x.ShowOrder.CompareTo(y.ShowOrder));
         }
 
         public void SetView(ActionLineView actionLineView)
@@ -51,10 +49,6 @@ namespace ActionLine.EditorView
                 Clear();
                 if (target)
                     RefreshView();
-                if(actions.Count == 0)
-                {
-                    InitEditorAction();
-                }
             }
         }
 
@@ -69,8 +63,19 @@ namespace ActionLine.EditorView
             {
                 Clear();
                 target = asset;
-                RefreshViewPort();
-                RefreshView();
+                if(target)
+                {
+                    if(actions.Count == 0)
+                    {
+                        ActionLineEditorUtil.CollectEditorAction(asset.GetType(), actions);
+                        foreach (var item in actions)
+                        {
+                            item.Context = this;
+                        }
+                    }
+                    RefreshViewPort();
+                    RefreshView();
+                }
             }
         }
 
@@ -232,10 +237,6 @@ namespace ActionLine.EditorView
             var action = new T();
             action.Context = this;
             actions.Add(action);
-        }
-
-        protected virtual void InitEditorAction()
-        {
         }
 
         private void UpdateClip(ActionClipEditorContext context, int index)
