@@ -39,6 +39,7 @@ namespace ActionLine.EditorView
             {
                 view = actionLineView;
                 view.AddManipulator(new ClipManipulator(this));
+                view.AddManipulator(new TrackTitleManipulator(this));
                 Clear();
                 if (target)
                     Update();
@@ -47,6 +48,11 @@ namespace ActionLine.EditorView
                     InitEditorAction();
                 }
             }
+        }
+
+        public int GetIndex(ActionClipData data)
+        {
+            return clips.IndexOf(data);
         }
 
         public void SetTarget(ActionLineAsset asset)

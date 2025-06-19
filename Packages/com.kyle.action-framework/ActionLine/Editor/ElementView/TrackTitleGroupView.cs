@@ -28,8 +28,6 @@ namespace ActionLine.EditorView
             {
                 var titleView = trackTitles[i];
                 var layout = titleView.layout;
-                if(layout.yMin > local.y)
-                    return i - 1;
                 if (layout.yMax > local.y)
                     return i;
             }

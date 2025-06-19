@@ -1,4 +1,5 @@
-﻿using UnityEngine.UIElements;
+﻿using System.Collections.Generic;
+using UnityEngine.UIElements;
 
 namespace ActionLine.EditorView
 {
@@ -62,8 +63,44 @@ namespace ActionLine.EditorView
                     if (!context.SelectedTracks.Exists(it => it.IsInherit))
                     {
                         int index = context.View.Title.Group.GetTrackIndexByMousePosition(evt.MousePositon);
-                        //TODO:判断当前位置是否和当前选中轨道位置相同，如果相同则不移动
-                        //TODO:移动轨道位置，如果是多选，则按照原有的顺序排序后移动
+                        List<int> trackIndexs = new List<int>();
+                        foreach (var item in context.SelectedTracks)
+                        {
+                            if (item.IsInherit)
+                                continue;
+                            int currentIndex = context.GetIndex(item);
+                            if(currentIndex < 0)
+                                continue;
+                            trackIndexs.Add(currentIndex);
+                        }
+                        if(trackIndexs.Count > 0)
+                        {
+                            trackIndexs.Sort();
+                            var firstIndex = trackIndexs[0];
+                            var lastIndex = trackIndexs[trackIndexs.Count - 1];
+                            if(firstIndex > index || lastIndex < index)
+                            {
+                                context.RegisterUndo("Move Track Index");
+
+                                List<ActionLineClip> clips = new List<ActionLineClip>();
+                                foreach (var item in trackIndexs)
+                                {
+                                    var clip = context.Clips[item];
+                                    clips.Add(clip.Clip);
+                                }
+                                ActionLineClip preClip = null;
+                                if(index > 0)
+                                {
+                                    preClip = context.Clips[index - 1].Clip;
+                                }
+                                foreach (var item in clips)
+                                {
+                                    context.Target.MoveToBehind(item, preClip);
+                                    preClip = item;
+                                }
+                                context.Update();
+                            }
+                        }
                     }
                 }
                 context.View.Title.Group.HideDragLine();
