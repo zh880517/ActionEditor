@@ -37,16 +37,12 @@ namespace ActionLine.EditorView
                 {
                     info.ClipColor = colorAttribute.ClipColor;
                 }
-                var displayNameAttribute = type.GetCustomAttribute<ActionClipDisplayNameAttribute>();
+                var displayNameAttribute = type.GetCustomAttribute<AliasAttribute>();
                 if (displayNameAttribute != null)
                 {
-                    info.Name = displayNameAttribute.DisplayName;
+                    info.Name = displayNameAttribute.Name;
                 }
-                MonoScript monoScript = MonoScriptUtil.GetMonoScript(type);
-                if (monoScript != null)
-                {
-                    info.Icon = AssetPreview.GetMiniThumbnail(monoScript);
-                }
+                info.Icon = MonoScriptUtil.GetTypeIcon(type);
                 clipTypeInfos.Add(type, info);
             }
             return info;
