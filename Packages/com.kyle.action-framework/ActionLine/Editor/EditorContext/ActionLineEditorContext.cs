@@ -21,6 +21,8 @@ namespace ActionLine.EditorView
 
         [SerializeField]
         private ActionLineAsset target;
+        [SerializeField]
+        private ActionClipTypeSelectWindow typeSelectWindow;
         public List<ActionClipData> SelectedClips = new List<ActionClipData>();
         public List<ActionClipData> SelectedTracks = new List<ActionClipData>();
 
@@ -36,19 +38,21 @@ namespace ActionLine.EditorView
         protected virtual void OnEnable()
         {
             hideFlags = HideFlags.HideAndDontSave;
-        }
-
-        public void SetView(ActionLineView actionLineView)
-        {
-            if (view != actionLineView)
+            if(view == null)
             {
-                view = actionLineView;
+                view = new ActionLineView();
                 view.AddManipulator(new ClipManipulator(this));
                 view.AddManipulator(new TrackTitleManipulator(this));
                 view.RegisterCallback<KeyDownEvent>(OnKeyDown);
-                Clear();
-                if (target)
-                    RefreshView();
+            }
+        }
+
+        protected virtual void OnDestroy()
+        {
+            if (typeSelectWindow)
+            {
+                DestroyImmediate(typeSelectWindow);
+                typeSelectWindow = null;
             }
         }
 
@@ -61,13 +65,21 @@ namespace ActionLine.EditorView
         {
             if (asset != target)
             {
+                if(target && (!asset || asset.GetType() != target.GetType()))
+                {
+                    if(typeSelectWindow)
+                    {
+                        DestroyImmediate(typeSelectWindow);
+                        typeSelectWindow = null;
+                    }
+                }
                 Clear();
                 target = asset;
                 if(target)
                 {
                     if(actions.Count == 0)
                     {
-                        ActionLineEditorUtil.CollectEditorAction(asset.GetType(), actions);
+                        ActionClipTypeUtil.CollectEditorAction(asset.GetType(), actions);
                         foreach (var item in actions)
                         {
                             item.Context = this;
@@ -77,6 +89,18 @@ namespace ActionLine.EditorView
                     RefreshView();
                 }
             }
+        }
+
+        public void ShowTypeSelectWindow()
+        {
+            if (!Target)
+                return;
+            if(!typeSelectWindow)
+            {
+                typeSelectWindow = TypeSelectWindow.Create<ActionClipTypeSelectWindow>();
+                typeSelectWindow.Context = this;
+            }
+            typeSelectWindow.Show(Event.current.mousePosition, 0, 0f);
         }
 
         public void ShowContextMenue(ActionModeType mode)

@@ -5,7 +5,7 @@ namespace ActionLine.EditorView
     public class SelectAllAction : EditorAction
     {
         public override string MenuPath => "Select All";
-        public override int ShowOrder => 5;
+        public override int ShowOrder => 100;
         public override KeyCode ShortCutKey => KeyCode.A;
         public override bool ActionKey => true;
         public override bool Visable(ActionModeType mode)
