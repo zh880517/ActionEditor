@@ -9,7 +9,7 @@ namespace ActionLine.EditorView
         private readonly VisualElement disbaleElement = new VisualElement();
         public TrackView()
         {
-            style.backgroundColor = ActionLineStyles.TrackGray;
+            style.backgroundColor = ActionLineStyles.NormalTrackColor;
             Add(disbaleElement);
             disbaleElement.StretchToParentSize();
             disbaleElement.style.backgroundColor = new Color(0, 0, 0, 0.9f);
@@ -22,11 +22,11 @@ namespace ActionLine.EditorView
         {
             if (selected)
             {
-                style.backgroundColor = ActionLineStyles.TrackBlue;
+                style.backgroundColor = ActionLineStyles.SelectTrackColor;
             }
             else
             {
-                style.backgroundColor = ActionLineStyles.TrackGray;
+                style.backgroundColor = ActionLineStyles.NormalTrackColor;
             }
         }
 

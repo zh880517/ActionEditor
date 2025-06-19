@@ -10,6 +10,7 @@ namespace ActionLine.EditorView
         {
             public ActionClipView ClipView;
             public VisualElement BG;
+            public VisualElement Disable;
         }
         private readonly List<ClipUnit> clips = new List<ClipUnit>();
         private int visableCount = 0;
@@ -70,6 +71,22 @@ namespace ActionLine.EditorView
             }
         }
 
+        public void SetClipDisable(int index, bool disable)
+        {
+            if (index >= 0 && index < clips.Count)
+            {
+                var clip = clips[index];
+                if (disable)
+                {
+                    clip.Disable.style.display = DisplayStyle.Flex;
+                }
+                else
+                {
+                    clip.Disable.style.display = DisplayStyle.None;
+                }
+            }
+        }
+
         private void EnsureCapacity(int count)
         {
             while (clips.Count < count)
@@ -79,23 +96,31 @@ namespace ActionLine.EditorView
                 bg.style.height = ActionLineStyles.ClipHeight;
                 bg.style.left = 0;
                 bg.style.right = 0;
-                bg.style.backgroundColor = ActionLineStyles.GrayBackGroundColor;
+                bg.style.backgroundColor = ActionLineStyles.NormalClipColor;
                 bg.style.flexGrow = 0;
                 bg.style.flexShrink = 0;
                 bg.pickingMode = PickingMode.Ignore;
                 int indexInQueue = clips.Count;
-                bg.RegisterCallback<MouseDownEvent>(evt => OnClickBackGround(indexInQueue, evt), TrickleDown.TrickleDown);
+                bg.RegisterCallback<MouseUpEvent>(evt => OnMouseUp(indexInQueue, evt));
                 bg.style.display = DisplayStyle.None;
                 Add(bg);
                 ActionClipView clip = new ActionClipView { Index = indexInQueue };
                 bg.Add(clip);
+                VisualElement disbale = new VisualElement();
+                disbale.StretchToParentSize();
+                disbale.pickingMode = PickingMode.Ignore;
+                disbale.style.backgroundColor = ActionLineStyles.DisbleTrackColor;
+                disbale.style.display = DisplayStyle.None;
+                bg.Add(disbale);
                 clips.Add(new ClipUnit { ClipView = clip, BG = bg });
             }
         }
 
-        private void OnClickBackGround(int index, MouseDownEvent evt)
+        private void OnMouseUp(int index, MouseUpEvent evt)
         {
-            SetClipBGColor(index, ActionLineStyles.SelectBackGroundColor);
+            //SetClipBGColor(index, ActionLineStyles.SelectBackGroundColor);
+            using var newEvt = TrackTitleMouseUpEvent.GetPooled(evt.button, index, evt.mousePosition, evt.modifiers);
+            SendEvent(newEvt);
         }
 
     }

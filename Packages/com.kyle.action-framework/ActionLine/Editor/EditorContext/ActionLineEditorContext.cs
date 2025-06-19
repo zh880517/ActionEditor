@@ -42,7 +42,7 @@ namespace ActionLine.EditorView
                 view.AddManipulator(new TrackTitleManipulator(this));
                 Clear();
                 if (target)
-                    Update();
+                    RefreshView();
                 if(actions.Count == 0)
                 {
                     InitEditorAction();
@@ -62,7 +62,7 @@ namespace ActionLine.EditorView
                 Clear();
                 target = asset;
                 RefreshViewPort();
-                Update();
+                RefreshView();
             }
         }
 
@@ -91,7 +91,7 @@ namespace ActionLine.EditorView
             view?.SetViewPort(viewPortData.Scale, viewPortData.Position.x, viewPortData.Position.y);
         }
 
-        public void Update()
+        public void RefreshView()
         {
             clips.Clear();
             target.ExportClipData(clips);
@@ -130,7 +130,22 @@ namespace ActionLine.EditorView
                 }
                 UpdateClip(context, i);
             }
+            RefreshSelectState();
             view.Track.Group.UpdateClipPosition();
+        }
+
+        public void RefreshSelectState()
+        {
+            for (int i = 0; i < clipEditors.Count; i++)
+            {
+                var editor = clipEditors[i];
+                bool isClipSelected = SelectedClips.Contains(editor.Data);
+                bool isTrackSelected = SelectedTracks.Contains(editor.Data);
+                editor.TitleView.SetSelected(isTrackSelected);
+                editor.ClipView.ShowOutLine(isClipSelected);
+                view.Track.Group.SetClipBGColor(i, isTrackSelected ? ActionLineStyles.SelectTrackColor : ActionLineStyles.NormalTrackColor);
+                view.Track.Group.SetClipDisable(i, !editor.Data.IsActive);
+            }
         }
 
         /// <summary>
@@ -176,7 +191,6 @@ namespace ActionLine.EditorView
 
         protected virtual void InitEditorAction()
         {
-
         }
 
         private void UpdateClip(ActionClipEditorContext context, int index)

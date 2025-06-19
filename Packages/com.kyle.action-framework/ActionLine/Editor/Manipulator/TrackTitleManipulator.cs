@@ -98,7 +98,7 @@ namespace ActionLine.EditorView
                                     context.Target.MoveToBehind(item, preClip);
                                     preClip = item;
                                 }
-                                context.Update();
+                                context.RefreshView();
                             }
                         }
                     }
@@ -108,7 +108,7 @@ namespace ActionLine.EditorView
             }
             if (evt.Button == 0)
             {
-                SelectTrack(evt.Index, evt.ActionKey);
+                context.SelectTrack(evt.Index, evt.ActionKey);
             }
             else if (evt.Button == 1)
             {
@@ -116,26 +116,5 @@ namespace ActionLine.EditorView
             }
         }
 
-        private void SelectTrack(int index, bool multi)
-        {
-            var data = context.Clips[index];
-            if (multi)
-            {
-                int selectedIndex = context.SelectedTracks.IndexOf(data);
-                if (selectedIndex >= 0)
-                {
-                    context.SelectedTracks.RemoveAt(selectedIndex);
-                }
-                else
-                {
-                    context.SelectedTracks.Add(data);
-                }
-            }
-            else
-            {
-                context.SelectedTracks.Clear();
-                context.SelectedTracks.Add(data);
-            }
-        }
     }
 }

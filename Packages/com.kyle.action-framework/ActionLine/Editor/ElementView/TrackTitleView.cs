@@ -60,6 +60,18 @@ namespace ActionLine.EditorView
             }
         }
 
+        public void SetSelected(bool isSelected)
+        {
+            if (isSelected)
+            {
+                style.borderLeftColor = ActionLineStyles.SelectTitleColor;
+            }
+            else
+            {
+                style.borderLeftColor = ActionLineStyles.NormalTitleColor;
+            }
+        }
+
         public void SetCustomElement(VisualElement element)
         {
             if (element != null)

@@ -96,34 +96,11 @@ namespace ActionLine.EditorView
             }
             if (evt.Button == 0)
             {
-                SelectClip(evt.ClipIndex, evt.ActionKey);
+                context.SelectClip(evt.ClipIndex, evt.ActionKey);
             }
             else if(evt.Button == 1)
             {
                 context.ShowContextMenue(ActionModeType.Clip);
-            }
-        }
-
-
-        private void SelectClip(int index, bool multi)
-        {
-            var data = context.Clips[index];
-            if (multi)
-            {
-                int selectedIndex = context.SelectedClips.IndexOf(data);
-                if (selectedIndex >= 0)
-                {
-                    context.SelectedClips.RemoveAt(selectedIndex);
-                }
-                else
-                {
-                    context.SelectedClips.Add(data);
-                }
-            }
-            else
-            {
-                context.SelectedClips.Clear();
-                context.SelectedClips.Add(data);
             }
         }
     }

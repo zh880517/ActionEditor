@@ -13,7 +13,7 @@ namespace ActionLine.EditorView
         public int EndFrame;
         public ActionClipView()
         {
-            style.backgroundColor = ActionLineStyles.GrayBackGroundColor;
+            style.backgroundColor = ActionLineStyles.NormalClipColor;
             var left = new MouseCursorRect();
             left.Cursor = MouseCursor.ResizeHorizontal;
             left.AlignParentLeft(5);
