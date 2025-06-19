@@ -2,6 +2,16 @@
 {
     public static class ActionLineSelectUtil
     {
+
+        public static void ClearSelected(this ActionLineEditorContext context, bool clip = true, bool track = true)
+        {
+            if (clip)
+                context.SelectedClips.Clear();
+            if (track)
+                context.SelectedTracks.Clear();
+            context.RefreshSelectState();
+        }
+
         public static void SelectClip(this ActionLineEditorContext context, int index, bool multi)
         {
             var data = context.Clips[index];

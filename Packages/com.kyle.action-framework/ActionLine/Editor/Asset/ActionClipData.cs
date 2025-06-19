@@ -4,7 +4,7 @@
     public struct ActionClipData : System.IEquatable<ActionClipData>
     {
         public ActionLineClip Clip;
-        public bool IsInherit;
+        public bool IsInherit;//不支持删除和上下移动
         public bool IsActive;
 
         public readonly bool Equals(ActionClipData other)

@@ -32,7 +32,8 @@ namespace ActionLine.EditorView
             if(evt.Button == 0)
             {
                 startFrame = context.View.Track.GetFrameInTrackByMousePosition(evt.MousePosition);
-                isStart = true;
+                if(context.SelectedClips.Exists(it=>!it.IsInherit))
+                    isStart = true;
             }
         }
 

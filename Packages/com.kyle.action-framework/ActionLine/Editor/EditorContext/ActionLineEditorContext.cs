@@ -33,6 +33,13 @@ namespace ActionLine.EditorView
         public ActionLineAsset Target => target;
         public ActionLineView View => view;
 
+        protected virtual void OnEnable()
+        {
+            hideFlags = HideFlags.HideAndDontSave;
+            InitEditorAction();
+            actions.Sort((x, y) => x.ShowOrder.CompareTo(y.ShowOrder));
+        }
+
         public void SetView(ActionLineView actionLineView)
         {
             if (view != actionLineView)
@@ -40,6 +47,7 @@ namespace ActionLine.EditorView
                 view = actionLineView;
                 view.AddManipulator(new ClipManipulator(this));
                 view.AddManipulator(new TrackTitleManipulator(this));
+                view.RegisterCallback<KeyDownEvent>(OnKeyDown);
                 Clear();
                 if (target)
                     RefreshView();
@@ -70,13 +78,35 @@ namespace ActionLine.EditorView
         {
             bool hasInherit = SelectedClips.Exists(x => x.IsInherit);
             GenericMenu menu = new GenericMenu();
+            int preOrder = -1;
             foreach (var item in actions)
             {
-                if(!item.Visable(mode))
+                if(item.MenuPath == null || !item.Visable(mode))
                     continue;
+
+                int order = item.ShowOrder / 100;
+                if (order != preOrder)
+                {
+                    if (preOrder >= 0)
+                        menu.AddSeparator("");
+                    preOrder = order;
+                }
+
+                string menuPath = item.MenuPath;
+                if (item.ShowShortCut && item.ShortCutKey != KeyCode.None)
+                {
+                    if (item.ActionKey && item.ShiftKey)
+                        menuPath = $"{menuPath}\tCtrl + Shift + {item.ShortCutKey}";
+                    else if (item.ActionKey)
+                        menuPath = $"{menuPath}\tCtrl + {item.ShortCutKey}";
+                    else if (item.ShiftKey)
+                        menuPath = $"{menuPath}\tShift + {item.ShortCutKey}";
+                    else
+                        menuPath = $"{menuPath}\t{item.ShortCutKey}";
+                }
                 if (item.IsValid(mode))
                 {
-                    menu.AddItem(new GUIContent(item.MenuPath, item.Icon), item.IsOn(mode), () => item.Execute(mode));
+                    menu.AddItem(new GUIContent(menuPath, item.Icon), item.IsOn(mode), () => item.Execute(mode));
                 }
                 else
                 {
@@ -84,6 +114,21 @@ namespace ActionLine.EditorView
                 }
             }
             menu.ShowAsContext();
+        }
+
+        private void OnKeyDown(KeyDownEvent evt)
+        {
+            bool isActionKey = evt.actionKey;
+            bool isShiftKey = evt.shiftKey;
+            var matched = actions.Find(it => it.ShortCutKey == evt.keyCode && it.ActionKey == isActionKey && it.ShiftKey == isShiftKey);
+            if (matched != null)
+            {
+                if (matched.IsValid(ActionModeType.ShortCut))
+                {
+                    matched.Execute(ActionModeType.ShortCut);
+                    evt.StopPropagation();
+                }
+            }
         }
 
         public void RefreshViewPort()

@@ -135,28 +135,29 @@ namespace ActionLine
             return false;
         }
 
-        public void AddClip(ActionLineClip clip)
+        public int AddClip(ActionLineClip clip)
         {
             if (clip == null) 
-                return;
+                return -1;
             int index = clips.IndexOf(clip);
             if (index >= 0)
             {
-                return;
+                return index;
             }
             clip.Owner = this;
             clips.Add(clip);
             AssetDatabase.RemoveObjectFromAsset(clip);
             AssetDatabase.AddObjectToAsset(clip, this);
             EditorUtility.SetDirty(this);
+            return clips.Count - 1;
         }
 
         public void RemoveClip(ActionLineClip clip)
         {
-            if (clip == null || !clips.Contains(clip))
+            if (clip == null || clip.Owner != this || !clips.Contains(clip))
                 return;
             clips.Remove(clip);
-            AssetDatabase.RemoveObjectFromAsset(clip);
+            //AssetDatabase.RemoveObjectFromAsset(clip);
             EditorUtility.SetDirty(this);
         }
 
