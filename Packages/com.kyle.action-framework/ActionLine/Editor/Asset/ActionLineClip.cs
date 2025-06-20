@@ -4,18 +4,19 @@ namespace ActionLine
 {
     public class ActionLineClip : ScriptableObject
     {
-        [ReadOnly]
+        [Combined, ReadOnly]
         public ActionLineAsset Owner;
 
-        [DisplayName("禁用")]
+        [Combined, Display("禁用"), PropertyMotion]
         public bool Disable;
-        [DisplayName("描述")]
-        public string Description;
 
-        [DisplayName("开始帧")]
+        [Combined, Display("描述"), Multiline]
+        public string Description = "123\n456";
+
+        [Combined, Display("开始帧"), PropertyMotion]
         public int StartFrame;
         
-        [DisplayName("帧长度")]
+        [Combined, Display("帧长度"), PropertyMotion]
         public int Length = 1;
     }
 }

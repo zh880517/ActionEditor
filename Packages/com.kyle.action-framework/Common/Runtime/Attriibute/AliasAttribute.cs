@@ -1,5 +1,5 @@
 ﻿using System;
-[AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
+[AttributeUsage(AttributeTargets.All, AllowMultiple = false, Inherited = false)]
 public class AliasAttribute : Attribute
 {
     public string Name { get; private set; }

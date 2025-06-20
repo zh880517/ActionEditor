@@ -8,17 +8,23 @@ namespace ActionLine
      */
     public class ActionLineAsset : ScriptableObject
     {
-        [SerializeField, ReadOnly]
-        private ActionLineAsset source;//继承的Source Asset，如果是变体，则指向原始Asset
-        [SerializeField, ReadOnly]
+        //继承的Source Asset，如果是变体，则指向原始Asset
+        [SerializeField]
+        [Combined, ReadOnly]
+        private ActionLineAsset source;
+
+        [SerializeField, HideInInspector]
         private List<ActionLineClip> clips = new List<ActionLineClip>();
+
         //禁用的Source Clips，仅变体生效
-        [SerializeField, ReadOnly]
+        [SerializeField, HideInInspector]
         private List<ActionLineClip> disableClips = new List<ActionLineClip>();
+
         //启用的Source Clips，仅变体生效,如果在Source中被禁用，则会在变体中启用
-        [SerializeField, ReadOnly]
+        [SerializeField, HideInInspector]
         private List<ActionLineClip> enableClips = new List<ActionLineClip>();
-        [DisplayName("帧数"), ReadOnly]
+
+        [Combined, Display("帧数"), ReadOnly]
         private int frameCount = 1;
         public int FrameCount=> (frameCount > 0 || !source) ? frameCount : source.frameCount;
         public int SelfFrameCount => frameCount;
