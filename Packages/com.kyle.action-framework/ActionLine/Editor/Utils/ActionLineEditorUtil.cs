@@ -21,7 +21,8 @@ namespace ActionLine.EditorView
                 throw new ArgumentException("Type must be a subclass of ActionLineClip", nameof(type));
             var clip = (ActionLineClip)ScriptableObject.CreateInstance(type);
             clip.hideFlags = HideFlags.DontSave | HideFlags.HideInHierarchy;
-            clip.name = type.Name;
+            var info = ActionClipTypeUtil.GetTypeInfo(type);
+            clip.name = info.Name;
             if (undoName != null)
                 Undo.RegisterCreatedObjectUndo(clip, "Create ActionLine Clip");
             return clip;

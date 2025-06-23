@@ -4,6 +4,9 @@ namespace ActionLine
 {
     public class ActionLineClip : ScriptableObject
     {
+        #region 编辑用临时属性，不保存
+        public bool Foldout { get; set; } = true;
+        #endregion
         [Combined, ReadOnly]
         public ActionLineAsset Owner;
 
@@ -11,7 +14,7 @@ namespace ActionLine
         public bool Disable;
 
         [Combined, Display("描述"), Multiline]
-        public string Description = "123\n456";
+        public string Description;
 
         [Combined, Display("开始帧"), PropertyMotion]
         public int StartFrame;

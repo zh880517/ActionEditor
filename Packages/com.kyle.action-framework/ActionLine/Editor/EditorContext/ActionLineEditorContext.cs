@@ -169,6 +169,7 @@ namespace ActionLine.EditorView
         {
             clips.Clear();
             target.ExportClipData(clips);
+            view.Property.SetAsset(target);
             int clipCount = clips.Count;
             view.Track.Group.SetVisableCount(clipCount);
             view.Title.Group.SetVisableCount(clipCount);
@@ -204,12 +205,20 @@ namespace ActionLine.EditorView
                 }
                 UpdateClip(context, i);
             }
+            SelectedClips.RemoveAll(it => !it.Clip);
+            SelectedTracks.RemoveAll(it => !it.Clip);
             RefreshSelectState();
             view.Track.Group.UpdateClipPosition();
         }
 
         public void RefreshSelectState()
         {
+            view.Property.SetVisableCount(SelectedClips.Count);
+            for (int i = 0; i < SelectedClips.Count; i++)
+            {
+                var data = SelectedClips[i];
+                view.Property.SetClip(i, data.Clip);
+            }
             for (int i = 0; i < clipEditors.Count; i++)
             {
                 var editor = clipEditors[i];
