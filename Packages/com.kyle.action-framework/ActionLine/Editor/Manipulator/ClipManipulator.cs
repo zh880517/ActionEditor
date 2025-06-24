@@ -101,7 +101,8 @@ namespace ActionLine.EditorView
             }
             else if(evt.Button == 1)
             {
-                context.ShowContextMenue(ActionModeType.Clip);
+                int currentFrame = context.View.Track.GetFrameInTrackByMousePosition(evt.MousePosition);
+                context.ShowContextMenue(ActionModeType.Clip, currentFrame);
             }
         }
     }

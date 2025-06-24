@@ -27,7 +27,7 @@ namespace ActionLine.EditorView
             lable.parent.Insert(index, icon);
         }
 
-        public void SetClip(ActionLineClip clip)
+        public void SetClip(ActionLineClip clip, bool editorable)
         {
             if (this.clip == clip)
                 return;
@@ -50,6 +50,8 @@ namespace ActionLine.EditorView
                 icon.image = typeInfo.Icon;
                 style.display = DisplayStyle.Flex;
                 inspector = new InspectorElement(clip);
+                inspector.SetEnabled(editorable);
+                //TODO:修改背景色或者添加文本提示框提示不可修改
                 foldout.Add(inspector);
             }
         }

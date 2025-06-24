@@ -22,6 +22,8 @@ namespace ActionLine.EditorView
         public float HorizontalOffset => horizontalOffset;
         public float VerticalOffset => verticalOffset;
 
+        public int CurrentFrame => cursorView.CurrentFrame;
+
 
         public System.Action<float> OnScaleChanged;
         public System.Action<float> OnVerticalScrollChanged;

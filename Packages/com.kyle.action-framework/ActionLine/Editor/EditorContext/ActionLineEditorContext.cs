@@ -103,10 +103,28 @@ namespace ActionLine.EditorView
             typeSelectWindow.Show(Event.current.mousePosition, 0, 0f);
         }
 
-        public void ShowContextMenue(ActionModeType mode)
+        public void ShowContextMenue(ActionModeType mode, int frameIndex)
         {
             bool hasInherit = SelectedClips.Exists(x => x.IsInherit);
             GenericMenu menu = new GenericMenu();
+            if(SelectedClips.Count == 1 && !hasInherit)
+            {
+                var clipContext = clipEditors.Find(x => x.Data == SelectedClips[0]);
+                if (clipContext != null)
+                {
+                    if(mode == ActionModeType.Clip)
+                    {
+                        int offsetFrame = frameIndex - clipContext.Data.Clip.StartFrame;
+                        if (offsetFrame < clipContext.Data.Clip.Length)
+                            clipContext.Editor.OnClipMenu(clipContext.Data.Clip, offsetFrame, menu);
+
+                    }
+                    else if(mode == ActionModeType.TrackTitle)
+                    {
+                        clipContext.Editor.OnTitleMenu(clipContext.Data.Clip, menu);
+                    }
+                }
+            }
             int preOrder = -1;
             foreach (var item in actions)
             {
@@ -147,6 +165,22 @@ namespace ActionLine.EditorView
 
         private void OnKeyDown(KeyDownEvent evt)
         {
+            if(evt.altKey && evt.keyCode != KeyCode.None && SelectedClips.Count == 1 && !SelectedClips[0].IsInherit)
+            {
+                var clipContext = clipEditors.Find(x => x.Data == SelectedClips[0]);
+                if (clipContext != null)
+                {
+                    int offsetFrame = view.Track.CurrentFrame - clipContext.Data.Clip.StartFrame;
+                    if (offsetFrame < clipContext.Data.Clip.Length)
+                    {
+                        if(clipContext.Editor.OnKeyDown(clipContext.Data.Clip, evt.shiftKey, evt.keyCode, offsetFrame))
+                        {
+                            evt.StopPropagation();
+                            return;
+                        }
+                    }
+                }
+            }
             bool isActionKey = evt.actionKey;
             bool isShiftKey = evt.shiftKey;
             var matched = actions.Find(it => it.ShortCutKey == evt.keyCode && it.ActionKey == isActionKey && it.ShiftKey == isShiftKey);
@@ -217,7 +251,7 @@ namespace ActionLine.EditorView
             for (int i = 0; i < SelectedClips.Count; i++)
             {
                 var data = SelectedClips[i];
-                view.Property.SetClip(i, data.Clip);
+                view.Property.SetClip(i, data.Clip, data.IsInherit);
             }
             for (int i = 0; i < clipEditors.Count; i++)
             {

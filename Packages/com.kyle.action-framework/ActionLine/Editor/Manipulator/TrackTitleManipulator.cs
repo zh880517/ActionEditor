@@ -112,7 +112,7 @@ namespace ActionLine.EditorView
             }
             else if (evt.Button == 1)
             {
-                context.ShowContextMenue(ActionModeType.TrackTitle);
+                context.ShowContextMenue(ActionModeType.TrackTitle, 0);
             }
         }
 

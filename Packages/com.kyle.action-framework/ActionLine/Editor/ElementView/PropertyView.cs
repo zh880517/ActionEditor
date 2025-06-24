@@ -46,14 +46,14 @@ namespace ActionLine.EditorView
             for (int i = count; i < propertyViews.Count; i++)
             {
                 var e = propertyViews[i];
-                e.SetClip(null);
+                e.SetClip(null, false);
             }
         }
 
-        public void SetClip(int index, ActionLineClip clip)
+        public void SetClip(int index, ActionLineClip clip, bool editorable)
         {
             var e = propertyViews[index];
-            e.SetClip(clip);
+            e.SetClip(clip, editorable);
         }
 
         public void SetAsset(ActionLineAsset asset)
