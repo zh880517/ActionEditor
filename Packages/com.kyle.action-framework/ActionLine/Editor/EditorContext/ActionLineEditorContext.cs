@@ -260,6 +260,7 @@ namespace ActionLine.EditorView
         public void RefreshViewPort()
         {
             view?.SetViewPort(viewPortData.Scale, viewPortData.Position.x, viewPortData.Position.y);
+            view?.SetFrameIndex(viewPortData.FrameIndex);
         }
 
         public void RefreshView()
