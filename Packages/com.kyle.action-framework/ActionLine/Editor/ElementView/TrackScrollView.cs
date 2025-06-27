@@ -99,6 +99,11 @@ namespace ActionLine.EditorView
             }
         }
 
+        public void SetFrameIndex(int frame)
+        {
+            cursorView.CurrentFrame = frame;
+        }
+
         public void FitFrameInView(int frame)
         {
             if (!hasGeometryChange)

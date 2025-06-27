@@ -13,6 +13,7 @@ namespace ActionLine.EditorView
         public float Scale => trackScroll.Scale;
         public float HorizontalOffset => trackScroll.HorizontalOffset;
         public float VerticalOffset => trackScroll.VerticalOffset;
+        public int CurrentFrame => trackScroll.CurrentFrame;
 
         public ActionLineView()
         {
@@ -36,6 +37,18 @@ namespace ActionLine.EditorView
         {
             trackScroll.SetViewPort(scale, horizontalOffset, verticalOffset);
             trackTitle.style.top = -verticalOffset;
+        }
+
+        public void SetMaxFrameCount(int count)
+        {
+            trackScroll.SetFrameCount(count);
+            trackTitle.PlayButtons.SetMaxFrame(count - 1);
+        }
+
+        public void SetFrameIndex(int frame)
+        {
+            trackScroll.SetFrameIndex(frame);
+            trackTitle.PlayButtons.SetFrame(frame);
         }
     }
 }

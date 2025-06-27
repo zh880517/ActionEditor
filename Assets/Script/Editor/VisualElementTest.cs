@@ -58,25 +58,13 @@ public class VisualElementTest : EditorWindow
         //rootVisualElement.Add(actionLineView);
         //actionLineView.Track.SetFrameCount(500);
         //actionLineView.style.flexGrow = 1;
-        Foldout foldout = new Foldout { text = "ActionLineClip Inspector" };
-        target = CreateInstance<ActionLine.ActionLineClip>();
-        var element = new InspectorElement(target);
-        foldout.Add(element);
-        var toggle = foldout.Q<Toggle>();
-        foldout.style.borderTopWidth = 1;
-        foldout.style.borderTopColor = Color.black;
-        foldout.style.borderBottomWidth = 1;
-        foldout.style.borderBottomColor = Color.black;
-        toggle.style.borderBottomWidth = 0.5f;
-        toggle.style.borderBottomColor = new Color(0.15f, 0.15f, 0.15f, 0.9f);
-        var lable = toggle.Q<Label>();
-        var icon = new Image();
-        icon.image = MonoScriptUtil.GetMonoScriptIcon<ActionLineClip>();
-        int index = lable.parent.IndexOf(lable);
-        icon.style.marginLeft = 5;
-        icon.style.marginRight = 5;
-        lable.parent.Insert(index, icon);
-        rootVisualElement.Add(foldout);
+
+        Debug.LogError("CreateGUI called");
+    }
+
+    private void OnEnable()
+    {
+        Debug.LogError("OnEnable called");
     }
 
     private void OnDestroy()

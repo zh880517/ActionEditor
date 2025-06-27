@@ -93,13 +93,22 @@ public class PlayButtonsView : VisualElement
         play.SetBuildinIcon(isPlaying ? "PauseButton" : "Animation.Play");
     }
 
-    public void SetFrame(int frame)
+    public void SetMaxFrame(int frame)
     {
         if (frame > MaxFrame)
         {
             frame = MaxFrame;
         }
         frameField.SetValueWithoutNotify(frame);
+    }
+
+    public void SetFrame(int frameIndex)
+    {
+        frameIndex = Mathf.Clamp(frameIndex, 0, MaxFrame);
+        if (frameIndex != frameField.value)
+        {
+            frameField.SetValueWithoutNotify(frameIndex);
+        }
     }
 
     private void OnFrameFieldChanged(ChangeEvent<int> evt)

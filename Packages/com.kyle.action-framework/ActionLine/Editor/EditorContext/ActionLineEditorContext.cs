@@ -11,6 +11,7 @@ namespace ActionLine.EditorView
         {
             public float Scale;
             public Vector2 Position;
+            public int FrameIndex;
         }
         [SerializeField]
         private ViewPortData viewPortData = new ViewPortData
@@ -20,9 +21,12 @@ namespace ActionLine.EditorView
         };
 
         [SerializeField]
-        private ActionLineAsset target;
+        protected ActionLineAsset target;
         [SerializeField]
-        private ActionClipTypeSelectWindow typeSelectWindow;
+        protected ActionClipTypeSelectWindow typeSelectWindow;
+        [SerializeField]
+        protected PreviewResourceContext resourceContext;
+        protected ActionLinePreviewContext preview;
         public List<ActionClipData> SelectedClips = new List<ActionClipData>();
         public List<ActionClipData> SelectedTracks = new List<ActionClipData>();
 
@@ -34,16 +38,34 @@ namespace ActionLine.EditorView
         public IReadOnlyList<ActionClipData> Clips => clips;
         public ActionLineAsset Target => target;
         public ActionLineView View => view;
+        public PreviewResourceContext ResourceContext => resourceContext;
 
-        protected virtual void OnEnable()
+        public virtual ActionLineView RequireView()
         {
-            hideFlags = HideFlags.HideAndDontSave;
-            if(view == null)
+            if (view == null)
             {
                 view = new ActionLineView();
                 view.AddManipulator(new ClipManipulator(this));
                 view.AddManipulator(new TrackTitleManipulator(this));
                 view.RegisterCallback<KeyDownEvent>(OnKeyDown);
+                view.RegisterCallback<FrameIndexChangeEvent>(FrameIndexChange);
+            }
+            return view;
+        }
+
+        protected virtual void OnEnable()
+        {
+            hideFlags = HideFlags.HideAndDontSave;
+            Undo.undoRedoPerformed += OnUndoRedo;
+        }
+
+        protected virtual void OnDisable()
+        {
+            Undo.undoRedoPerformed -= OnUndoRedo;
+            if (preview != null)
+            {
+                preview.Destroy();
+                preview = null;
             }
         }
 
@@ -53,6 +75,38 @@ namespace ActionLine.EditorView
             {
                 DestroyImmediate(typeSelectWindow);
                 typeSelectWindow = null;
+            }
+            DestroySimulate();
+        }
+
+
+        public void CreateSimulate()
+        {
+            if (Application.isPlaying)
+                return;
+            if (!resourceContext)
+            {
+                var provider = ActionLineEditorProvider.GetProvider(target.GetType());
+                resourceContext = provider.CreateResourceContext();
+            }
+            if (preview != null)
+            {
+                var provider = ActionLineEditorProvider.GetProvider(target.GetType());
+                preview = provider.CreatePreview(target, resourceContext);
+            }
+        }
+
+        public void DestroySimulate()
+        {
+            if (preview != null)
+            {
+                preview.Destroy();
+                preview = null;
+            }
+            if (resourceContext != null)
+            {
+                DestroyImmediate(resourceContext);
+                resourceContext = null;
             }
         }
 
@@ -85,8 +139,11 @@ namespace ActionLine.EditorView
                             item.Context = this;
                         }
                     }
-                    RefreshViewPort();
-                    RefreshView();
+                    if(view != null)
+                    {
+                        RefreshViewPort();
+                        RefreshView();
+                    }
                 }
             }
         }
@@ -170,7 +227,7 @@ namespace ActionLine.EditorView
                 var clipContext = clipEditors.Find(x => x.Data == SelectedClips[0]);
                 if (clipContext != null)
                 {
-                    int offsetFrame = view.Track.CurrentFrame - clipContext.Data.Clip.StartFrame;
+                    int offsetFrame = view.CurrentFrame - clipContext.Data.Clip.StartFrame;
                     if (offsetFrame < clipContext.Data.Clip.Length)
                     {
                         if(clipContext.Editor.OnKeyDown(clipContext.Data.Clip, evt.shiftKey, evt.keyCode, offsetFrame))
@@ -194,6 +251,12 @@ namespace ActionLine.EditorView
             }
         }
 
+        private void FrameIndexChange(FrameIndexChangeEvent evt)
+        {
+            view.SetFrameIndex(evt.Frame);
+            preview?.SetFrame(evt.Frame);
+        }
+
         public void RefreshViewPort()
         {
             view?.SetViewPort(viewPortData.Scale, viewPortData.Position.x, viewPortData.Position.y);
@@ -201,6 +264,7 @@ namespace ActionLine.EditorView
 
         public void RefreshView()
         {
+            view.SetMaxFrameCount(target.FrameCount);
             clips.Clear();
             target.ExportClipData(clips);
             view.Property.SetAsset(target);
@@ -243,6 +307,7 @@ namespace ActionLine.EditorView
             SelectedTracks.RemoveAll(it => !it.Clip);
             RefreshSelectState();
             view.Track.Group.UpdateClipPosition();
+            preview?.Resfresh(clips);
         }
 
         public void RefreshSelectState()
@@ -279,7 +344,8 @@ namespace ActionLine.EditorView
             viewPortData = new ViewPortData
             {
                 Scale = view.Scale,
-                Position = new Vector2(view.HorizontalOffset, view.VerticalOffset)
+                Position = new Vector2(view.HorizontalOffset, view.VerticalOffset),
+                FrameIndex = view.CurrentFrame,
             };
             Undo.RegisterCompleteObjectUndo(target, name);
             EditorUtility.SetDirty(target);
@@ -295,6 +361,7 @@ namespace ActionLine.EditorView
             clipEditors.Clear();
             view.Track.Group.SetVisableCount(0);
             view.Title.Group.SetVisableCount(0);
+            preview?.Clear();
         }
 
         protected void RegisterAction<T>() where T : EditorAction, new()
@@ -323,5 +390,10 @@ namespace ActionLine.EditorView
             context.ClipView.EndFrame = context.Data.Clip.StartFrame + context.Data.Clip.Length;
         }
 
+        private void OnUndoRedo()
+        {
+            RefreshView();
+            RefreshViewPort();
+        }
     }
 }

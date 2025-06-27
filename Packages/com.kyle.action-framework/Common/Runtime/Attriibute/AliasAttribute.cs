@@ -1,4 +1,5 @@
 ﻿using System;
+
 [AttributeUsage(AttributeTargets.All, AllowMultiple = false, Inherited = false)]
 public class AliasAttribute : Attribute
 {

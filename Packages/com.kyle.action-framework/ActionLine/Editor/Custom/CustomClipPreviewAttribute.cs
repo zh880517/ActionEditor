@@ -3,10 +3,10 @@
 namespace ActionLine.EditorView
 {
     [AttributeUsage(AttributeTargets.All, Inherited = false, AllowMultiple = false)]
-    public class CustomClipSimulatorAttribute : Attribute
+    public class CustomClipPreviewAttribute : Attribute
     {
         public Type ClipType { get; private set; }
-        public CustomClipSimulatorAttribute(Type clipType)
+        public CustomClipPreviewAttribute(Type clipType)
         {
             ClipType = clipType;
         }
