@@ -56,7 +56,5 @@ namespace ActionLine.EditorView
             }
             return provider;
         }
-
-        public static ActionLineEditorContext
     }
 }
