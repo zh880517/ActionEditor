@@ -16,9 +16,11 @@ namespace ActionLine.EditorView
         public PropertyView()
         {
             Add(buttonGroup);
-            buttonGroup.Add(new Button() { text = "Clip" });
-            buttonGroup.Add(new Button() { text = "Group" });
+            buttonGroup.Add(new Button() { text = "  Clip  " });
+            buttonGroup.Add(new Button() { text = " Group " });
             buttonGroup.isMultipleSelection = false;
+            buttonGroup.contentContainer.style.justifyContent = Justify.Center; // 水平居中
+            buttonGroup.contentContainer.style.alignItems = Align.Center;      // 垂直居中
             buttonGroup.RegisterValueChangedCallback(OnToggleStateChange);
             Add(groupScrollView);
             Add(clipScrollView);

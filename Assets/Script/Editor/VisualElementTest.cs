@@ -1,4 +1,5 @@
 using ActionLine;
+using ActionLine.EditorView;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
@@ -54,17 +55,15 @@ public class VisualElementTest : EditorWindow
         //    trackScrollView.FitFrameInView(evt.newValue);
         //});
 
-        //var actionLineView = new ActionLineView();
-        //rootVisualElement.Add(actionLineView);
-        //actionLineView.Track.SetFrameCount(500);
-        //actionLineView.style.flexGrow = 1;
+        var actionLineView = new ActionLineView();
+        rootVisualElement.Add(actionLineView);
+        actionLineView.SetMaxFrameCount(500);
+        actionLineView.style.flexGrow = 1;
 
-        Debug.LogError("CreateGUI called");
     }
 
     private void OnEnable()
     {
-        Debug.LogError("OnEnable called");
     }
 
     private void OnDestroy()

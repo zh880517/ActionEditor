@@ -64,6 +64,7 @@ namespace ActionLine.EditorView
         public void SetFrame(int index)
         {
             FrameIndex = index;
+            OnBeforFramePreview();
             for (int i = 0; i < previews.Count; i++)
             {
                 var unit = previews[i];
@@ -90,7 +91,11 @@ namespace ActionLine.EditorView
                     unit.Preview.Update(this, data.Clip, frameOffset);
                 }
             }
+            OnAfterFramePreview();
         }
+
+        protected virtual void OnBeforFramePreview(){}
+        protected virtual void OnAfterFramePreview(){}
 
         public void Clear()
         {
@@ -118,11 +123,15 @@ namespace ActionLine.EditorView
             }
         }
 
-        public virtual void Enable()
-        {
+        /// <summary>
+        /// 在创建ActionLinePreviewContext时调用，用于初始化一些资源或状态。
+        /// </summary>
+        public virtual void OnCreate() { }
 
-        }
-
+        /// <summary>
+        /// 在禁用ActionLinePreviewContext时调用，用于隐藏资源或重置状态。
+        /// 触发时机：切换其它资源的预览时，或者作为其它ActionLine的Clip时结束调用。
+        /// </summary>
         public virtual void Disable()
         {
             foreach (var item in previews)

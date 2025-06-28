@@ -39,6 +39,7 @@ namespace ActionLine.EditorView
         public ActionLineAsset Target => target;
         public ActionLineView View => view;
         public PreviewResourceContext ResourceContext => resourceContext;
+        public bool IsPreviewEnable => ResourceContext;
 
         public virtual ActionLineView RequireView()
         {
@@ -57,11 +58,13 @@ namespace ActionLine.EditorView
         {
             hideFlags = HideFlags.HideAndDontSave;
             Undo.undoRedoPerformed += OnUndoRedo;
+            EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
         }
 
         protected virtual void OnDisable()
         {
             Undo.undoRedoPerformed -= OnUndoRedo;
+            EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
             if (preview != null)
             {
                 preview.Destroy();
@@ -76,11 +79,11 @@ namespace ActionLine.EditorView
                 DestroyImmediate(typeSelectWindow);
                 typeSelectWindow = null;
             }
-            DestroySimulate();
+            DestroyPrview();
         }
 
 
-        public void CreateSimulate()
+        public void CreatePreview()
         {
             if (Application.isPlaying)
                 return;
@@ -93,10 +96,12 @@ namespace ActionLine.EditorView
             {
                 var provider = ActionLineEditorProvider.GetProvider(target.GetType());
                 preview = provider.CreatePreview(target, resourceContext);
+                preview.OnCreate();
+                preview.SetFrame(view.CurrentFrame);
             }
         }
 
-        public void DestroySimulate()
+        public void DestroyPrview()
         {
             if (preview != null)
             {
@@ -119,13 +124,15 @@ namespace ActionLine.EditorView
         {
             if (asset != target)
             {
-                if(target && (!asset || asset.GetType() != target.GetType()))
+                if (target && (!asset || asset.GetType() != target.GetType()))
                 {
                     if(typeSelectWindow)
                     {
                         DestroyImmediate(typeSelectWindow);
                         typeSelectWindow = null;
                     }
+                    preview?.Destroy();
+                    preview = null;
                 }
                 Clear();
                 target = asset;
@@ -138,6 +145,10 @@ namespace ActionLine.EditorView
                         {
                             item.Context = this;
                         }
+                    }
+                    if(!resourceContext)
+                    {
+                        CreatePreview();
                     }
                     if(view != null)
                     {
@@ -261,6 +272,8 @@ namespace ActionLine.EditorView
         {
             view?.SetViewPort(viewPortData.Scale, viewPortData.Position.x, viewPortData.Position.y);
             view?.SetFrameIndex(viewPortData.FrameIndex);
+            view?.SetPlayState(false);
+            preview?.SetFrame(viewPortData.FrameIndex);
         }
 
         public void RefreshView()
@@ -393,8 +406,16 @@ namespace ActionLine.EditorView
 
         private void OnUndoRedo()
         {
-            RefreshView();
             RefreshViewPort();
+            RefreshView();
+        }
+
+        private void OnPlayModeStateChanged(PlayModeStateChange state)
+        {
+            if (state == PlayModeStateChange.ExitingEditMode)
+            {
+                DestroyPrview();
+            }
         }
     }
 }

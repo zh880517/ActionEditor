@@ -50,5 +50,10 @@ namespace ActionLine.EditorView
             trackScroll.SetFrameIndex(frame);
             trackTitle.PlayButtons.SetFrame(frame);
         }
+
+        public void SetPlayState(bool isPlaying)
+        {
+            trackTitle.PlayButtons.SetPlayState(isPlaying);
+        }
     }
 }
