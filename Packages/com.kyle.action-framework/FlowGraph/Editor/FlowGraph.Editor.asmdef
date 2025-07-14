@@ -1,0 +1,20 @@
+{
+    "name": "FlowGraph.Editor",
+    "rootNamespace": "",
+    "references": [
+        "GUID:edca0bc4151401e458d0a30a4e81774a",
+        "GUID:4c21a2e7390f04d489b274fe2134650a",
+        "GUID:405e66a069b6cac4d85af8ad68e29061"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
