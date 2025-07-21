@@ -9,6 +9,7 @@ internal class PropertyMotionDrawer : TCombinableDrawer<PropertyMotionAttribute>
         {
             using (var evt = PropertyChangeEvent.GetPooled(p))
             {
+                evt.target = field;
                 field.SendEvent(evt);
             }
         });

@@ -108,6 +108,7 @@ namespace ActionLine.EditorView
         {
             using (var evt = ClipMouseDownEvent.GetPooled(mde.button, type, Index, mde.mousePosition, mde.modifiers))
             {
+                evt.target = this;
                 SendEvent(evt);
             }
         }
@@ -116,6 +117,7 @@ namespace ActionLine.EditorView
         {
             using (var evt = ClipMouseUpEvent.GetPooled(mue.button, type, Index, mue.mousePosition, mue.modifiers))
             {
+                evt.target = this;
                 SendEvent(evt);
             }
         }
@@ -126,6 +128,7 @@ namespace ActionLine.EditorView
                 return;
             using(var newEvt = ClipMouseMoveEvent.GetPooled(evt.button, type, Index, evt.mousePosition, evt.modifiers))
             {
+                newEvt.target = this;
                 SendEvent(newEvt);
             }
         }

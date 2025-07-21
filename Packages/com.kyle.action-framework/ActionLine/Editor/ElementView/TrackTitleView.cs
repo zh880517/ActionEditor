@@ -86,6 +86,7 @@ namespace ActionLine.EditorView
             }
             using (var mouseDownEvent = TrackTitleMouseDownEvent.GetPooled(evt.button, Index, evt.mousePosition, evt.modifiers))
             {
+                mouseDownEvent.target = this;
                 SendEvent(mouseDownEvent);
             }
         }
@@ -95,6 +96,7 @@ namespace ActionLine.EditorView
             this.ReleaseMouse();
             using (var mouseUpEvent = TrackTitleMouseUpEvent.GetPooled(evt.button, Index, evt.mousePosition, evt.modifiers))
             {
+                mouseUpEvent.target = this;
                 SendEvent(mouseUpEvent);
             }
         }
@@ -105,6 +107,7 @@ namespace ActionLine.EditorView
                 return;
             using (var mouseMoveEvent = TrackTitleMouseMoveEvent.GetPooled(evt.button, Index, evt.mousePosition, evt.modifiers))
             {
+                mouseMoveEvent.target = this;
                 SendEvent(mouseMoveEvent);
             }
         }

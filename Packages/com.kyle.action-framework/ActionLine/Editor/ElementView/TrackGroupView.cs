@@ -120,6 +120,7 @@ namespace ActionLine.EditorView
         {
             //SetClipBGColor(index, ActionLineStyles.SelectBackGroundColor);
             using var newEvt = TrackTitleMouseUpEvent.GetPooled(evt.button, index, evt.mousePosition, evt.modifiers);
+            newEvt.target = this;
             SendEvent(newEvt);
         }
 

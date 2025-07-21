@@ -120,6 +120,7 @@ public class PlayButtonsView : VisualElement
 
         using (var evt = PlayButtonChangeEvent.GetPooled(type))
         {
+            evt.target = this;
             SendEvent(evt);
         }
     }
@@ -173,6 +174,7 @@ public class PlayButtonsView : VisualElement
             {
                 using (var evt = FrameIndexChangeEvent.GetPooled(frameIndex))
                 {
+                    evt.target = this;
                     SendEvent(evt);
                 }
             }
@@ -189,6 +191,7 @@ public class PlayButtonsView : VisualElement
         }
         using (var newEvt = FrameIndexChangeEvent.GetPooled(frame))
         {
+            newEvt.target = this;
             SendEvent(newEvt);
         }
     }

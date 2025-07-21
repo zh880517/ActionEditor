@@ -215,6 +215,7 @@ public class TimelineTickMarkView : ImmediateModeElement
             cursorView.CurrentFrame = frame;
         using (var evt = FrameIndexChangeEvent.GetPooled(frame))
         {
+            evt.target = this;
             SendEvent(evt);
         }
         MarkDirtyRepaint();
