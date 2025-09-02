@@ -1,12 +1,12 @@
-﻿
-namespace Flow
+﻿namespace Flow
 {
     [System.Serializable]
     public class FlowEdge
     {
-        public FlowNode From;
-        public FlowNode To;
-        public string FromPort;
-        public string ToPort;
+        public FlowNode Output;//输出节点
+        public FlowNode Input;//目标节点
+        public string OutputPort;
+        public int OutputIndex;
+        public string InputPort;
     }
 }

@@ -3,9 +3,9 @@
     [System.Serializable]
     public class FlowDataEdge
     {
-        public FlowNode From;
-        public FlowNode To;
-        public string FromSlot;
-        public string ToSlot;
+        public FlowNode Output;
+        public FlowNode Input;
+        public string OutputSlot;
+        public string InputSlot;
     }
 }

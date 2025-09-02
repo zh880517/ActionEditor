@@ -2,9 +2,9 @@ using System.Collections.Generic;
 using UnityEngine;
 namespace Flow
 {
-    public class FlowGraphAsset : ScriptableObject
+    public class FlowGraph : ScriptableObject
     {
-        [Combined, Display("√Ë ˆ"), Multiline]
+        [Combined, Display("ÊèèËø∞"), Multiline]
         public string Comment;
         [HideInInspector]
         public List<FlowNode> Nodes = new List<FlowNode>();
@@ -12,5 +12,9 @@ namespace Flow
         public List<FlowEdge> Edges = new List<FlowEdge>();
         [HideInInspector]
         public List<FlowDataEdge> DataEdges = new List<FlowDataEdge>();
+        [HideInInspector]
+        public Vector3 Position;
+        [HideInInspector]
+        public Vector3 Scale;
     }
 }
