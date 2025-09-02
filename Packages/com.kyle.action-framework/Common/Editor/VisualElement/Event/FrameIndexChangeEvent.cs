@@ -7,6 +7,7 @@ public class FrameIndexChangeEvent : EventBase<FrameIndexChangeEvent>
     {
         base.Init();
         Frame = 0;
+        bubbles = true;
     }
     public static FrameIndexChangeEvent GetPooled(int frame)
     {
