@@ -87,7 +87,7 @@ namespace Flow.EditorView
                 {
                     typeInfo.InputFields.Add(f);
                 }
-                else if(parent == null && field.GetCustomAttribute<ExpandedInParent>() != null) //仅支持一层
+                else if(parent == null && field.GetCustomAttribute<ExpandedInParentAttribute>() != null) //仅支持一层
                 {
                     CollectDataPortFields(field.FieldType, f, typeInfo);
                 }

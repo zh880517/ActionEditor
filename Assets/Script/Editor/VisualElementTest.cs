@@ -1,5 +1,6 @@
 using ActionLine;
 using ActionLine.EditorView;
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
@@ -8,6 +9,28 @@ using UnityEngine.UIElements;
 
 public class VisualElementTest : EditorWindow
 {
+    public class PropertyEditorTest
+    {
+        public int intValue;
+        public float floatValue;
+        public string stringValue;
+        public bool boolValue;
+        public Vector2 vector2Value;
+        public Vector3 vector3Value;
+        public Vector4 vector4Value;
+        public Color colorValue;
+        public AnimationCurve curveValue;
+        public Gradient gradientValue;
+        public LayerMask layerMaskValue;
+        public GameObject gameObjectValue;
+        [DisplayName("整数列表")]
+        public List<int> intList;
+        [DisplayName("字符串数组"), FixedArraySize]
+        public string[] stringArray = new string[5];
+        [IntPopupSelect(new string[] { "选项1", "选项2", "选项3" })]
+        public int popupValue;
+    }
+
     [MenuItem("Tools/VisualElementTest")]
     private static void Test()
     {
@@ -55,11 +78,17 @@ public class VisualElementTest : EditorWindow
         //    trackScrollView.FitFrameInView(evt.newValue);
         //});
 
+        /*
         var actionLineView = new ActionLineView();
         rootVisualElement.Add(actionLineView);
         actionLineView.SetMaxFrameCount(500);
         actionLineView.style.flexGrow = 1;
+        */
 
+        PropertyEditorTest test = new PropertyEditorTest();
+        var editorElement = PropertyEditor.PropertyElementFactory.CreateByType(typeof(PropertyEditorTest));
+        editorElement.SetValue(test);
+        rootVisualElement.Add(editorElement);
     }
 
     private void OnEnable()

@@ -2,7 +2,7 @@
 {
     public class TFlowNode<T> : FlowNode where T : struct
     {
-        [ExpandedInParent]
+        [ExpandedInParentAttribute]
         public T Value;
     }
 }
