@@ -28,7 +28,7 @@ namespace Flow
 
     public interface IFlowDynamicOutputable<T> : IFlowDynamicOutputable
     {
-        List<T> Ports { get; }
+        List<T> Ports { get; }//动态输出端口数据,不能为null
     }
 
 

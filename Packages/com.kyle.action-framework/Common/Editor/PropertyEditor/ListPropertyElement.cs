@@ -28,6 +28,7 @@ namespace PropertyEditor
             listView.reorderable = true;
             listView.reorderMode = ListViewReorderMode.Animated;
             listView.showAddRemoveFooter = true;
+            listView.horizontalScrollingEnabled = false;
             listView.virtualizationMethod = CollectionVirtualizationMethod.DynamicHeight;
 
             Add(listView);

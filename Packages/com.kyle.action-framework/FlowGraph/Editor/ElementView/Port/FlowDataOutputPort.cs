@@ -4,9 +4,10 @@ using UnityEngine.UIElements;
 
 namespace Flow.EditorView
 {
-    public class FlowDataOutputPortView : Port
+    public class FlowDataOutputPort : FlowNodePort
     {
-        public FlowDataOutputPortView(Type type)
+        public string FieldName;
+        public FlowDataOutputPort(Type type)
             : base(Orientation.Horizontal, Direction.Output, Capacity.Multi, type)
         {
             var connectorListener = new EdgeConnectorListener();

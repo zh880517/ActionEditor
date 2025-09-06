@@ -9,26 +9,25 @@ namespace Flow.EditorView
     public class FlowNodeOutputPortField
     {
         public Type DataType;
+        public string Name;
         public string OldName;
-        public AliasAttribute Alias;
+        public string ShowName;
     }
 
     public class FlowNodeInputPortField
     {
-        public FlowNodeInputPortField Parent;
-        public FieldInfo Field;
-        public Type FieldType => Field.FieldType;
-        public string Name => Field.Name;
+        public string[] Path;
+        public Type FieldType;
+        public string Name;
         public string OldName;
-        public AliasAttribute Alias;
 
         public FlowNodeInputPortField(FieldInfo field)
         {
-            Field = field;
             var attr = field.GetCustomAttribute<FormerlySerializedAsAttribute>();
             if (attr != null)
                 OldName = attr.oldName;
-            Alias = field.GetCustomAttribute<AliasAttribute>();
+            FieldType = field.FieldType;
+            Name = field.Name;
         }
 
     }
@@ -44,18 +43,19 @@ namespace Flow.EditorView
     public class FlowNodeTypeInfo
     {
         public Type NodeType;
+        public string ShowName;
         public bool HasInput;
         public NodeOutputType OutputType = NodeOutputType.None;
         public List<FlowNodeInputPortField> InputFields = new List<FlowNodeInputPortField>();
         public List<FlowNodeOutputPortField> OutputFields = new List<FlowNodeOutputPortField>();
         public Type DynamicPortType;
-        public PropertyInfo DynamicProperty;
+        public FieldInfo DynamicPortField;
     }
     public static class FlowNodeTypeUtil
     {
         private readonly static Dictionary<Type, FlowNodeTypeInfo> nodeTypeInfos = new Dictionary<Type, FlowNodeTypeInfo>();
 
-        private static void CollectDataPortFields(Type type, FlowNodeInputPortField parent, FlowNodeTypeInfo typeInfo)
+        private static void CollectDataPortFields(Type type, string path, FlowNodeTypeInfo typeInfo)
         {
             List<FieldInfo> fields = new List<FieldInfo>();
             var currentType = type;
@@ -69,27 +69,64 @@ namespace Flow.EditorView
             }
             foreach (var field in fields)
             {
-                var f = new FlowNodeInputPortField(field) { Parent = parent };
+                if(field.IsDefined(typeof(DynamicOutputAttribute)))
+                {
+                    if(typeInfo.OutputType != NodeOutputType.Dynamic)
+                    {
+                        UnityEngine.Debug.LogError($"节点类型标记 [DynamicOutputAttribute] 必须继承自 IFlowDynamicOutputable 接口 : {type.FullName}, {field.Name}");
+                    }
+                    else if (field.FieldType.GetGenericTypeDefinition() == typeof(List<>))
+                    {
+                        if (typeInfo.DynamicPortField != null)
+                        {
+                            UnityEngine.Debug.LogError($"节点类型有重复标记 [DynamicOutputAttribute],仅支持一个字段 : {type.FullName}, {field.Name}");
+                        }
+                        else
+                        {
+                            typeInfo.DynamicPortType = field.FieldType.GetGenericArguments()[0];
+                            typeInfo.DynamicPortField = field;
+                        }
+                        continue;
+                    }
+                    else
+                    {
+                        UnityEngine.Debug.LogError($"节点类型标记 [DynamicOutputAttribute] 字段必须为 List<T> 类型 : {type.FullName}, {field.Name}");
+                    }
+                }
                 if(typeof(IOutputData).IsAssignableFrom(field.FieldType))
                 {
                     if(field.FieldType.IsGenericType)
                     {
                         var t = field.FieldType.GetGenericArguments()[0];
-                        FlowNodeOutputPortField output = new FlowNodeOutputPortField { DataType = t };
+                        FlowNodeOutputPortField output = new FlowNodeOutputPortField { DataType = t};
                         var attr = field.GetCustomAttribute<FormerlySerializedAsAttribute>();
                         if (attr != null)
                             output.OldName = attr.oldName;
-                        output.Alias = field.GetCustomAttribute<AliasAttribute>();
+                        output.Name = field.Name;
+                        var alias = field.GetCustomAttribute<AliasAttribute>();
+                        if (alias != null)
+                            output.ShowName = alias.Name;
+                        else
+                            output.ShowName = field.Name;
                         typeInfo.OutputFields.Add(output);
                     }
                 }
-                else if (field.GetCustomAttribute<InputableAttribute>() != null)
+                else if (field.IsDefined(typeof(InputableAttribute)))
                 {
+                    var f = new FlowNodeInputPortField(field);
+                    List<string> paths = new List<string>();
+                    if (path != null)
+                        paths.AddRange(path.Split('.'));
+                    paths.Add(field.Name);
+                    f.Path = paths.ToArray();
                     typeInfo.InputFields.Add(f);
                 }
-                else if(parent == null && field.GetCustomAttribute<ExpandedInParentAttribute>() != null) //仅支持一层
+                else if(path == null && field.IsDefined(typeof(ExpandedInParentAttribute))) //仅支持一层
                 {
-                    CollectDataPortFields(field.FieldType, f, typeInfo);
+                    if(path == null)
+                        CollectDataPortFields(field.FieldType, field.Name, typeInfo);
+                    else
+                        CollectDataPortFields(field.FieldType, path + "." + field.Name, typeInfo);
                 }
             }
         }
@@ -99,16 +136,17 @@ namespace Flow.EditorView
             if (!nodeType.IsSubclassOf(typeof(FlowNode)))
                 return null;
             FlowNodeTypeInfo typeInfo = new FlowNodeTypeInfo();
+            typeInfo.NodeType = nodeType;
+            var alias = nodeType.GetCustomAttribute<AliasAttribute>();
+            typeInfo.ShowName = alias != null ? alias.Name : nodeType.Name;
+
             var interfaces = nodeType.GetInterfaces();
 
             typeInfo.HasInput = interfaces.Contains(typeof(IFlowInputable));
             var outputInterfaces = interfaces.Where(it => typeof(IFlowOutputable).IsAssignableFrom(it));
-            var dyanmicInterface = outputInterfaces.FirstOrDefault(it => it.IsGenericType && it.GetGenericTypeDefinition() == typeof(IFlowDynamicOutputable<>));
-            if (dyanmicInterface != null)
+            if(outputInterfaces.Contains(typeof(IFlowDynamicOutputable)))
             {
                 typeInfo.OutputType = NodeOutputType.Dynamic;
-                typeInfo.DynamicPortType = dyanmicInterface.GetGenericArguments()[0];
-                typeInfo.DynamicProperty = dyanmicInterface.GetProperty("Ports");
             }
             else if (outputInterfaces.Contains(typeof(IFlowConditionable)))
             {
@@ -134,55 +172,6 @@ namespace Flow.EditorView
                 nodeTypeInfos[nodeType] = typeInfo;
             }
             return typeInfo;
-        }
-
-        private static readonly Dictionary<FlowNodeInputPortField, StructedFieldEditor> s_cache = new Dictionary<FlowNodeInputPortField, StructedFieldEditor>();
-
-        public static List<FieldEditor> BuildEditor(FlowNode node)
-        {
-            var typeInfo = GetNodeTypeInfo(node.GetType());
-            if (typeInfo.InputFields.Count == 0)
-                return null;
-            List<FieldEditor> result = new List<FieldEditor>();
-            StructedFieldEditor root = new StructedFieldEditor 
-            {
-                Value = node
-            };
-            s_cache.Clear();
-            foreach (var item in typeInfo.InputFields)
-            {
-                FieldEditor editor = new FieldEditor { Field = item.Field };
-                if(item.Parent == null)
-                {
-                    editor.Parent = root;
-                }
-                else
-                {
-                    editor.Parent = GetEditor(item.Parent, root, s_cache);
-                }
-                result.Add(editor);
-            }
-            s_cache.Clear();
-            return result;
-        }
-
-        private static StructedFieldEditor GetEditor(FlowNodeInputPortField field, StructedFieldEditor root, Dictionary<FlowNodeInputPortField, StructedFieldEditor> cache)
-        {
-            if(!cache.TryGetValue(field, out var result))
-            {
-                result = new StructedFieldEditor { Field = field.Field };
-                cache.Add(field, result);
-                if(field.Parent == null)
-                {
-                    result.Parent = root;
-                    result.RefreshValue();
-                }
-                else
-                {
-                    result.Parent = GetEditor(field.Parent, root, s_cache);
-                }
-            }
-            return result;
         }
     }
 }

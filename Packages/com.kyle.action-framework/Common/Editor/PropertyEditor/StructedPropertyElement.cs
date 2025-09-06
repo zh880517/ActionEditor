@@ -187,6 +187,45 @@ namespace PropertyEditor
             return null;
         }
 
+        public StrctedFieldElement FindChild(string name)
+        {
+            foreach (var item in children)
+            {
+                if (item.Element.Field.Name == name)
+                {
+                    return item;
+                }
+            }
+            return null;
+        }
+        public StrctedFieldElement FindByPath(string[] path)
+        {
+            StrctedFieldElement current = null;
+            for (int i = 0; i < path.Length; i++)
+            {
+                if (i == 0)
+                {
+                    current = FindChild(path[i]);
+                }
+                else
+                {
+                    if (current == null)
+                        return null;
+                    if (current.Element is StructedPropertyElement structed)
+                    {
+                        current = structed.FindChild(path[i]);
+                    }
+                    else
+                    {
+                        return null;
+                    }
+                }
+                if (current == null)
+                    return null;
+            }
+            return current;
+        }
+
         private void OnPropertyValueChangedEvent(PropertyValueChangedEvent evt)
         {
             if (evt.target == evt.currentTarget)
