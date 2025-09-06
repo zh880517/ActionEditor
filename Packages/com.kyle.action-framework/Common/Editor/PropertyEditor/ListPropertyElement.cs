@@ -11,6 +11,7 @@ namespace PropertyEditor
         private readonly List<PropertyElement> children = new List<PropertyElement>();
         private readonly IList rawValue;
         private IList sourceList;
+        private float labelWidth = LabelMinWidth;
         public override bool ReadOnly { get => listView.enabledSelf; set => listView.SetEnabled(!value); }
 
         public ListPropertyElement(System.Type elementType)
@@ -56,7 +57,13 @@ namespace PropertyEditor
 
         public override void SetLableWidth(float width)
         {
-            //TODO 设置宽度
+            if (labelWidth == width)
+                return;
+            labelWidth = width;
+            foreach (var item in children)
+            {
+                item.SetLableWidth(labelWidth);
+            }
         }
 
         public override void SetValue(object value)
@@ -77,7 +84,9 @@ namespace PropertyEditor
 
         private VisualElement MakeItem()
         {
-            return PropertyElementFactory.CreateByType(elementType, true);
+            var element = PropertyElementFactory.CreateByType(elementType, true);
+            element.SetLableWidth(labelWidth);
+            return element;
         }
         private void BindItem(VisualElement element, int index)
         {

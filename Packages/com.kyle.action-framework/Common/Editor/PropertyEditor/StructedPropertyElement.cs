@@ -5,6 +5,31 @@ using UnityEngine.UIElements;
 
 namespace PropertyEditor
 {
+    public class StrctedFieldElement : VisualElement
+    {
+        public PropertyElement Element { get; private set; }
+        public bool ReadOnly { get; private set; }
+        public string DisplayName { get; private set; }
+        public string ToolTip { get; private set; }
+
+        public StrctedFieldElement()
+        {
+            style.flexDirection = FlexDirection.Row;
+        }
+
+        public void Initialize(PropertyElement element, bool readOnly, string displayName, string toolTip)
+        {
+            Element = element;
+            ReadOnly = readOnly;
+            DisplayName = displayName;
+            ToolTip = toolTip;
+            style.flexDirection = FlexDirection.Row;
+            Element.SetLable(displayName, toolTip);
+            Element.style.flexGrow = 1;
+            Add(Element);
+        }
+    }
+
     public class StructedPropertyElement : PropertyElement
     {
         public struct FieldUnit
@@ -13,8 +38,8 @@ namespace PropertyEditor
             public bool ReadOnly;//属性标记
         }
 
-        public const float TitleIndent = 10f;//缩进
-        protected List<FieldUnit> children = new List<FieldUnit>();
+        public const float TitleIndent = 10f;//缩进,系统默认Lable最小宽度是120
+        protected List<StrctedFieldElement> children = new List<StrctedFieldElement>();
         protected Foldout foldout;
         protected bool readOnly = false;
         protected string lable;
@@ -38,6 +63,7 @@ namespace PropertyEditor
                 }
             } 
         }
+        public bool ExpandedInParent => foldout != null;
 
         public StructedPropertyElement(Type type, bool expandedInParent = false)
         {
@@ -57,23 +83,27 @@ namespace PropertyEditor
                 PropertyElement element = PropertyElementFactory.CreateByFieldInfo(field);
                 if (element != null)
                 {
-                    var unit = new FieldUnit 
-                    { 
-                        Element = element,
-                        ReadOnly = field.IsDefined(typeof(ReadOnlyAttribute)),
-                    };
-                    element.ReadOnly = readOnly || unit.ReadOnly;
-                    element.Field = field;
+                    var child = new StrctedFieldElement();
+                    string displayName = field.Name;
+                    string toolTip = null;
                     var display = field.GetCustomAttribute<DisplayAttribute>();
                     if (display != null)
                     {
-                        element.SetLable(display.Name, display.Tooltip);
+                        displayName = display.Name;
+                        toolTip = display.Tooltip;
                     }
                     else
                     {
-                        element.SetLable(field.Name, null);
+                        var displayNameAttr = field.GetCustomAttribute<DisplayNameAttribute>();
+                        if (displayNameAttr != null)
+                        {
+                            displayName = displayNameAttr.DisplayName;
+                            toolTip = displayNameAttr.Tooltip;
+                        }
                     }
-                    children.Add(unit);
+                    child.Initialize(element, readOnly || field.IsDefined(typeof(ReadOnlyAttribute)), displayName, toolTip);
+                    element.ReadOnly = readOnly || child.ReadOnly;
+                    children.Add(child);
 
                     if (foldout != null)
                         foldout.Add(element);
@@ -96,7 +126,6 @@ namespace PropertyEditor
             if(!expanded)
             {
                 foldout = new Foldout();
-                foldout.contentContainer.style.paddingLeft = TitleIndent;
                 foldout.text = lable;
                 foldout.tooltip = toolTip;
                 Add(foldout);
@@ -132,7 +161,7 @@ namespace PropertyEditor
         {
             foreach (var item in children)
             {
-                item.Element.SetLableWidth(width - TitleIndent);
+                item.Element.SetLableWidth(width);
             }
         }
 
@@ -185,6 +214,8 @@ namespace PropertyEditor
 
         private void OnRegisterUndoEvent(RegisterUndoEvent evt)
         {
+            if (evt.target == evt.currentTarget)
+                return;
             if (value is UnityEngine.Object obj)
             {
                 UnityEditor.Undo.RegisterCompleteObjectUndo(obj, evt.ActionName);

@@ -9,6 +9,14 @@ using UnityEngine.UIElements;
 
 public class VisualElementTest : EditorWindow
 {
+    [System.Serializable]
+    public struct TestStruct
+    {
+        public int intValue;
+        public float floatValue;
+        public Sprite sprite;
+    }
+
     public class PropertyEditorTest
     {
         public int intValue;
@@ -23,12 +31,13 @@ public class VisualElementTest : EditorWindow
         public Gradient gradientValue;
         public LayerMask layerMaskValue;
         public GameObject gameObjectValue;
-        [DisplayName("ÕûÊýÁÐ±í")]
+        [Display("æ•´æ•°åˆ—è¡¨")]
         public List<int> intList;
-        [DisplayName("×Ö·û´®Êý×é"), FixedArraySize]
+        [Display("å­—ç¬¦ä¸²æ•°ç»„"), FixedArraySize]
         public string[] stringArray = new string[5];
-        [IntPopupSelect(new string[] { "Ñ¡Ïî1", "Ñ¡Ïî2", "Ñ¡Ïî3" })]
+        [IntPopupSelect(new string[] { "é€‰é¡¹1", "é€‰é¡¹2", "é€‰é¡¹3" })]
         public int popupValue;
+        public TestStruct[] vector2IntValue;
     }
 
     [MenuItem("Tools/VisualElementTest")]
@@ -44,10 +53,10 @@ public class VisualElementTest : EditorWindow
         //acticonClip.style.height = 30;
         //acticonClip.style.width = 300;
         //rootVisualElement.Add(acticonClip);
-        //var floatField = new FloatField("Ëõ·Å");
+        //var floatField = new FloatField("ç¼©æ”¾");
         //floatField.value = 1.0f;
         //rootVisualElement.Add(floatField);
-        //var intField = new IntegerField("Ö¡Êý");
+        //var intField = new IntegerField("å¸§æ•°");
         //rootVisualElement.Add(intField);
         //var timelineBar = new TimelineTickMarkView();
         //timelineBar.style.left = 5;

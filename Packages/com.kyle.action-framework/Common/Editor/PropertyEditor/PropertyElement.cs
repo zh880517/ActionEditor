@@ -5,6 +5,7 @@ namespace PropertyEditor
 {
     public abstract class PropertyElement : VisualElement
     {
+        public const float LabelMinWidth = 120;
         public FieldInfo Field;//for field
         public int Index = -1;//for array element
         public abstract bool ReadOnly { get; set; }
