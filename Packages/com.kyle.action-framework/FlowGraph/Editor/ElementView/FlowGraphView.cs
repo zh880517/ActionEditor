@@ -48,7 +48,7 @@ namespace Flow.EditorView
 
         public void Refresh()
         {
-            //ÒÆ³ý¶àÓàµÄ½Úµã
+            //ç§»é™¤å¤šä½™çš„èŠ‚ç‚¹
             for (int i = nodeViews.Count - 1; i >= 0; i--)
             {
                 var nodeView = nodeViews[i];
@@ -62,7 +62,7 @@ namespace Flow.EditorView
                     nodeView.Refresh();
                 }
             }
-            //Ìí¼ÓÐÂµÄ½Úµã
+            //æ·»åŠ æ–°çš„èŠ‚ç‚¹
             foreach (var node in Graph.Nodes)
             {
                 if (!nodeViews.Any(n => n.Node == node))
@@ -72,7 +72,7 @@ namespace Flow.EditorView
                     AddElement(nodeView);
                 }
             }
-            //ÒÆ³ý¶àÓàµÄÁ¬Ïß
+            //ç§»é™¤å¤šä½™çš„è¿žçº¿
             var edgeList = edges.ToList();
             HashSet<ulong> connectedDataEdges = new HashSet<ulong>();
             HashSet<int> connectedFlowEdges = new HashSet<int>();
@@ -123,7 +123,7 @@ namespace Flow.EditorView
 
             }
 
-            //Ìí¼ÓÐÂµÄÁ¬Ïß
+            //æ·»åŠ æ–°çš„è¿žçº¿
             foreach (var item in Graph.DataEdges)
             {
                 if(!connectedDataEdges.Contains(item.EdgeID))

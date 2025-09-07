@@ -16,6 +16,7 @@ namespace Flow
         public Vector3 Position;
         [HideInInspector]
         public Vector3 Scale;
+        [HideInInspector]
         [SerializeField]
         private uint keyIndex = 0;
 
