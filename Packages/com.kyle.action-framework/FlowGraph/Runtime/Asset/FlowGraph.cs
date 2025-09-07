@@ -16,5 +16,12 @@ namespace Flow
         public Vector3 Position;
         [HideInInspector]
         public Vector3 Scale;
+        [SerializeField]
+        private uint keyIndex = 0;
+
+        public ulong GenUID()
+        {
+            return FlowGUIDGenertor.GenID(keyIndex++);
+        }
     }
 }

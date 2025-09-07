@@ -7,5 +7,6 @@
         public FlowNode Input;
         public string OutputSlot;
         public string InputSlot;
+        public ulong EdgeID;
     }
 }

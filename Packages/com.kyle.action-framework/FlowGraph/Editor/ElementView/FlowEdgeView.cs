@@ -4,5 +4,6 @@ namespace Flow.EditorView
 {
     public class FlowEdgeView : Edge
     {
+        public ulong EdgeID;
     }
 }

@@ -1,6 +1,8 @@
 ﻿using PropertyEditor;
 using System.Collections.Generic;
 using UnityEditor.Experimental.GraphView;
+using UnityEditor.UI;
+using UnityEngine;
 
 namespace Flow.EditorView
 {
@@ -29,16 +31,12 @@ namespace Flow.EditorView
         private FlowNodeTypeInfo nodeTypeInfo;
         private FlowDynamicOutputPort dynamicOutputPort;
 
-        public FlowNodeView()
-        {
-        }
-
-        public void Initialize(FlowNode node)
+        public FlowNodeView(FlowNode node)
         {
             Node = node;
             nodeTypeInfo = FlowNodeTypeUtil.GetNodeTypeInfo(node.GetType());
             title = nodeTypeInfo.ShowName;
-            SetPosition(node.Position);
+            base.SetPosition(node.Position);
             expanded = node.Expanded;
 
             //流程输入端口
@@ -90,7 +88,7 @@ namespace Flow.EditorView
             //数据输出端口
             foreach (var item in nodeTypeInfo.OutputFields)
             {
-                var port = new FlowDataOutputPort(item.DataType);
+                var port = new FlowDataPort(false, item.DataType);
                 port.portName = item.ShowName;
                 port.Owner = node;
                 port.FieldName = item.Name;
@@ -108,10 +106,10 @@ namespace Flow.EditorView
             foreach (var item in nodeTypeInfo.InputFields)
             {
                 var element = propertyEditor.FindByPath(item.Path);
-                if(element != null)
+                if (element != null)
                 {
                     inputFields.Add(element);
-                    var port = new FlowDataInputPort(item.FieldType);
+                    var port = new FlowDataPort(true, item.FieldType);
                     port.portName = element.DisplayName;
                     port.Owner = node;
                     port.FieldName = item.Name;
@@ -122,6 +120,14 @@ namespace Flow.EditorView
             }
 
             RefreshExpandedState();
+        }
+
+        public void Refresh()
+        {
+            SetPosition(Node.Position);
+            expanded = Node.Expanded;
+            propertyEditor.SetValue(Node);
+            dynamicOutputPort?.Refresh();
         }
 
         public FlowNodePort GetFlowPort(bool isInput, int index)
@@ -151,6 +157,16 @@ namespace Flow.EditorView
                 }
             }
             return null;
+        }
+
+        public override void SetPosition(Rect newPos)
+        {
+            base.SetPosition(newPos);
+            if (Node != null)
+            {
+                FlowGraphEditorUtil.RegisterUndo(Node, "Move Node");
+                Node.Position = newPos;
+            }
         }
     }
 }

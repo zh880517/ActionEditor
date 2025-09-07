@@ -7,7 +7,6 @@ using UnityEngine;
 
 public abstract class TypeSelectWindow : ScriptableObject, ISearchWindowProvider
 {
-
     internal struct TypeData
     {
         public string Name;
@@ -102,7 +101,7 @@ public abstract class TypeSelectWindow : ScriptableObject, ISearchWindowProvider
         return true;
     }
 
-    protected abstract void OnSelect(System.Type type, Vector2 screenMousePosition);
+    protected abstract void OnSelect(System.Type type, Vector2 localMousePosition);
 
     private void OnDestroy()
     {

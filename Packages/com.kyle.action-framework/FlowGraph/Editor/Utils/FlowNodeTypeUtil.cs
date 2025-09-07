@@ -8,6 +8,8 @@ namespace Flow.EditorView
 {
     public class FlowNodeOutputPortField
     {
+        public FieldInfo Parent;
+        public FieldInfo Field;
         public Type DataType;
         public string Name;
         public string OldName;
@@ -55,7 +57,7 @@ namespace Flow.EditorView
     {
         private readonly static Dictionary<Type, FlowNodeTypeInfo> nodeTypeInfos = new Dictionary<Type, FlowNodeTypeInfo>();
 
-        private static void CollectDataPortFields(Type type, string path, FlowNodeTypeInfo typeInfo)
+        private static void CollectDataPortFields(Type type , FieldInfo parentField, string path, FlowNodeTypeInfo typeInfo)
         {
             List<FieldInfo> fields = new List<FieldInfo>();
             var currentType = type;
@@ -98,7 +100,7 @@ namespace Flow.EditorView
                     if(field.FieldType.IsGenericType)
                     {
                         var t = field.FieldType.GetGenericArguments()[0];
-                        FlowNodeOutputPortField output = new FlowNodeOutputPortField { DataType = t};
+                        FlowNodeOutputPortField output = new FlowNodeOutputPortField { DataType = t, Parent = parentField, Field = field};
                         var attr = field.GetCustomAttribute<FormerlySerializedAsAttribute>();
                         if (attr != null)
                             output.OldName = attr.oldName;
@@ -124,9 +126,9 @@ namespace Flow.EditorView
                 else if(path == null && field.IsDefined(typeof(ExpandedInParentAttribute))) //仅支持一层
                 {
                     if(path == null)
-                        CollectDataPortFields(field.FieldType, field.Name, typeInfo);
+                        CollectDataPortFields(field.FieldType, field, field.Name, typeInfo);
                     else
-                        CollectDataPortFields(field.FieldType, path + "." + field.Name, typeInfo);
+                        CollectDataPortFields(field.FieldType, field, path + "." + field.Name, typeInfo);
                 }
             }
         }
@@ -160,7 +162,7 @@ namespace Flow.EditorView
             {
                 typeInfo.OutputType = NodeOutputType.None;
             }
-            CollectDataPortFields(nodeType, null, typeInfo);
+            CollectDataPortFields(nodeType, null, null, typeInfo);
             return typeInfo;
         }
 

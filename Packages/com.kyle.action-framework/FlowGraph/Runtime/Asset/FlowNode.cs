@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace Flow
 {
@@ -15,6 +14,11 @@ namespace Flow
     {
     }
 
+    //Update节点
+    public interface IFlowUpdateable : IFlowInputable, IFlowOutputable
+    {
+    }
+
     //条件节点，有两个输出，0是true，1是false
     public interface IFlowConditionable : IFlowOutputable
     {
@@ -25,12 +29,6 @@ namespace Flow
     public interface IFlowDynamicOutputable : IFlowOutputable
     {
     }
-
-    public interface IFlowDynamicOutputable<T> : IFlowDynamicOutputable
-    {
-        List<T> Ports { get; }//动态输出端口数据,不能为null
-    }
-
 
     public abstract class FlowNode : ScriptableObject
     {

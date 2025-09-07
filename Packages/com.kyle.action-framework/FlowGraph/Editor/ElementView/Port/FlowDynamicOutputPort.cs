@@ -28,15 +28,15 @@ namespace Flow.EditorView
         public FlowNode Node { get; private set; }
         private readonly Label titleLabel = new Label();
         private readonly ListView listView = new ListView();
+        private readonly FlowNodeTypeInfo nodeTypeInfo;
         private readonly IList rawValue;
-        private readonly IList sourceList;
-        private readonly System.Type elementType;
+        private IList sourceList;
 
         private readonly List<DynamicOutputPortElement> children = new List<DynamicOutputPortElement>();
 
         public FlowDynamicOutputPort(FlowNode node, FlowNodeTypeInfo nodeTypeInfo)
         {
-            elementType = nodeTypeInfo.DynamicPortType;
+            this.nodeTypeInfo = nodeTypeInfo;
             style.flexDirection = FlexDirection.Column;
             titleLabel.style.unityFontStyleAndWeight = UnityEngine.FontStyle.Bold;
             var displayNameAttr = nodeTypeInfo.DynamicPortField.GetCustomAttribute<DisplayAttribute>();
@@ -71,7 +71,7 @@ namespace Flow.EditorView
             listView.itemsRemoved += OnRemoved;
             listView.itemIndexChanged += IndexChanged;
 
-            rawValue = (IList)System.Activator.CreateInstance(typeof(List<>).MakeGenericType(elementType));
+            rawValue = (IList)System.Activator.CreateInstance(typeof(List<>).MakeGenericType(nodeTypeInfo.DynamicPortType));
             sourceList = (IList)nodeTypeInfo.DynamicPortField.GetValue(node);
             if (sourceList != null)
             {
@@ -84,6 +84,21 @@ namespace Flow.EditorView
             RegisterCallback<PropertyValueChangedEvent>(OnPropertyValueChangedEvent);
         }
 
+        public void Refresh()
+        {
+            var newList = (IList)nodeTypeInfo.DynamicPortField.GetValue(Node);
+            if(newList != sourceList)
+            {
+                sourceList = newList;
+            }
+            rawValue.Clear();
+            foreach (var item in sourceList)
+            {
+                rawValue.Add(item);
+            }
+            listView.RefreshItems();
+        }
+
         public FlowNodePort GetPort(int index)
         {
             if (index < 0 || index >= children.Count)
@@ -93,7 +108,7 @@ namespace Flow.EditorView
 
         private VisualElement MakeItem()
         {
-            var element = PropertyElementFactory.CreateByType(elementType, true);
+            var element = PropertyElementFactory.CreateByType(nodeTypeInfo.DynamicPortType, true);
             element.SetLableWidth(60);
             return new DynamicOutputPortElement(element);
         }
@@ -103,6 +118,7 @@ namespace Flow.EditorView
             var portElement = element as DynamicOutputPortElement;
             portElement.Field.SetValue(rawValue[index]);
             portElement.Field.Index = index;
+            portElement.Port.Index = index;
             portElement.Index = index;
             if (!children.Contains(portElement))
                 children.Add(portElement);
@@ -116,13 +132,13 @@ namespace Flow.EditorView
         private void OnRemoved(IEnumerable<int> indexs)
         {
             //按照从后往前的顺序删除
-            FlowPortOperateUtil.RemoveDynamicOutputPort(Node, indexs);
+            FlowPortOperateUtil.RemoveDynamicOutputPortWithUndo(Node, indexs);
             CopyRawValueToList();
         }
         private void IndexChanged(int srcIndex, int dstIndex)
         {
             //先从列表中移除srcIndex的数据，再插入到dstIndex位置
-            FlowPortOperateUtil.DynamicOutputPortIndexChanged(Node, srcIndex, dstIndex);
+            FlowPortOperateUtil.DynamicOutputPortIndexChangedWithUndo(Node, srcIndex, dstIndex);
             CopyRawValueToList();
         }
         private void SyncFromListView()
@@ -150,6 +166,8 @@ namespace Flow.EditorView
                 if (child.Index != i)
                 {
                     child.Index = i;
+                    child.Port.Index = i;
+                    child.Field.Index = i;
                     child.Field.SetValue(rawValue[i]);
                 }
             }

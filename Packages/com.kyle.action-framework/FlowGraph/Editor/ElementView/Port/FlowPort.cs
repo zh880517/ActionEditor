@@ -6,6 +6,7 @@ namespace Flow.EditorView
     public class FlowPort : FlowNodePort
     {
         public int Index;
+        public override bool IsFlowPort => true;
         public bool IsInput => direction == Direction.Input;
 
         public FlowPort(bool isInput) 

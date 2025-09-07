@@ -4,18 +4,21 @@ using UnityEngine.UIElements;
 
 namespace Flow.EditorView
 {
-    public class FlowDataInputPort : FlowNodePort
+    public class FlowDataPort : FlowNodePort
     {
         public string FieldName;
-        public FlowDataInputPort(Type type)
-            : base(Orientation.Horizontal, Direction.Output, Capacity.Single, type)
+        public override bool IsFlowPort => false;
+        public FlowDataPort(bool input, Type type)
+            : base(Orientation.Horizontal, input ? Direction.Input : Direction.Output, Capacity.Multi, type)
         {
             var connectorListener = new EdgeConnectorListener();
             m_EdgeConnector = new EdgeConnector<FlowEdgeView>(connectorListener);
             this.AddManipulator(m_EdgeConnector);
-
             AddToClassList($"Port_{type.Name}");
-            AddToClassList($"Port_In_{type.Name}");
+            if(input)
+                AddToClassList($"Port_In_{type.Name}");
+            else
+                AddToClassList($"Port_Out_{type.Name}");
         }
     }
 }
