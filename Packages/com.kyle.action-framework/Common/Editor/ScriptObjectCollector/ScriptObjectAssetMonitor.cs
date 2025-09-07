@@ -7,6 +7,6 @@ internal class ScriptObjectAssetMonitor : AssetPostprocessor
     {
         if(!ScriptObjectCollector.HasInstance)
             return;
-
+        ScriptObjectCollector.instance.OnAssetChange(importedAssets, deletedAssets, movedAssets, movedFromAssetPaths);
     }
 }

@@ -3,10 +3,7 @@ using UnityEditor;
 using UnityEngine;
 namespace ActionLine
 {
-    /* 
-     * 创建时需要设置 hideFlags = HideFlags.DontSave，编辑时不会将场景设置为dirty
-     */
-    public class ActionLineAsset : ScriptableObject
+    public class ActionLineAsset : CollectableScriptableObject
     {
         //继承的Source Asset，如果是变体，则指向原始Asset
         [SerializeField]

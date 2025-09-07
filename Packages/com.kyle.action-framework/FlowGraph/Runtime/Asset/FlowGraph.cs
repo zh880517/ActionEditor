@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 namespace Flow
 {
-    public class FlowGraph : ScriptableObject
+    public class FlowGraph : CollectableScriptableObject
     {
         [Combined, Display("描述"), Multiline]
         public string Comment;

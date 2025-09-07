@@ -10,11 +10,11 @@ public class ScriptObjectCollector : ScriptableSingleton<ScriptObjectCollector>
     class ObjectInfo
     {
         public MonoScript Script;
-        public List<string> Fiels = new List<string>();
+        public List<string> Files = new List<string>();
     }
     [SerializeField]
-    private List<ObjectInfo> objects = new List<ObjectInfo>();
-    private List<MonoScript> modifyAssetTypes = new List<MonoScript>();
+    private readonly List<ObjectInfo> objects = new List<ObjectInfo>();
+    private readonly List<MonoScript> modifyAssetTypes = new List<MonoScript>();
 
     public static event System.Action<MonoScript> OnAssetChanged;
 
@@ -22,7 +22,7 @@ public class ScriptObjectCollector : ScriptableSingleton<ScriptObjectCollector>
     {
         var info = instance.objects.Find(o => o.Script == script);
         if (info != null)
-            return info.Fiels;
+            return info.Files;
         return null;
     }
 
@@ -38,7 +38,7 @@ public class ScriptObjectCollector : ScriptableSingleton<ScriptObjectCollector>
                 AddAsset(mono, path);
         }
     }
-    private void AddAsset(MonoScript script, string path)
+    private bool AddAsset(MonoScript script, string path)
     {
         var info = objects.Find(o => o.Script == script);
         if (info == null)
@@ -46,10 +46,12 @@ public class ScriptObjectCollector : ScriptableSingleton<ScriptObjectCollector>
             info = new ObjectInfo() { Script = script };
             objects.Add(info);
         }
-        if (!info.Fiels.Contains(path))
+        if (!info.Files.Contains(path))
         {
-            info.Fiels.Add(path);
+            info.Files.Add(path);
+            return true;
         }
+        return false;
     }
 
     public void OnAssetChange(string[] importedAssets, string[] deletedAssets, string[] movedAssets, string[] movedFromAssetPaths)
@@ -60,6 +62,8 @@ public class ScriptObjectCollector : ScriptableSingleton<ScriptObjectCollector>
                 continue;
             var type = AssetDatabase.GetMainAssetTypeAtPath(item);
             var mono = MonoScriptUtil.GetMonoScript(type);
+            if (!type.IsSubclassOf(typeof(CollectableScriptableObject)))
+                continue;
             if (mono != null)
             {
                 AddAsset(mono, item);
@@ -73,9 +77,9 @@ public class ScriptObjectCollector : ScriptableSingleton<ScriptObjectCollector>
                 continue;
             foreach (var res in objects)
             {
-                if(res.Fiels.Contains(item))
+                if(res.Files.Contains(item))
                 {
-                    res.Fiels.Remove(item);
+                    res.Files.Remove(item);
                     if (!modifyAssetTypes.Contains(res.Script))
                         modifyAssetTypes.Add(res.Script);
                     break;
@@ -89,6 +93,8 @@ public class ScriptObjectCollector : ScriptableSingleton<ScriptObjectCollector>
             if (!from.EndsWith(".asset") || !to.EndsWith(".asset"))
                 continue;
             var type = AssetDatabase.GetMainAssetTypeAtPath(to);
+            if(!type.IsSubclassOf(typeof(CollectableScriptableObject)))
+                continue;
             var mono = MonoScriptUtil.GetMonoScript(type);
             if (mono == null)
                 continue;
@@ -98,11 +104,11 @@ public class ScriptObjectCollector : ScriptableSingleton<ScriptObjectCollector>
                 info = new ObjectInfo() { Script = mono };
                 objects.Add(info);
             }
-            if (!info.Fiels.Contains(to))
+            if (!info.Files.Contains(to))
             {
-                info.Fiels.Add(to);
+                info.Files.Add(to);
             }
-            info.Fiels.Remove(from);
+            info.Files.Remove(from);
             if (!modifyAssetTypes.Contains(mono))
                 modifyAssetTypes.Add(mono);
         }
