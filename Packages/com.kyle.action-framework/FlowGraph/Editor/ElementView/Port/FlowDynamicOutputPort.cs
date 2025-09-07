@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
+using UnityEditor;
 using UnityEngine.UIElements;
 
 namespace Flow.EditorView
@@ -47,7 +48,7 @@ namespace Flow.EditorView
             }
             else
             {
-                titleLabel.text = nodeTypeInfo.DynamicPortField.Name;
+                titleLabel.text = ObjectNames.NicifyVariableName(nodeTypeInfo.DynamicPortField.Name);
             }
 
             if ((node is IFlowDynamicOutputable))

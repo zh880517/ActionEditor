@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
+using UnityEditor;
 using UnityEngine.UIElements;
 
 namespace PropertyEditor
@@ -84,7 +85,7 @@ namespace PropertyEditor
                 if (element != null)
                 {
                     var child = new StrctedFieldElement();
-                    string displayName = field.Name;
+                    string displayName = ObjectNames.NicifyVariableName(field.Name);
                     string toolTip = null;
                     var display = field.GetCustomAttribute<DisplayAttribute>();
                     if (display != null)

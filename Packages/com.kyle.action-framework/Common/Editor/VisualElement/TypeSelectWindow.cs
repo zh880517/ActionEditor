@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using UnityEditor;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 
@@ -46,7 +47,7 @@ public abstract class TypeSelectWindow : ScriptableObject, ISearchWindowProvider
             foreach (var type in types)
             {
                 var dpName = type.GetCustomAttribute<AliasAttribute>(false);
-                string name = dpName == null ? type.Name : dpName.Name;
+                string name = dpName == null ? ObjectNames.NicifyVariableName(type.Name) : dpName.Name;
                 tmpList.Clear();
                 var catalogType = type;
                 while (catalogType != null)

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using UnityEditor;
 using UnityEngine.Serialization;
 
 namespace Flow.EditorView
@@ -109,7 +110,7 @@ namespace Flow.EditorView
                         if (alias != null)
                             output.ShowName = alias.Name;
                         else
-                            output.ShowName = field.Name;
+                            output.ShowName = ObjectNames.NicifyVariableName(field.Name);
                         typeInfo.OutputFields.Add(output);
                     }
                 }
