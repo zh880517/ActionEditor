@@ -60,21 +60,35 @@ namespace Flow.EditorView
         protected FlowGraph current;
 
         protected FlowGraphView graphView;
-        private Dictionary<FlowGraph, FlowGraphView> views = new Dictionary<FlowGraph, FlowGraphView>();
+        private readonly Dictionary<FlowGraph, FlowGraphView> views = new Dictionary<FlowGraph, FlowGraphView>();
 
         protected virtual void OnOpen(FlowGraph graph)
         {
-            if(!openList.Contains(graph))
-            {
-                openList.Add(graph);
-            }
-            if(graph != current)
-            {
-                current = graph;
-            }
+            if (graph == current)
+                return;
+            openList.Remove(graph);
+            openList.Add(graph);
+            current = graph;
             if(rootVisualElement != null)
             {
                 GraphViewRefresh();
+            }
+            OnGraphChanged();
+
+            //同时打开的图过多时，关闭最早打开的图
+            if (views.Count > 20)
+            {
+                int minIndex = openList.Count - 15;
+
+                foreach (var kv in views)
+                {
+                    int index = openList.IndexOf(kv.Key);
+                    if(index <= minIndex)
+                    {
+                        rootVisualElement.Remove(kv.Value);
+                        views.Remove(kv.Key);
+                    }
+                }
             }
         }
 
@@ -119,10 +133,15 @@ namespace Flow.EditorView
                 graphView.Refresh();
                 return;
             }
+            var prev = current;
             GraphViewRefresh();
+            if (prev != current)
+            {
+                OnGraphChanged();
+            }
         }
 
-        protected virtual FlowGraphView CreateGraphView(FlowGraph graph)
+        protected FlowGraphView GetGraphView(FlowGraph graph)
         {
             if(views.TryGetValue(graph, out var view))
             {
@@ -130,16 +149,21 @@ namespace Flow.EditorView
                     view.Refresh();
                 return view;
             }
-            view = new FlowGraphView(graph);
+            view = CreateGraphView(graph);
             view.StretchToParentSize();
             views.Add(graph, view);
             rootVisualElement.Add(graphView);
             return view;
         }
 
+        protected virtual FlowGraphView CreateGraphView(FlowGraph graph)
+        {
+            return new FlowGraphView(graph);
+        }
+
         protected void GraphViewRefresh()
         {
-            var view = CreateGraphView(current);
+            var view = GetGraphView(current);
             if(view != graphView)
             {
                 if(graphView != null)
@@ -147,6 +171,10 @@ namespace Flow.EditorView
                 graphView = view;
                 graphView.style.display = DisplayStyle.Flex;
             }
+        }
+
+        protected virtual void OnGraphChanged()
+        {
         }
 
         protected virtual void OnKeyDownEvent(KeyDownEvent evt)
