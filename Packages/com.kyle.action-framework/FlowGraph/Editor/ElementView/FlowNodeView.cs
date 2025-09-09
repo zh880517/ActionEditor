@@ -1,7 +1,6 @@
 ﻿using PropertyEditor;
 using System.Collections.Generic;
 using UnityEditor.Experimental.GraphView;
-using UnityEditor.UI;
 using UnityEngine;
 
 namespace Flow.EditorView
@@ -38,7 +37,6 @@ namespace Flow.EditorView
             title = nodeTypeInfo.ShowName;
             base.SetPosition(node.Position);
             expanded = node.Expanded;
-
             //流程输入端口
             if (nodeTypeInfo.HasInput)
             {
@@ -81,7 +79,7 @@ namespace Flow.EditorView
                 case NodeOutputType.Dynamic:
                     {
                         dynamicOutputPort = new FlowDynamicOutputPort(node, nodeTypeInfo);
-                        outputContainer.Add(dynamicOutputPort);
+                        //outputContainer.Add(dynamicOutputPort);
                     }
                     break;
             }
@@ -99,7 +97,8 @@ namespace Flow.EditorView
             //属性编辑器
             propertyEditor = PropertyElementFactory.CreateByType(node.GetType(), true) as StructedPropertyElement;
             propertyEditor.SetValue(node);
-            propertyEditor.SetLableWidth(60);
+            propertyEditor.SetLableWidth(50);
+            propertyEditor.style.minWidth = 120;
             extensionContainer.Add(propertyEditor);
 
             //数据输入端口
@@ -110,6 +109,7 @@ namespace Flow.EditorView
                 {
                     inputFields.Add(element);
                     var port = new FlowDataPort(true, item.FieldType);
+                    //extensionContainer.Add(port);
                     port.portName = element.DisplayName;
                     port.Owner = node;
                     port.FieldName = item.Name;
@@ -118,7 +118,10 @@ namespace Flow.EditorView
                     ports.Add(new PortUnit { Name = item.Name, Port = port, Type = PortType.DataInput });
                 }
             }
-
+            if(dynamicOutputPort != null)
+            {
+                extensionContainer.Add(dynamicOutputPort);
+            }
             RefreshExpandedState();
         }
 
@@ -128,6 +131,15 @@ namespace Flow.EditorView
             expanded = Node.Expanded;
             propertyEditor.SetValue(Node);
             dynamicOutputPort?.Refresh();
+        }
+
+        public void DisconnectAll()
+        {
+            foreach (var item in ports)
+            {
+                item.Port.DisconnectAll();
+            }
+            dynamicOutputPort?.DisconnectAll();
         }
 
         public FlowNodePort GetFlowPort(bool isInput, int index)

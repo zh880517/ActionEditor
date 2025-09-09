@@ -7,6 +7,7 @@ namespace PropertyEditor.BuiltIn
     {
         private readonly EnumField field;
         public override bool ReadOnly { get => field.enabledSelf == false; set => field.SetEnabled(!value); }
+        private bool hasInit;
         public EnumElement()
         {
             field = new EnumField();
@@ -15,6 +16,11 @@ namespace PropertyEditor.BuiltIn
         }
         protected override void SetValueToField()
         {
+            if (!hasInit)
+            {
+                field.Init(value);
+                hasInit = true;
+            }
             field.SetValueWithoutNotify(value);
         }
         public override void SetLable(string name, string tip)

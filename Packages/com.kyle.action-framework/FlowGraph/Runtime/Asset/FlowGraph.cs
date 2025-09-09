@@ -15,7 +15,7 @@ namespace Flow
         [HideInInspector]
         public Vector3 Position;
         [HideInInspector]
-        public Vector3 Scale;
+        public Vector3 Scale = Vector3.one;
         [HideInInspector]
         [SerializeField]
         private uint keyIndex = 0;
@@ -23,6 +23,16 @@ namespace Flow
         public ulong GenUID()
         {
             return FlowGUIDGenertor.GenID(keyIndex++);
+        }
+
+        protected virtual void OnCreate() { }
+
+        public static T Create<T>() where T : FlowGraph
+        {
+            T graph = CreateInstance<T>();
+            graph.name = typeof(T).Name;
+            graph.OnCreate();
+            return graph;
         }
     }
 }

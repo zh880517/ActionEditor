@@ -10,7 +10,6 @@ namespace Flow.EditorView
         public string GUID;
         public MonoScript NodeScript;
         public Rect Position;
-        public bool Expanded;
         public string JsonData;
     }
     [System.Serializable]

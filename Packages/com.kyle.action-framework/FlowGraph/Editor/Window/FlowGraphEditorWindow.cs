@@ -1,53 +1,29 @@
 ﻿using System.Collections.Generic;
-using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace Flow.EditorView
 {
-    [System.AttributeUsage(System.AttributeTargets.Class, Inherited = false, AllowMultiple = true)]
-    public class CustomFlowGraphWindowAttribute : System.Attribute
+    public class FlowGraphEditorWindow : EditorWindow
     {
-        public System.Type GraphType { get; private set; }
-        public CustomFlowGraphWindowAttribute(System.Type graphType)
-        {
-            GraphType = graphType;
-        }
-    }
-
-    public class FlowEditorWindow : EditorWindow
-    {
-        private static Dictionary<System.Type, System.Type> windowTypeCache;
         [UnityEditor.Callbacks.OnOpenAsset(0)]
         internal static bool OnGraphOpened(int instanceID, int line)
         {
             if (EditorUtility.InstanceIDToObject(instanceID) is FlowGraph asset)
             {
-                if(windowTypeCache == null)
+                System.Type windowType = null;
+                var editorContext = FlowGraphEditorContext.GetContext(asset.GetType());
+                if(editorContext != null)
                 {
-                    windowTypeCache = new Dictionary<System.Type, System.Type>();
-                    foreach (var item in TypeCollector<FlowEditorWindow>.Types)
-                    {
-                        var attrs = item.GetCustomAttributes<CustomFlowGraphWindowAttribute>();
-                        foreach (var attr in attrs)
-                        {
-                            if (attr.GraphType != null && !windowTypeCache.ContainsKey(attr.GraphType))
-                            {
-                                windowTypeCache.Add(attr.GraphType, item);
-                            }
-                        }
-                    }
+                    windowType = editorContext.GetEditorWindowType();
                 }
-                if(windowTypeCache.TryGetValue(asset.GetType(), out var windowType))
+                if (windowType == null)
                 {
-                    var window = GetWindow(windowType) as FlowEditorWindow;
-                    window.OnOpen(asset);
+                    windowType = typeof(FlowGraphEditorWindow);
                 }
-                else
-                {
-                    GetWindow<FlowEditorWindow>("Flow Graph").OnOpen(asset);
-                }
+                var window = GetWindow(windowType) as FlowGraphEditorWindow;
+                window.OnOpen(asset);
                 return true;
             }
 
@@ -58,7 +34,7 @@ namespace Flow.EditorView
         protected List<FlowGraph> openList = new List<FlowGraph>();
         [SerializeField]
         protected FlowGraph current;
-
+        protected virtual VisualElement graphContainerView => rootVisualElement;
         protected FlowGraphView graphView;
         private readonly Dictionary<FlowGraph, FlowGraphView> views = new Dictionary<FlowGraph, FlowGraphView>();
 
@@ -85,7 +61,7 @@ namespace Flow.EditorView
                     int index = openList.IndexOf(kv.Key);
                     if(index <= minIndex)
                     {
-                        rootVisualElement.Remove(kv.Value);
+                        kv.Value.RemoveFromHierarchy();
                         views.Remove(kv.Key);
                     }
                 }
@@ -94,15 +70,21 @@ namespace Flow.EditorView
 
         private void CreateGUI()
         {
-            if(current)
+            OnCreateUI();
+            if (current)
             {
                 GraphViewRefresh();
             }
         }
 
+        protected virtual void OnCreateUI()
+        {
+
+        }
+
         protected virtual void OnEnable()
         {
-            if(rootVisualElement != null && current)
+            if(graphContainerView != null && current)
             {
                 GraphViewRefresh();
             }
@@ -145,14 +127,12 @@ namespace Flow.EditorView
         {
             if(views.TryGetValue(graph, out var view))
             {
-                if(graphView != view)
-                    view.Refresh();
                 return view;
             }
             view = CreateGraphView(graph);
             view.StretchToParentSize();
             views.Add(graph, view);
-            rootVisualElement.Add(graphView);
+            graphContainerView.Add(view);
             return view;
         }
 
@@ -170,6 +150,7 @@ namespace Flow.EditorView
                     graphView.style.display = DisplayStyle.None;
                 graphView = view;
                 graphView.style.display = DisplayStyle.Flex;
+                graphView.Refresh();
             }
         }
 
@@ -195,7 +176,8 @@ namespace Flow.EditorView
 
         protected virtual void OnSave(FlowGraph graph)
         {
-
+            var editorContext = FlowGraphEditorContext.GetContext(graph.GetType());
+            editorContext?.Export(graph);
         }
     }
 }

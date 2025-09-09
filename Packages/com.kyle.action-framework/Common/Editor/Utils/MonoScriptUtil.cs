@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 
@@ -12,7 +13,7 @@ public static class MonoScriptUtil
     public static MonoScript GetMonoScript(Type type)
     {
         var t = typeof(MonoScript);
-        var method = t.GetMethod("FromType", System.Reflection.BindingFlags.Static);
+        var method = t.GetMethod("FromType", BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.FlattenHierarchy);
         if (method != null)
         {
             return method.Invoke(t, new object[] { type }) as MonoScript;
@@ -22,8 +23,16 @@ public static class MonoScriptUtil
 
     public static Texture2D GetMonoScriptIcon(MonoScript script)
     {
-        return script != null ? AssetPreview.GetMiniThumbnail(script) : null;
+        var import = AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(script)) as MonoImporter;
+        if (import != null)
+        {
+            var icon = import.GetIcon();
+            if (icon != null)
+                return icon;
+        }
+        return EditorGUIUtility.IconContent("ScriptableObject Icon").image as Texture2D;
     }
+
 
     public static Texture2D GetMonoScriptIcon<T>() where T : UnityEngine.Object
     {
@@ -32,9 +41,11 @@ public static class MonoScriptUtil
 
     public static Texture2D GetTypeIcon(Type type)
     {
-        if (!type.IsSubclassOf(typeof(ScriptableObject)) && !type.IsSubclassOf(typeof(MonoBehaviour)))
-            return null;
-        MonoScript script = GetMonoScript(type);
-        return GetMonoScriptIcon(script);
+        if(type.IsSubclassOf(typeof(ScriptableObject)))
+        {
+            var script = GetMonoScript(type);
+            return GetMonoScriptIcon(script);
+        }
+        return AssetPreview.GetMiniTypeThumbnail(type);
     }
 }

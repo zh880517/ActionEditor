@@ -42,6 +42,6 @@ namespace Flow
         [HideInInspector]
         public bool Expanded = true;
         public abstract bool IsDefine<T>();
-        public virtual void OnCreate(bool isClone) { }
+        public virtual void OnCreate() { }
     }
 }

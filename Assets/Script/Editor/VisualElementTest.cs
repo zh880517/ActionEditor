@@ -38,6 +38,7 @@ public class VisualElementTest : EditorWindow
         [IntPopupSelect(new string[] { "选项1", "选项2", "选项3" })]
         public int popupValue;
         public TestStruct[] vector2IntValue;
+        public CompareType Compare;
     }
 
     [MenuItem("Tools/VisualElementTest")]

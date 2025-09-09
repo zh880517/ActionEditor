@@ -2,8 +2,8 @@
 
 namespace Flow
 {
-    [AttributeUsage(AttributeTargets.Field, Inherited = false, AllowMultiple = false)]
-    public class DynamicOutputAttribute : Attribute
+    [AttributeUsage(AttributeTargets.Field, Inherited = true, AllowMultiple = false)]
+    public class DynamicOutputAttribute : HiddenInPropertyEditor
     {
     }
 }

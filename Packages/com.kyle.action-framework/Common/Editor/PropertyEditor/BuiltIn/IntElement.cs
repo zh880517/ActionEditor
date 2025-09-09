@@ -61,7 +61,7 @@ namespace PropertyEditor.BuiltIn
     {
         public override void SetValue(object value)
         {
-            field.SetValueWithoutNotify((int)value);
+            field.SetValueWithoutNotify((long)(ulong)value);
         }
 
         protected override void OnValueChanged(ChangeEvent<long> evt)
@@ -83,7 +83,7 @@ namespace PropertyEditor.BuiltIn
     {
         public override void SetValue(object value)
         {
-            field.SetValueWithoutNotify((int)value);
+            field.SetValueWithoutNotify((long)(int)value);
         }
 
         protected override void OnValueChanged(ChangeEvent<long> evt)
@@ -104,7 +104,7 @@ namespace PropertyEditor.BuiltIn
     {
         public override void SetValue(object value)
         {
-            field.SetValueWithoutNotify((int)value);
+            field.SetValueWithoutNotify((long)(uint)value);
         }
 
         protected override void OnValueChanged(ChangeEvent<long> evt)
@@ -124,7 +124,7 @@ namespace PropertyEditor.BuiltIn
     {
         public override void SetValue(object value)
         {
-            field.SetValueWithoutNotify((short)value);
+            field.SetValueWithoutNotify((long)(short)value);
         }
 
         protected override void OnValueChanged(ChangeEvent<long> evt)
@@ -144,7 +144,7 @@ namespace PropertyEditor.BuiltIn
     {
         public override void SetValue(object value)
         {
-            field.SetValueWithoutNotify((ushort)value);
+            field.SetValueWithoutNotify((long)(ushort)value);
         }
 
         protected override void OnValueChanged(ChangeEvent<long> evt)

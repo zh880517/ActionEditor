@@ -10,6 +10,7 @@ public class ScriptObjectCollector : ScriptableSingleton<ScriptObjectCollector>
     class ObjectInfo
     {
         public MonoScript Script;
+        public string RootPath;
         public List<string> Files = new List<string>();
     }
     [SerializeField]
@@ -18,26 +19,35 @@ public class ScriptObjectCollector : ScriptableSingleton<ScriptObjectCollector>
 
     public static event System.Action<MonoScript> OnAssetChanged;
 
-    public IReadOnlyList<string> GetAssets(MonoScript script)
+    public IReadOnlyList<string> GetAssets(MonoScript script, string assetRoot)
     {
         var info = instance.objects.Find(o => o.Script == script);
         if (info != null)
-            return info.Files;
-        return null;
+        {
+            if(info.RootPath != assetRoot)
+            {
+                instance.objects.Remove(info);
+                info = null;
+            }
+        }
+        if(info == null)
+        {
+            info = new ObjectInfo() { Script = script, RootPath = assetRoot };
+            var files = System.IO.Directory.GetFiles(assetRoot, "*.asset", System.IO.SearchOption.AllDirectories);
+            foreach (var item in files)
+            {
+                string path = item.Replace("\\", "/");
+                var type = AssetDatabase.GetMainAssetTypeAtPath(path);
+                var mono = MonoScriptUtil.GetMonoScript(type);
+                if (mono == script)
+                {
+                    info.Files.Add(path);
+                }
+            }
+        }
+        return info.Files;
     }
 
-    private void Awake()
-    {
-        var files = System.IO.Directory.GetFiles("Assets/", "*.asset", System.IO.SearchOption.AllDirectories);
-        foreach (var item in files)
-        {
-            string path = item.Replace("\\", "/");
-            var type = AssetDatabase.GetMainAssetTypeAtPath(path);
-            var mono = MonoScriptUtil.GetMonoScript(type);
-            if (mono != null)
-                AddAsset(mono, path);
-        }
-    }
     private bool AddAsset(MonoScript script, string path)
     {
         var info = objects.Find(o => o.Script == script);

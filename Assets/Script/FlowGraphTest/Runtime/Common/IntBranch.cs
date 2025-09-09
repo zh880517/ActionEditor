@@ -1,7 +1,9 @@
 ﻿using Flow;
 using System.Collections.Generic;
-
-public struct IntBranch : IFlowDynamicOutputable, IFlowInputable
+[FlowNodePath("选项分支")]
+[Alias("整数分支")]
+[System.Serializable]
+public struct IntBranch : ICommonDynamicOutputable
 {
     [Inputable]
     public int Value;

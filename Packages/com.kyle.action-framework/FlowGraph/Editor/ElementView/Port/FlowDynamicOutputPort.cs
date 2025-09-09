@@ -20,7 +20,9 @@ namespace Flow.EditorView
                 Add(fieldElement);
             }
             Field = fieldElement;
-            Port = new FlowPort(true);
+            Port = new FlowPort(false);
+            Port.portName = "";
+            Field.style.minWidth = 100;
             Add(Port);
         }
     }
@@ -37,7 +39,25 @@ namespace Flow.EditorView
 
         public FlowDynamicOutputPort(FlowNode node, FlowNodeTypeInfo nodeTypeInfo)
         {
+            Node = node;
             this.nodeTypeInfo = nodeTypeInfo;
+            rawValue = (IList)System.Activator.CreateInstance(typeof(List<>).MakeGenericType(nodeTypeInfo.DynamicPortType));
+            var value = nodeTypeInfo.ValueField.GetValue(node);
+            sourceList = GetSourceList();
+            if (sourceList != null)
+            {
+                foreach (var item in sourceList)
+                {
+                    rawValue.Add(item);
+                }
+            }
+            else
+            {
+                sourceList = (IList)System.Activator.CreateInstance(typeof(List<>).MakeGenericType(nodeTypeInfo.DynamicPortType));
+                nodeTypeInfo.DynamicPortField.SetValue(value, sourceList);
+                nodeTypeInfo.ValueField.SetValue(node, value);
+            }
+
             style.flexDirection = FlexDirection.Column;
             titleLabel.style.unityFontStyleAndWeight = UnityEngine.FontStyle.Bold;
             var displayNameAttr = nodeTypeInfo.DynamicPortField.GetCustomAttribute<DisplayAttribute>();
@@ -50,14 +70,8 @@ namespace Flow.EditorView
             {
                 titleLabel.text = ObjectNames.NicifyVariableName(nodeTypeInfo.DynamicPortField.Name);
             }
+            Add(titleLabel);
 
-            if ((node is IFlowDynamicOutputable))
-            {
-                throw new System.Exception("node must implement IFlowDynamicOutputable");
-            }
-            Add(listView);
-            Node = node;
-            style.flexDirection = FlexDirection.Column;
             listView.showFoldoutHeader = false;
             listView.reorderable = true;
             listView.reorderMode = ListViewReorderMode.Animated;
@@ -68,26 +82,29 @@ namespace Flow.EditorView
             listView.itemsSource = rawValue;
             listView.makeItem = MakeItem;
             listView.bindItem = BindItem;
+            listView.destroyItem = DestroyItem;
             listView.itemsAdded += OnAdded;
             listView.itemsRemoved += OnRemoved;
             listView.itemIndexChanged += IndexChanged;
+            Add(listView);
 
-            rawValue = (IList)System.Activator.CreateInstance(typeof(List<>).MakeGenericType(nodeTypeInfo.DynamicPortType));
-            sourceList = (IList)nodeTypeInfo.DynamicPortField.GetValue(node);
-            if (sourceList != null)
-            {
-                foreach (var item in sourceList)
-                {
-                    rawValue.Add(item);
-                }
-            }
 
             RegisterCallback<PropertyValueChangedEvent>(OnPropertyValueChangedEvent);
+            RegisterCallback<MouseDownEvent>(evt =>
+            {
+                evt.StopImmediatePropagation();
+            });
+        }
+
+        private IList GetSourceList()
+        {
+            var value = nodeTypeInfo.ValueField.GetValue(Node);
+            return (IList)nodeTypeInfo.DynamicPortField.GetValue(value);
         }
 
         public void Refresh()
         {
-            var newList = (IList)nodeTypeInfo.DynamicPortField.GetValue(Node);
+            var newList = GetSourceList();
             if(newList != sourceList)
             {
                 sourceList = newList;
@@ -98,6 +115,14 @@ namespace Flow.EditorView
                 rawValue.Add(item);
             }
             listView.RefreshItems();
+        }
+
+        public void DisconnectAll()
+        {
+            foreach (var item in children)
+            {
+                item.Port.DisconnectAll();
+            }
         }
 
         public FlowNodePort GetPort(int index)
@@ -111,8 +136,11 @@ namespace Flow.EditorView
         {
             var element = PropertyElementFactory.CreateByType(nodeTypeInfo.DynamicPortType, true);
             element.SetLableWidth(60);
-            return new DynamicOutputPortElement(element);
+            var e = new DynamicOutputPortElement(element);
+            e.Port.Owner = Node;
+            return e;
         }
+
 
         private void BindItem(VisualElement element, int index)
         {
@@ -122,7 +150,20 @@ namespace Flow.EditorView
             portElement.Port.Index = index;
             portElement.Index = index;
             if (!children.Contains(portElement))
+            {
                 children.Add(portElement);
+                using (var e = DynamicOuputPortCreateEvent.GetPooled(portElement.Port, Node, index))
+                {
+                    SendEvent(e);
+                }
+            }
+            children.Sort((a, b) => a.Index.CompareTo(b.Index));
+        }
+
+        private void DestroyItem(VisualElement element)
+        {
+            var portElement = element as DynamicOutputPortElement;
+            children.Remove(portElement);
         }
 
         private void OnAdded(IEnumerable<int> indexs)
@@ -155,23 +196,7 @@ namespace Flow.EditorView
             {
                 sourceList.Add(item);
             }
-            for (int i = 0; i < children.Count; i++)
-            {
-                var child = children[i];
-                if (i >= rawValue.Count)
-                {
-                    children.RemoveAt(i);
-                    i--;
-                    continue;
-                }
-                if (child.Index != i)
-                {
-                    child.Index = i;
-                    child.Port.Index = i;
-                    child.Field.Index = i;
-                    child.Field.SetValue(rawValue[i]);
-                }
-            }
+            children.Sort((a, b) => a.Index.CompareTo(b.Index));
         }
         private void OnPropertyValueChangedEvent(PropertyValueChangedEvent evt)
         {

@@ -40,6 +40,8 @@ namespace PropertyEditor
             Initialize();
             if (dataType == null)
                 return null;
+            if(dataType.IsDefined(typeof(HiddenInPropertyEditor)))
+                return null;
             if (elementCache.TryGetValue(dataType, out var unit))
             {
                 return unit.EditorElementType;
@@ -49,6 +51,18 @@ namespace PropertyEditor
             if (dataType.IsSubclassOf(typeof(UnityEngine.Object)))
                 return typeof(ObjectElement);
 
+            return null;
+        }
+
+        private static Type GetCustomEditorElementType(Type dataType)
+        {
+            Initialize();
+            if (dataType == null)
+                return null;
+            if (elementCache.TryGetValue(dataType, out var unit))
+            {
+                return unit.EditorElementType;
+            }
             return null;
         }
 
@@ -82,6 +96,8 @@ namespace PropertyEditor
             if (field.IsDefined(typeof(UnityEngine.HideInInspector)))
                 return null;
             if (field.IsDefined(typeof(HiddenInPropertyEditor)))
+                return null;
+            if (field.FieldType.IsDefined(typeof(HiddenInPropertyEditor)))
                 return null;
             var customAttr = field.GetCustomAttribute<CustomPropertyAttribute>();
             if (customAttr != null)
@@ -141,7 +157,7 @@ namespace PropertyEditor
             if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(List<>))
                 return new ListPropertyElement(type.GetGenericArguments()[0]);
 
-            var editorType = GetEditorElementType(type);
+            var editorType = GetCustomEditorElementType(type);
             if (editorType != null)
             {
                 if (Activator.CreateInstance(editorType) is PropertyElement editor)

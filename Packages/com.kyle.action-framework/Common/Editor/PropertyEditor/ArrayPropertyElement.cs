@@ -18,6 +18,7 @@ namespace PropertyEditor
             this.elementType = elementType;
             rawValue = (IList)System.Activator.CreateInstance(typeof(List<>).MakeGenericType(elementType));
             listView.makeItem = MakeItem;
+            listView.destroyItem = DestroyItem;
             listView.bindItem = BindItem;
             listView.itemsAdded += OnAdded;
             listView.itemsRemoved += OnRemoved;
@@ -86,6 +87,15 @@ namespace PropertyEditor
             element.SetLableWidth(labelWidth);
             return element;
         }
+
+        private void DestroyItem(VisualElement element)
+        {
+            var propertyElement = element as PropertyElement;
+            if (propertyElement != null && children.Contains(propertyElement))
+            {
+                children.Remove(propertyElement);
+            }
+        }
         private void BindItem(VisualElement element, int index)
         {
             var propertyElement = element as PropertyElement;
@@ -95,6 +105,7 @@ namespace PropertyEditor
                 propertyElement.SetValue(rawValue[index]);
                 if (!children.Contains(propertyElement))
                     children.Add(propertyElement);
+                children.Sort((a, b) => a.Index.CompareTo(b.Index));
             }
         }
         private void OnAdded(IEnumerable<int> indices)
@@ -130,21 +141,7 @@ namespace PropertyEditor
             {
                 sourceArray.SetValue(rawValue[i], i);
             }
-            for (int i = 0; i < children.Count; i++)
-            {
-                var child = children[i];
-                if (i >= rawValue.Count)
-                {
-                    children.RemoveAt(i);
-                    i--;
-                    continue;
-                }
-                if (child.Index != i)
-                {
-                    child.Index = i;
-                    child.SetValue(rawValue[i]);
-                }
-            }
+            children.Sort((a, b) => a.Index.CompareTo(b.Index));
         }
         private void OnPropertyValueChangedEvent(PropertyValueChangedEvent evt)
         {

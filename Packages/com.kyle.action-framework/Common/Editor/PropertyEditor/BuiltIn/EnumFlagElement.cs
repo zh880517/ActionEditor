@@ -8,6 +8,7 @@ namespace PropertyEditor.BuiltIn
     {
         protected readonly UnityEditor.UIElements.EnumFlagsField field = new UnityEditor.UIElements.EnumFlagsField();
         public override bool ReadOnly { get => field.enabledSelf == false; set => field.SetEnabled(!value); }
+        private bool hasInit = false;
         public EnumFlagElement()
         {
             field.RegisterValueChangedCallback(OnValueChanged);
@@ -25,6 +26,11 @@ namespace PropertyEditor.BuiltIn
         }
         public override void SetValue(object value)
         {
+            if(!hasInit)
+            {
+                field.Init((Enum)value);
+                hasInit = true;
+            }
             field.SetValueWithoutNotify((Enum)value);
         }
         protected override void SetValueToField()

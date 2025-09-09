@@ -7,6 +7,7 @@ namespace Flow.EditorView
     public static class FlowNodeTypeCollector
     {
         private static Dictionary<string, List<Type>> nodeTypes;
+        private static Dictionary<Type, string> typeTags = new Dictionary<Type, string>();
 
         public static IReadOnlyList<Type> GetNodeTypes(string tag)
         {
@@ -15,15 +16,17 @@ namespace Flow.EditorView
                 nodeTypes = new Dictionary<string, List<Type>>();
                 foreach (var type in TypeCollector<FlowNode>.Types)
                 {
-                    if(type.GetGenericTypeDefinition() != typeof(TFlowNode<>))
+                    var dataType = type.GetGenericParam(typeof(TFlowNode<>));
+                    if (dataType == null)
                         continue;
-                    var tagAttr = type.GetCustomAttribute<FlowTagAttribute>();
-                    if (tagAttr != null)
+                    string dataTypeTag = GetTypeTag(dataType);
+                    if(dataTypeTag != null)
                     {
-                        if (!nodeTypes.TryGetValue(tagAttr.Tag, out var list))
+
+                        if (!nodeTypes.TryGetValue(dataTypeTag, out var list))
                         {
                             list = new List<Type>();
-                            nodeTypes.Add(tagAttr.Tag, list);
+                            nodeTypes.Add(dataTypeTag, list);
                         }
                         list.Add(type);
                     }
@@ -34,6 +37,25 @@ namespace Flow.EditorView
                 return nodeTypes[tag];
             }
             return null;
+        }
+
+        public static string GetTypeTag(Type type)
+        {
+            if (!typeTags.TryGetValue(type, out var tag))
+            {
+                var interfaces = type.GetInterfaces();
+                foreach (var item in interfaces)
+                {
+                    var tagAttr = item.GetCustomAttribute<FlowTagAttribute>();
+                    if (tagAttr != null)
+                    {
+                        tag = tagAttr.Tag;
+                        break;
+                    }
+                }
+                typeTags[type] = tag;
+            }
+            return tag;
         }
 
     }

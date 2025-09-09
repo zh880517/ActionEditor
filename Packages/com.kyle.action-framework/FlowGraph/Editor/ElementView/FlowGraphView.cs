@@ -18,6 +18,8 @@ namespace Flow.EditorView
             this.AddManipulator(new ContentDragger());
             this.AddManipulator(new SelectionDragger());
             this.AddManipulator(new RectangleSelector());
+            Insert(0, new GridBackground());
+            SetupZoom(0.1f, 5f);
             flowTypeSelect = FlowTypeSelectProvider.GetTypeSelectWindow(graph);
 
             contentViewContainer.style.translate = graph.Position;
@@ -33,8 +35,10 @@ namespace Flow.EditorView
             nodeCreationRequest = (c) =>
             {
                 flowTypeSelect.Current = this;
-                SearchWindow.Open(new SearchWindowContext(MouseLocalPosition), flowTypeSelect);
+                flowTypeSelect.MousePosition = MouseLocalPosition;
+                SearchWindow.Open(new SearchWindowContext(c.screenMousePosition), flowTypeSelect);
             };
+            RegisterCallback<DynamicOuputPortCreateEvent>(OnDynamicOuputPortCreateEvent);
         }
 
         public override List<Port> GetCompatiblePorts(Port startPort, NodeAdapter nodeAdapter)
@@ -54,6 +58,7 @@ namespace Flow.EditorView
                 var nodeView = nodeViews[i];
                 if (!Graph.Nodes.Contains(nodeView.Node))
                 {
+                    nodeView.DisconnectAll();
                     nodeViews.RemoveAt(i);
                     RemoveElement(nodeView);
                 }
@@ -89,7 +94,7 @@ namespace Flow.EditorView
                 {
                     if(!Graph.DataEdges.Exists(it=>it.EdgeID == edge.EdgeID))
                     {
-                        RemoveElement(edge);
+                        RemoveEdge(edge);
                         edgeList.RemoveAt(i);
                         i--;
                     }
@@ -104,14 +109,14 @@ namespace Flow.EditorView
                     var output = edge.output as FlowPort;
                     if(input == null || output == null)
                     {
-                        RemoveElement(edge);
+                        RemoveEdge(edge);
                         edgeList.RemoveAt(i);
                         i--;
                     }
-                    int index = Graph.Edges.FindIndex(it => it.Input == input.Owner && it.OutputIndex == input.Index && it.Output == output.Owner);
+                    int index = Graph.Edges.FindIndex(it => it.Input == input.Owner && it.OutputIndex == output.Index && it.Output == output.Owner);
                     if (index < 0)
                     {
-                        RemoveElement(edge);
+                        RemoveEdge(edge);
                         edgeList.RemoveAt(i);
                         i--;
                     }
@@ -161,10 +166,39 @@ namespace Flow.EditorView
                 }
             }
         }
+
+        private void RemoveEdge(FlowEdgeView edge)
+        {
+            edge.output?.Disconnect(edge);
+            edge.input?.Disconnect(edge);
+            RemoveElement(edge);
+        }
+
         private void ViewTransformChangedCallback(GraphView view)
         {
             Graph.Position = contentViewContainer.resolvedStyle.translate;
             Graph.Scale = contentViewContainer.resolvedStyle.scale.value;
+        }
+
+        private void OnDynamicOuputPortCreateEvent(DynamicOuputPortCreateEvent evt)
+        {
+            foreach (var item in Graph.Edges)
+            {
+                if (item.Output == evt.Node && item.OutputIndex >= evt.Index)
+                {
+                    var inputNodeView = nodeViews.Find(n => n.Node == item.Input);
+                    var inputPort = inputNodeView?.GetFlowPort(true, 0);
+                    if(inputPort != null)
+                    {
+                        var edgeView = new FlowEdgeView();
+                        edgeView.EdgeID = 0;
+                        edgeView.input = inputPort;
+                        edgeView.output = evt.Port;
+                        AddElement(edgeView);
+                    }
+                    break;
+                }
+            }
         }
 
         protected virtual GraphViewChange GraphViewChangedCallback(GraphViewChange changes)
@@ -289,13 +323,8 @@ namespace Flow.EditorView
         public void OnNodeCreate(System.Type type, Vector2 localPosition)
         {
             FlowGraphEditorUtil.RegisterUndo(Graph, "create node");
-            FlowNode node = ScriptableObject.CreateInstance(type) as FlowNode;
+            FlowNode node = FlowGraphEditorUtil.CreateNode(Graph, type, localPosition);
             Undo.RegisterCreatedObjectUndo(node, "create node");
-            node.hideFlags = HideFlags.HideInHierarchy;
-            node.Graph = Graph;
-            node.Position = new Rect(localPosition, new Vector2(200, 150));
-            Graph.Nodes.Add(node);
-            node.OnCreate(false);
             var nodeView = new FlowNodeView(node);
             nodeViews.Add(nodeView);
             AddElement(nodeView);
@@ -322,7 +351,6 @@ namespace Flow.EditorView
                         GUID = System.Guid.NewGuid().ToString(),
                         NodeScript = MonoScript.FromScriptableObject(node),
                         Position = position,
-                        Expanded = node.Expanded,
                         JsonData = JsonUtility.ToJson(nodeView.Node)
                     };
                     nodeGUIDs[node] = nodeData.GUID;
@@ -369,16 +397,9 @@ namespace Flow.EditorView
             Dictionary<string, FlowNode> nodeDict = new Dictionary<string, FlowNode>();
             foreach (var nodeData in copyData.Nodes)
             {
-                var node = ScriptableObject.CreateInstance(nodeData.NodeScript.GetClass()) as FlowNode;
+                var node = FlowGraphEditorUtil.CreateNode(Graph, nodeData.NodeScript.GetClass(), MouseLocalPosition + offset);
                 Undo.RegisterCreatedObjectUndo(node, "paste node");
-                node.hideFlags = HideFlags.HideInHierarchy;
-                node.Graph = Graph;
-                node.Position = nodeData.Position;
-                node.Position.position += (MouseLocalPosition + offset);
-                node.Expanded = nodeData.Expanded;
                 JsonUtility.FromJsonOverwrite(nodeData.JsonData, node);
-                Graph.Nodes.Add(node);
-                node.OnCreate(true);
                 nodeDict[nodeData.GUID] = node;
                 var nodeView = new FlowNodeView(node);
                 nodeViews.Add(nodeView);

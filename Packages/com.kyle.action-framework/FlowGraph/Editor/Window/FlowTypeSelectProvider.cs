@@ -58,5 +58,10 @@ namespace Flow.EditorView
                 }
             }
         }
+
+        private void OnDisable()
+        {
+            FlowGraphEditorContext.Destroy();
+        }
     }
 }

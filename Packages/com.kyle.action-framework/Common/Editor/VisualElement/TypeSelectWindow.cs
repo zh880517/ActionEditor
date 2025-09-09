@@ -46,19 +46,10 @@ public abstract class TypeSelectWindow : ScriptableObject, ISearchWindowProvider
         {
             foreach (var type in types)
             {
-                var dpName = type.GetCustomAttribute<AliasAttribute>(false);
+                var dpName = GetAlias(type);
                 string name = dpName == null ? ObjectNames.NicifyVariableName(type.Name) : dpName.Name;
                 tmpList.Clear();
-                var catalogType = type;
-                while (catalogType != null)
-                {
-                    var catalog = catalogType.GetCustomAttribute<TypeCatalogAttribute>(false);
-                    if (catalog != null && !string.IsNullOrEmpty(catalog.Name))
-                    {
-                        tmpList.Add(catalog.Name);
-                    }
-                    catalogType = catalogType.BaseType;
-                }
+                GetTypeCreatePath(type, tmpList);
                 var root = rootTree;
                 for (int i = tmpList.Count - 1; i >= 0; --i)
                 {
@@ -71,6 +62,26 @@ public abstract class TypeSelectWindow : ScriptableObject, ISearchWindowProvider
 
         return tree;
     }
+
+    protected virtual AliasAttribute GetAlias(System.Type type)
+    {
+        return type.GetCustomAttribute<AliasAttribute>(false);
+    }
+
+    protected virtual void GetTypeCreatePath(System.Type type, List<string> names)
+    {
+        var catalogType = type;
+        while (catalogType != null)
+        {
+            var catalog = catalogType.GetCustomAttribute<TypeCatalogAttribute>(false);
+            if (catalog != null && !string.IsNullOrEmpty(catalog.Name))
+            {
+                names.Add(catalog.Name);
+            }
+            catalogType = catalogType.BaseType;
+        }
+    }
+
     private void BuildTree(TypeTree tree, int level, List<SearchTreeEntry> entries)
     {
         entries.Add(new SearchTreeGroupEntry(new GUIContent(tree.Name), level));

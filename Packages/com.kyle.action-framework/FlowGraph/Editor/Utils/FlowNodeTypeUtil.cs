@@ -46,7 +46,8 @@ namespace Flow.EditorView
     public class FlowNodeTypeInfo
     {
         public Type NodeType;
-        public Type DataType;
+        public FieldInfo ValueField;
+        public Type DataType => ValueField.FieldType;
         public string ShowName;
         public bool HasInput;
         public NodeOutputType OutputType = NodeOutputType.None;
@@ -128,14 +129,15 @@ namespace Flow.EditorView
         {
             if (!nodeType.IsSubclassOf(typeof(FlowNode)))
                 return null;
-            if(nodeType.GetGenericTypeDefinition() != typeof(TFlowNode<>))
+            var dataType = GetGenericParam(nodeType, typeof(TFlowNode<>));
+            if (dataType == null)
             {
                 UnityEngine.Debug.LogError($"节点类型必须继承自 TFlowNode<T> : {nodeType.FullName}");
                 return null;
             }
             FlowNodeTypeInfo typeInfo = new FlowNodeTypeInfo();
             typeInfo.NodeType = nodeType;
-            typeInfo.DataType = nodeType.GetGenericArguments()[0];
+            typeInfo.ValueField = nodeType.GetField("Value");
             var alias = typeInfo.DataType.GetCustomAttribute<AliasAttribute>();
             typeInfo.ShowName = alias != null ? alias.Name : nodeType.Name;
 
@@ -159,8 +161,7 @@ namespace Flow.EditorView
             {
                 typeInfo.OutputType = NodeOutputType.None;
             }
-            var dataField = nodeType.GetField("Value");
-            CollectDataPortFields(dataField, typeInfo);
+            CollectDataPortFields(typeInfo.ValueField, typeInfo);
             return typeInfo;
         }
 
@@ -172,6 +173,22 @@ namespace Flow.EditorView
                 nodeTypeInfos[nodeType] = typeInfo;
             }
             return typeInfo;
+        }
+
+        public static Type GetGenericParam(this Type type, Type genericType)
+        {
+            while (type != null && type != typeof(object))
+            {
+                if(type.IsGenericType && type.GetGenericTypeDefinition() == genericType)
+                    return type.GetGenericArguments()[0];
+                type = type.BaseType;
+            }
+            return null;
+        }
+
+        public static bool IsGenericTypeOf(this Type type, Type genericType)
+        {
+            return GetGenericParam(type, genericType) != null;
         }
     }
 }

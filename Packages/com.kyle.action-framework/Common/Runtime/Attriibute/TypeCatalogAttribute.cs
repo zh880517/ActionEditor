@@ -1,5 +1,5 @@
 ﻿using System;
-[AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
+[AttributeUsage(AttributeTargets.Class | AttributeTargets.Interface | AttributeTargets.Struct, AllowMultiple = false, Inherited = false)]
 public class TypeCatalogAttribute : Attribute
 {
     public string Name { get; private set; }

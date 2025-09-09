@@ -16,8 +16,10 @@ public enum CompareType
     [InspectorName("<=")]
     LessEqual
 }
-
-public struct IntCompare : IFlowInputable, IFlowConditionable
+[FlowNodePath("比较")]
+[Alias("整数比较")]
+[System.Serializable]
+public struct IntCompare : ICommonConditionable
 {
     [Inputable]
     public int A;
