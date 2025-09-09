@@ -15,6 +15,8 @@ namespace Flow.EditorView
                 nodeTypes = new Dictionary<string, List<Type>>();
                 foreach (var type in TypeCollector<FlowNode>.Types)
                 {
+                    if(type.GetGenericTypeDefinition() != typeof(TFlowNode<>))
+                        continue;
                     var tagAttr = type.GetCustomAttribute<FlowTagAttribute>();
                     if (tagAttr != null)
                     {

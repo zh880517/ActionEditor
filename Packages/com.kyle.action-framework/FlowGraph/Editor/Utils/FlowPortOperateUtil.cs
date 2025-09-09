@@ -117,7 +117,7 @@ namespace Flow.EditorView
 
         public static void RemoveDynamicOutputPortWithUndo(FlowNode node, int index)
         {
-            if (node == null || !(node is IFlowDynamicOutputable))
+            if (node == null || !node.IsDefine <IFlowDynamicOutputable>())
                 return;
             FlowGraphEditorUtil.RegisterUndo(node, "remove dynamic port", true);
             RemoveDynamicOutputPort(node, index);
@@ -125,7 +125,7 @@ namespace Flow.EditorView
 
         public static void RemoveDynamicOutputPortWithUndo(FlowNode node, IEnumerable<int> indexs)
         {
-            if (node == null || !(node is IFlowDynamicOutputable))
+            if (node == null || !node.IsDefine<IFlowDynamicOutputable>())
                 return;
             FlowGraphEditorUtil.RegisterUndo(node, "remove dynamic port", true);
             var graph = node.Graph;
@@ -153,7 +153,7 @@ namespace Flow.EditorView
 
         public static void DynamicOutputPortIndexChangedWithUndo(FlowNode node, int srcIndex, int dstIndex)
         {
-            if (node == null || !(node is IFlowDynamicOutputable))
+            if (node == null || !node.IsDefine<IFlowDynamicOutputable>())
                 return;
             FlowGraphEditorUtil.RegisterUndo(node, "dynamic port index changed", true);
             var graph = node.Graph;
@@ -190,7 +190,7 @@ namespace Flow.EditorView
                     edges.RemoveAt(i);
                     continue;
                 }
-                if (e.Output is IFlowEntry)
+                if (e.Output.IsDefine<IFlowEntry>())
                 {
                     if (e.OutputIndex != 0)
                     {
@@ -198,7 +198,7 @@ namespace Flow.EditorView
                         continue;
                     }
                 }
-                else if (e.Output is IFlowConditionable)
+                else if (e.Output.IsDefine<IFlowConditionable>())
                 {
                     if (e.OutputIndex != 0 && e.OutputIndex != 1)
                     {
@@ -206,7 +206,7 @@ namespace Flow.EditorView
                         continue;
                     }
                 }
-                else if (e.Output is IFlowDynamicOutputable)
+                else if (e.Output.IsDefine<IFlowDynamicOutputable>())
                 {
                     var ouputNodeTypeInfor = FlowNodeTypeUtil.GetNodeTypeInfo(e.Output.GetType());
                     if (ouputNodeTypeInfor == null || ouputNodeTypeInfor.OutputType != NodeOutputType.Dynamic)
@@ -221,7 +221,7 @@ namespace Flow.EditorView
                         continue;
                     }
                 }
-                else if (e.Output is IFlowOutputable)
+                else if (e.Output.IsDefine<IFlowOutputable>())
                 {
                     if (e.OutputIndex != 0)
                     {

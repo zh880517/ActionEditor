@@ -2,11 +2,14 @@
 
 namespace Flow
 {
-    public interface IFlowInputable
+    public interface IFlowNode
+    {
+    }
+    public interface IFlowInputable : IFlowNode
     {
     }
 
-    public interface IFlowOutputable
+    public interface IFlowOutputable : IFlowNode
     {
     }
 
@@ -38,5 +41,7 @@ namespace Flow
         public Rect Position;
         [HideInInspector]
         public bool Expanded = true;
+        public abstract bool IsDefine<T>();
+        public virtual void OnCreate(bool isClone) { }
     }
 }

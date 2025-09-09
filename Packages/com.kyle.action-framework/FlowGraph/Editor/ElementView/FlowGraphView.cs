@@ -291,9 +291,11 @@ namespace Flow.EditorView
             FlowGraphEditorUtil.RegisterUndo(Graph, "create node");
             FlowNode node = ScriptableObject.CreateInstance(type) as FlowNode;
             Undo.RegisterCreatedObjectUndo(node, "create node");
+            node.hideFlags = HideFlags.HideInHierarchy;
             node.Graph = Graph;
             node.Position = new Rect(localPosition, new Vector2(200, 150));
             Graph.Nodes.Add(node);
+            node.OnCreate(false);
             var nodeView = new FlowNodeView(node);
             nodeViews.Add(nodeView);
             AddElement(nodeView);
@@ -311,7 +313,7 @@ namespace Flow.EditorView
                 if (e is FlowNodeView nodeView)
                 {
                     var node = nodeView.Node;
-                    if (node is IFlowEntry)
+                    if (node .IsDefine<IFlowEntry>())
                         continue;
                     Rect position = node.Position;
                     position.position -= MouseLocalPosition;
@@ -369,12 +371,14 @@ namespace Flow.EditorView
             {
                 var node = ScriptableObject.CreateInstance(nodeData.NodeScript.GetClass()) as FlowNode;
                 Undo.RegisterCreatedObjectUndo(node, "paste node");
+                node.hideFlags = HideFlags.HideInHierarchy;
                 node.Graph = Graph;
                 node.Position = nodeData.Position;
                 node.Position.position += (MouseLocalPosition + offset);
                 node.Expanded = nodeData.Expanded;
                 JsonUtility.FromJsonOverwrite(nodeData.JsonData, node);
                 Graph.Nodes.Add(node);
+                node.OnCreate(true);
                 nodeDict[nodeData.GUID] = node;
                 var nodeView = new FlowNodeView(node);
                 nodeViews.Add(nodeView);
