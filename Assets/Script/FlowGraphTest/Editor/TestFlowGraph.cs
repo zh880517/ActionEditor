@@ -3,9 +3,8 @@ using Flow;
 [FlowGraphTagsAttrribute("Common")]
 public class TestFlowGraph : FlowGraph
 {
-    protected override void OnCreate()
+    public override bool CheckDelete(FlowNode node)
     {
-        base.OnCreate();
-
+        return !(node is EntryNode);
     }
 }

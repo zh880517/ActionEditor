@@ -203,13 +203,14 @@ namespace Flow.EditorView
 
         protected virtual GraphViewChange GraphViewChangedCallback(GraphViewChange changes)
         {
+            bool needRefresh = false;
             if (changes.elementsToRemove != null)
             {
                 changes.elementsToRemove.RemoveAll(it =>
                 {
                     if (it is FlowNodeView nodeView)
                     {
-                            return true;
+                        return !Graph.CheckDelete(nodeView.Node);
                     }
                     return false;
                 });
@@ -237,12 +238,15 @@ namespace Flow.EditorView
                             case FlowNodeView nodeView:
                                 FlowPortOperateUtil.OnNodeRemove(nodeView.Node);
                                 FlowDataPortOperateUtil.OnNodeRemove(nodeView.Node);
+                                OnNodeDelete(nodeView.Node);
+                                nodeView.DisconnectAll();
                                 Graph.Nodes.Remove(nodeView.Node);
                                 nodeViews.Remove(nodeView);
                                 Undo.DestroyObjectImmediate(nodeView.Node);
                                 break;
                         }
                     }
+                    needRefresh = true;
                 }
             }
             if (changes.edgesToCreate != null)
@@ -265,9 +269,34 @@ namespace Flow.EditorView
                         flowEdge.EdgeID = id;
                     }
                 }
+                needRefresh = true;
+            }
+            if (needRefresh)
+            {
+                Refresh();
             }
             return changes;
         }
+
+        protected void OnNodeDelete(FlowNode node)
+        {
+            var removes = edges.Select(it => it as FlowEdgeView)
+                .Where(it => it != null)
+                .Where(it =>
+                {
+                    if (it.input is FlowNodePort input && input.Owner == node)
+                        return true;
+                    if (it.output is FlowNodePort output && output.Owner == node)
+                        return true;
+                    return false;
+                })
+                .ToArray();
+            foreach (var edge in removes)
+            {
+                RemoveElement(edge);
+            }
+        }
+
 
         private void OnMouseMoveEvent(MouseMoveEvent evt)
         {
@@ -284,6 +313,29 @@ namespace Flow.EditorView
             {
                 evt.StopPropagation();
             }
+            else if (evt.commandName == "SelectAll")
+            {
+                ClearSelection();
+                foreach (var nodeView in nodeViews)
+                {
+                    AddToSelection(nodeView);
+                }
+                evt.StopPropagation();
+            }
+            else if(evt.commandName == "DeselectAll")
+            {
+                ClearSelection();
+                evt.StopPropagation();
+            }
+            else if (evt.commandName == "SoftDelete")
+            {
+                DeleteSelection();
+                evt.StopPropagation();
+            }
+            else
+            {
+                evt.StopPropagation();
+            }
         }
 
         protected void OnValidateCommand(ValidateCommandEvent evt)
@@ -293,6 +345,14 @@ namespace Flow.EditorView
                 evt.StopPropagation();
             }
             else if (evt.commandName == "Paste" && !string.IsNullOrEmpty(EditorGUIUtility.systemCopyBuffer))
+            {
+                evt.StopPropagation();
+            }
+            else if (evt.commandName == "SoftDelete" && selection.Count() > 0)
+            {
+                evt.StopPropagation();
+            }
+            else
             {
                 evt.StopPropagation();
             }

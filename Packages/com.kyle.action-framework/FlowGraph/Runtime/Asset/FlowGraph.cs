@@ -25,14 +25,11 @@ namespace Flow
             return FlowGUIDGenertor.GenID(keyIndex++);
         }
 
-        protected virtual void OnCreate() { }
-
-        public static T Create<T>() where T : FlowGraph
+        public virtual bool CheckDelete(FlowNode node)
         {
-            T graph = CreateInstance<T>();
-            graph.name = typeof(T).Name;
-            graph.OnCreate();
-            return graph;
+            return true;
         }
+
+        protected virtual void OnCreate() { }
     }
 }

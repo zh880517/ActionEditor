@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace Flow.EditorView
 {
@@ -109,7 +110,6 @@ namespace Flow.EditorView
                 {
                     inputFields.Add(element);
                     var port = new FlowDataPort(true, item.FieldType);
-                    //extensionContainer.Add(port);
                     port.portName = element.DisplayName;
                     port.Owner = node;
                     port.FieldName = item.Name;
@@ -118,7 +118,8 @@ namespace Flow.EditorView
                     ports.Add(new PortUnit { Name = item.Name, Port = port, Type = PortType.DataInput });
                 }
             }
-            if(dynamicOutputPort != null)
+            RefreshDataPorts();
+            if (dynamicOutputPort != null)
             {
                 extensionContainer.Add(dynamicOutputPort);
             }
@@ -131,6 +132,16 @@ namespace Flow.EditorView
             expanded = Node.Expanded;
             propertyEditor.SetValue(Node);
             dynamicOutputPort?.Refresh();
+            RefreshDataPorts();
+        }
+
+        public void RefreshDataPorts()
+        {
+            foreach (var item in inputFields)
+            {
+                bool hasConnection = Node.Graph.DataEdges.Exists(it=>it.Input == Node && it.InputSlot == item.FieldName);
+                item.Element.style.display = hasConnection ? DisplayStyle.None : DisplayStyle.Flex;
+            }
         }
 
         public void DisconnectAll()

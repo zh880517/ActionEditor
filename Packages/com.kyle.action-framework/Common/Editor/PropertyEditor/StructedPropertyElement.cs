@@ -12,6 +12,7 @@ namespace PropertyEditor
         public bool ReadOnly { get; private set; }
         public string DisplayName { get; private set; }
         public string ToolTip { get; private set; }
+        public string FieldName => Element.Field?.Name;
 
         public StrctedFieldElement()
         {
@@ -24,7 +25,6 @@ namespace PropertyEditor
             ReadOnly = readOnly;
             DisplayName = displayName;
             ToolTip = toolTip;
-            style.flexDirection = FlexDirection.Row;
             Element.SetLable(displayName, toolTip);
             Element.style.flexGrow = 1;
             Add(Element);
@@ -107,9 +107,9 @@ namespace PropertyEditor
                     children.Add(child);
 
                     if (foldout != null)
-                        foldout.Add(element);
+                        foldout.Add(child);
                     else
-                        Add(element);
+                        Add(child);
                 }
             }
 
@@ -133,7 +133,7 @@ namespace PropertyEditor
 
                 foreach (var item in children)
                 {
-                    foldout.Add(item.Element);
+                    foldout.Add(item);
                 }
             }
             else
@@ -142,7 +142,7 @@ namespace PropertyEditor
                 foldout = null;
                 foreach (var item in children)
                 {
-                    Add(item.Element);
+                    Add(item);
                 }
             }
         }
