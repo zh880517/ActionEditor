@@ -5,7 +5,8 @@ using UnityEngine.UIElements;
 
 namespace Flow.EditorView
 {
-    public class FlowGraphEditorWindow : EditorWindow
+
+    public class FlowGraphEditorWindow : EditorWindow, IFlowEditorWindow
     {
         [UnityEditor.Callbacks.OnOpenAsset(0)]
         internal static bool OnGraphOpened(int instanceID, int line)
@@ -42,6 +43,7 @@ namespace Flow.EditorView
         {
             if (graph == current)
                 return;
+            Undo.RegisterCompleteObjectUndo(this, name);
             openList.Remove(graph);
             openList.Add(graph);
             current = graph;
@@ -132,6 +134,7 @@ namespace Flow.EditorView
             view = CreateGraphView(graph);
             view.StretchToParentSize();
             view.EditorWindow = this;
+            view.EditorData = FlowGraphEditorDataCache.instance.GetEditorData(this, graph);
             views.Add(graph, view);
             graphContainerView.Add(view);
             return view;
@@ -179,6 +182,24 @@ namespace Flow.EditorView
         {
             var editorContext = FlowGraphEditorContext.GetContext(graph.GetType());
             editorContext?.Export(graph);
+        }
+
+        public Vector2 ScreenPositionToWorldPosition(Vector2 screenPosition)
+        {
+            if(rootVisualElement != null)
+            {
+                return rootVisualElement.ChangeCoordinatesTo(rootVisualElement, screenPosition - position.position);
+            }
+            return screenPosition;
+        }
+
+        public Vector2 WorldPositionToScreenPosition(Vector2 worldPosition)
+        {
+            if (rootVisualElement != null)
+            {
+                return worldPosition + position.position;
+            }
+            return worldPosition;
         }
     }
 }

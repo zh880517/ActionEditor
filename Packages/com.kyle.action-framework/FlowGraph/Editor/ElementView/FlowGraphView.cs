@@ -8,7 +8,8 @@ namespace Flow.EditorView
 {
     public class FlowGraphView : GraphView
     {
-        public FlowGraphEditorWindow EditorWindow { get; set; }
+        public IFlowEditorWindow EditorWindow { get; set; }
+        public FlowGraphEditorData EditorData { get; set; }
         public FlowGraph Graph { get; private set; }
         public Vector2 MouseLocalPosition { get; private set; }
         private readonly List<FlowNodeView> nodeViews = new List<FlowNodeView>();
@@ -36,12 +37,8 @@ namespace Flow.EditorView
             nodeCreationRequest = (c) =>
             {
                 flowTypeSelect.Current = this;
-                if (EditorWindow)
-                {
-                    var root = EditorWindow.rootVisualElement;
-                    var worldMousePosition = root.ChangeCoordinatesTo(root, c.screenMousePosition - EditorWindow.position.position);
-                    flowTypeSelect.MousePosition = contentViewContainer.WorldToLocal(worldMousePosition);  
-                }
+                var worldMousePosition = EditorWindow.ScreenPositionToWorldPosition(c.screenMousePosition);
+                flowTypeSelect.MousePosition = contentViewContainer.WorldToLocal(worldMousePosition);
                 SearchWindow.Open(new SearchWindowContext(c.screenMousePosition), flowTypeSelect);
             };
             RegisterCallback<DynamicOuputPortCreateEvent>(OnDynamicOuputPortCreateEvent);
@@ -56,8 +53,10 @@ namespace Flow.EditorView
                     .ToList();
         }
 
+
         public void Refresh()
         {
+            selection.Clear();
             //移除多余的节点
             for (int i = nodeViews.Count - 1; i >= 0; i--)
             {
@@ -81,6 +80,10 @@ namespace Flow.EditorView
                     var nodeView = new FlowNodeView(node);
                     nodeViews.Add(nodeView);
                     AddElement(nodeView);
+                    if (EditorData.Selections.Exists(it=>it.Node == node))
+                    {
+                        AddToSelection(nodeView);
+                    }
                 }
             }
             //移除多余的连线
@@ -103,10 +106,15 @@ namespace Flow.EditorView
                         RemoveEdge(edge);
                         edgeList.RemoveAt(i);
                         i--;
+                        continue;
                     }
                     else
                     {
                         connectedDataEdges.Add(edge.EdgeID);
+                    }
+                    if(EditorData.Selections.Exists(it=>it.Type == SelectionType.DataEdge && it.EdgeID == edge.EdgeID))
+                    {
+                        AddToSelection(edge);
                     }
                 }
                 else
@@ -118,6 +126,7 @@ namespace Flow.EditorView
                         RemoveEdge(edge);
                         edgeList.RemoveAt(i);
                         i--;
+                        continue;
                     }
                     int index = Graph.Edges.FindIndex(it => it.Input == input.Owner && it.OutputIndex == output.Index && it.Output == output.Owner);
                     if (index < 0)
@@ -125,13 +134,17 @@ namespace Flow.EditorView
                         RemoveEdge(edge);
                         edgeList.RemoveAt(i);
                         i--;
+                        continue;
                     }
                     else
                     {
                         connectedFlowEdges.Add(index);
                     }
+                    if (EditorData.Selections.Exists(it => it.Type == SelectionType.Edge && it.Edge == Graph.Edges[index]))
+                    {
+                        AddToSelection(edge);
+                    }
                 }
-
             }
 
             //添加新的连线
@@ -150,6 +163,10 @@ namespace Flow.EditorView
                         edgeView.input = inputPort;
                         edgeView.output = outputPort;
                         AddElement(edgeView);
+                        if (EditorData.Selections.Exists(it => it.Type == SelectionType.DataEdge && it.EdgeID == edgeView.EdgeID))
+                        {
+                            AddToSelection(edgeView);
+                        }
                     }
                 }
             }
@@ -168,6 +185,11 @@ namespace Flow.EditorView
                         edgeView.input = inputPort;
                         edgeView.output = outputPort;
                         AddElement(edgeView);
+
+                        if (EditorData.Selections.Exists(it => it.Type == SelectionType.Edge && it.Edge == item))
+                        {
+                            AddToSelection(edgeView);
+                        }
                     }
                 }
             }
@@ -222,7 +244,7 @@ namespace Flow.EditorView
                 });
                 if (changes.elementsToRemove.Count > 0)
                 {
-                    FlowGraphEditorUtil.RegisterUndo(Graph, "remove element");
+                    RegisterGraphUndo(Graph, "remove element");
                     foreach (var ele in changes.elementsToRemove)
                     {
                         switch (ele)
@@ -257,7 +279,7 @@ namespace Flow.EditorView
             }
             if (changes.edgesToCreate != null)
             {
-                FlowGraphEditorUtil.RegisterUndo(Graph, "create edge");
+                RegisterGraphUndo(Graph, "create edge");
                 foreach (var edge in changes.edgesToCreate)
                 {
                     var flowEdge = edge as FlowEdgeView;
@@ -302,8 +324,42 @@ namespace Flow.EditorView
                 RemoveElement(edge);
             }
         }
-
-
+        protected void RegisterGraphUndo(FlowGraph graph, string name)
+        {
+            EditorData.Selections.Clear();
+            foreach (var item in selection)
+            {
+                switch (item)
+                {
+                    case FlowNodeView nodeView:
+                        EditorData.Selections.Add(new SelectionData { Type = SelectionType.Node, Node = nodeView.Node });
+                        break;
+                    case FlowEdgeView edgeView:
+                        if (edgeView.EdgeID != 0)
+                        {
+                            EditorData.Selections.Add(new SelectionData
+                            {
+                                Type = SelectionType.DataEdge,
+                                EdgeID = edgeView.EdgeID,
+                            });
+                        }
+                        else
+                        {
+                            var output = edgeView.output as FlowPort;
+                            var input = edgeView.input as FlowPort;
+                            if (output != null && input != null)
+                                EditorData.Selections.Add(new SelectionData
+                                {
+                                    Type = SelectionType.Edge,
+                                    Edge = Graph.Edges.Find(it => it.Output == output.Owner && it.OutputIndex == output.Index && it.Input == input.Owner)
+                                });
+                        }
+                        break;
+                }
+            }
+            Undo.RegisterCompleteObjectUndo(EditorData, name);
+            FlowGraphEditorUtil.RegisterUndo(graph, name);
+        }
         private void OnMouseMoveEvent(MouseMoveEvent evt)
         {
             MouseLocalPosition = evt.localMousePosition;
@@ -390,7 +446,7 @@ namespace Flow.EditorView
 
         public void OnNodeCreate(System.Type type, Vector2 localPosition)
         {
-            FlowGraphEditorUtil.RegisterUndo(Graph, "create node");
+            RegisterGraphUndo(Graph, "create node");
             FlowNode node = FlowGraphEditorUtil.CreateNode(Graph, type, localPosition);
             Undo.RegisterCreatedObjectUndo(node, "create node");
             var nodeView = new FlowNodeView(node);
@@ -459,7 +515,7 @@ namespace Flow.EditorView
         {
             if (copyData == null || copyData.Nodes.Count == 0)
                 return;
-            FlowGraphEditorUtil.RegisterUndo(Graph, "paste node");
+            RegisterGraphUndo(Graph, "paste node");
             Dictionary<string, FlowNode> nodeDict = new Dictionary<string, FlowNode>();
             foreach (var nodeData in copyData.Nodes)
             {

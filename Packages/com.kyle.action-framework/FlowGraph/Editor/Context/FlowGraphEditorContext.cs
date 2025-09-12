@@ -66,6 +66,11 @@ namespace Flow.EditorView
             return typeof(FlowGraphEditorWindow);
         }
 
+        public virtual Type GetEditorDataType()
+        {
+            return typeof(FlowGraphEditorData);
+        }
+
         public abstract IReadOnlyList<FlowGraph> Graphs { get; }
         public abstract Type GetGraphType();
         public abstract void OnGraphCreate(FlowGraph graph);
