@@ -8,6 +8,7 @@ namespace Flow.EditorView
 {
     public class FlowGraphView : GraphView
     {
+        public FlowGraphEditorWindow EditorWindow { get; set; }
         public FlowGraph Graph { get; private set; }
         public Vector2 MouseLocalPosition { get; private set; }
         private readonly List<FlowNodeView> nodeViews = new List<FlowNodeView>();
@@ -35,7 +36,12 @@ namespace Flow.EditorView
             nodeCreationRequest = (c) =>
             {
                 flowTypeSelect.Current = this;
-                flowTypeSelect.MousePosition = MouseLocalPosition;
+                if (EditorWindow)
+                {
+                    var root = EditorWindow.rootVisualElement;
+                    var worldMousePosition = root.ChangeCoordinatesTo(root, c.screenMousePosition - EditorWindow.position.position);
+                    flowTypeSelect.MousePosition = contentViewContainer.WorldToLocal(worldMousePosition);  
+                }
                 SearchWindow.Open(new SearchWindowContext(c.screenMousePosition), flowTypeSelect);
             };
             RegisterCallback<DynamicOuputPortCreateEvent>(OnDynamicOuputPortCreateEvent);
@@ -340,19 +346,21 @@ namespace Flow.EditorView
 
         protected void OnValidateCommand(ValidateCommandEvent evt)
         {
-            if (evt.commandName == "Copy" && selection.Count() > 0)
+            if (selection.Exists(it => it is Node))
             {
-                evt.StopPropagation();
+                if (evt.commandName == "Copy" 
+                    || evt.commandName == "DeselectAll"
+                    || evt.commandName == "Duplicate")
+                {
+                    evt.StopPropagation();
+                    return;
+                }
             }
-            else if (evt.commandName == "Paste" && !string.IsNullOrEmpty(EditorGUIUtility.systemCopyBuffer))
+            if (evt.commandName == "Paste" && !string.IsNullOrEmpty(EditorGUIUtility.systemCopyBuffer))
             {
                 evt.StopPropagation();
             }
             else if (evt.commandName == "SoftDelete" && selection.Count() > 0)
-            {
-                evt.StopPropagation();
-            }
-            else
             {
                 evt.StopPropagation();
             }
@@ -404,13 +412,11 @@ namespace Flow.EditorView
                     var node = nodeView.Node;
                     if (node .IsDefine<IFlowEntry>())
                         continue;
-                    Rect position = node.Position;
-                    position.position -= MouseLocalPosition;
                     var nodeData = new FlowNodeCopy
                     {
                         GUID = System.Guid.NewGuid().ToString(),
                         NodeScript = MonoScript.FromScriptableObject(node),
-                        Position = position,
+                        Position = node.Position.position - MouseLocalPosition,
                         JsonData = JsonUtility.ToJson(nodeView.Node)
                     };
                     nodeGUIDs[node] = nodeData.GUID;
@@ -457,9 +463,11 @@ namespace Flow.EditorView
             Dictionary<string, FlowNode> nodeDict = new Dictionary<string, FlowNode>();
             foreach (var nodeData in copyData.Nodes)
             {
-                var node = FlowGraphEditorUtil.CreateNode(Graph, nodeData.NodeScript.GetClass(), MouseLocalPosition + offset);
-                Undo.RegisterCreatedObjectUndo(node, "paste node");
+                Vector2 position = MouseLocalPosition + (nodeData.Position + offset);
+                var node = FlowGraphEditorUtil.CreateNode(Graph, nodeData.NodeScript.GetClass(), position);
                 JsonUtility.FromJsonOverwrite(nodeData.JsonData, node);
+                node.Position.position = position;
+                Undo.RegisterCreatedObjectUndo(node, "paste node");
                 nodeDict[nodeData.GUID] = node;
                 var nodeView = new FlowNodeView(node);
                 nodeViews.Add(nodeView);

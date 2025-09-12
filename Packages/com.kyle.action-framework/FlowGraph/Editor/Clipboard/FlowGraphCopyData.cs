@@ -9,7 +9,7 @@ namespace Flow.EditorView
     {
         public string GUID;
         public MonoScript NodeScript;
-        public Rect Position;
+        public Vector2 Position;
         public string JsonData;
     }
     [System.Serializable]

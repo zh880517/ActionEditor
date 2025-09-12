@@ -131,6 +131,7 @@ namespace Flow.EditorView
             }
             view = CreateGraphView(graph);
             view.StretchToParentSize();
+            view.EditorWindow = this;
             views.Add(graph, view);
             graphContainerView.Add(view);
             return view;
