@@ -30,6 +30,11 @@ namespace Flow
             return true;
         }
 
+        public virtual void ExportToRuntime(FlowGraphRuntimeData data)
+        {
+            FlowGraphExport.Export(this, data);
+        }
+
         protected virtual void OnCreate() { }
     }
 }

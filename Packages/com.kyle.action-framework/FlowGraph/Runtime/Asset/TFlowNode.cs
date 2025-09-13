@@ -9,5 +9,17 @@
         {
             return Value is U;
         }
+
+        public override FlowNodeRuntimeData Export()
+        {
+            var exportData = CreateExport();
+            exportData.Value = Value;
+            return exportData;
+        }
+
+        protected virtual TFlowNodeRuntimeData<T> CreateExport()
+        {
+            return new TFlowNodeRuntimeData<T>();
+        }
     }
 }

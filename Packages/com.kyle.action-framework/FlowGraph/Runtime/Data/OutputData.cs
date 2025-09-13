@@ -19,6 +19,7 @@
         public ulong Key;
     }
 
+    /*
     //可变数据，每次读取都要对应的节点执行一次，重新计算一次数值
     [System.Serializable]
     [HiddenInPropertyEditor]
@@ -31,4 +32,5 @@
         }
         public ulong Key;
     }
+    */
 }
