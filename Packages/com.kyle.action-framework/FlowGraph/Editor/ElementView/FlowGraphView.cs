@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
 using UnityEditor.Experimental.GraphView;
+using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 namespace Flow.EditorView
@@ -14,6 +15,8 @@ namespace Flow.EditorView
         public Vector2 MouseLocalPosition { get; private set; }
         private readonly List<FlowNodeView> nodeViews = new List<FlowNodeView>();
         private readonly FlowTypeSelectWindow flowTypeSelect;
+        private MiniMap miniMap;
+        private readonly ToolbarToggle miniMapToggle = new ToolbarToggle();
         public FlowGraphView(FlowGraph graph)
         {
             Graph = graph;
@@ -42,6 +45,42 @@ namespace Flow.EditorView
                 SearchWindow.Open(new SearchWindowContext(c.screenMousePosition), flowTypeSelect);
             };
             RegisterCallback<DynamicOuputPortCreateEvent>(OnDynamicOuputPortCreateEvent);
+            SetMinMapActive(false);
+            miniMapToggle.RegisterValueChangedCallback(evt =>
+            {
+                SetMinMapActive(evt.newValue);
+            });
+            miniMapToggle.text = "显示缩略图";
+            miniMapToggle.style.position = Position.Absolute;
+            miniMapToggle.style.top = 0;
+            miniMapToggle.style.right = 0;
+            Add(miniMapToggle);
+        }
+
+        private void SetMinMapActive(bool active)
+        {
+            miniMapToggle.SetValueWithoutNotify(active);
+            if(active)
+            {
+                if (miniMap == null)
+                {
+                    miniMap = new MiniMap();
+                    miniMap.graphView = this;
+                    var size = layout.size;
+                    var mapSize = new Vector2(200, 150);
+                    miniMap.SetPosition(new Rect(size - mapSize, mapSize));
+                    Add(miniMap);
+                }
+                miniMap.style.display = DisplayStyle.Flex;
+            }
+            else
+            {
+
+                if (miniMap != null)
+                {
+                    miniMap.style.display = DisplayStyle.None;
+                }
+            }
         }
 
         public override List<Port> GetCompatiblePorts(Port startPort, NodeAdapter nodeAdapter)
@@ -56,7 +95,6 @@ namespace Flow.EditorView
 
         public void Refresh()
         {
-            selection.Clear();
             //移除多余的节点
             for (int i = nodeViews.Count - 1; i >= 0; i--)
             {
@@ -80,10 +118,6 @@ namespace Flow.EditorView
                     var nodeView = new FlowNodeView(node);
                     nodeViews.Add(nodeView);
                     AddElement(nodeView);
-                    if (EditorData.Selections.Exists(it=>it.Node == node))
-                    {
-                        AddToSelection(nodeView);
-                    }
                 }
             }
             //移除多余的连线
@@ -112,10 +146,6 @@ namespace Flow.EditorView
                     {
                         connectedDataEdges.Add(edge.EdgeID);
                     }
-                    if(EditorData.Selections.Exists(it=>it.Type == SelectionType.DataEdge && it.EdgeID == edge.EdgeID))
-                    {
-                        AddToSelection(edge);
-                    }
                 }
                 else
                 {
@@ -140,10 +170,6 @@ namespace Flow.EditorView
                     {
                         connectedFlowEdges.Add(index);
                     }
-                    if (EditorData.Selections.Exists(it => it.Type == SelectionType.Edge && it.Edge == Graph.Edges[index]))
-                    {
-                        AddToSelection(edge);
-                    }
                 }
             }
 
@@ -163,10 +189,6 @@ namespace Flow.EditorView
                         edgeView.input = inputPort;
                         edgeView.output = outputPort;
                         AddElement(edgeView);
-                        if (EditorData.Selections.Exists(it => it.Type == SelectionType.DataEdge && it.EdgeID == edgeView.EdgeID))
-                        {
-                            AddToSelection(edgeView);
-                        }
                     }
                 }
             }
@@ -185,12 +207,50 @@ namespace Flow.EditorView
                         edgeView.input = inputPort;
                         edgeView.output = outputPort;
                         AddElement(edgeView);
-
-                        if (EditorData.Selections.Exists(it => it.Type == SelectionType.Edge && it.Edge == item))
-                        {
-                            AddToSelection(edgeView);
-                        }
                     }
+                }
+            }
+        }
+
+        public void RefreshSelection()
+        {
+            ClearSelection();
+            foreach (var item in EditorData.Selections)
+            {
+                switch (item.Type)
+                {
+                    case SelectionType.Node:
+                        var nodeView = nodeViews.Find(n => n.Node == item.Node);
+                        if (nodeView != null)
+                            AddToSelection(nodeView);
+                        break;
+                    case SelectionType.Edge:
+                        var edgeView = edges.ToList().Find(e =>
+                        {
+                            if (e is FlowEdgeView fe && fe.EdgeID == 0)
+                            {
+                                var output = fe.output as FlowPort;
+                                var input = fe.input as FlowPort;
+                                if (output != null && input != null)
+                                    return item.Edge == Graph.Edges.Find(it => it.Output == output.Owner && it.OutputIndex == output.Index && it.Input == input.Owner);
+                            }
+                            return false;
+                        });
+                        if (edgeView != null)
+                            AddToSelection(edgeView);
+                        break;
+                    case SelectionType.DataEdge:
+                        var dataEdgeView = edges.ToList().Find(e =>
+                        {
+                            if (e is FlowEdgeView fe)
+                            {
+                                return fe.EdgeID == item.EdgeID;
+                            }
+                            return false;
+                        });
+                        if (dataEdgeView != null)
+                            AddToSelection(dataEdgeView);
+                        break;
                 }
             }
         }

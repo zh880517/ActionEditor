@@ -42,8 +42,8 @@ namespace Flow.EditorView
             {
                 var list = System.Activator.CreateInstance(typeof(List<>).MakeGenericType(nodeTypeInfo.DynamicPortType)) as System.Collections.IList;
                 var value = nodeTypeInfo.ValueField.GetValue(node);
-                nodeTypeInfo.ValueField.SetValue(value, list);
-                nodeTypeInfo.DynamicPortField.SetValue(node, list);
+                nodeTypeInfo.DynamicPortField.SetValue(value, list);
+                nodeTypeInfo.ValueField.SetValue(node, value);
             }
 
             node.OnCreate();
