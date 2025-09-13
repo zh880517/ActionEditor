@@ -210,9 +210,11 @@ namespace Flow.EditorView
                     }
                 }
             }
+
+            schedule.Execute(RefreshSelection);
         }
 
-        public void RefreshSelection()
+        protected void RefreshSelection()
         {
             ClearSelection();
             foreach (var item in EditorData.Selections)

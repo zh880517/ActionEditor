@@ -115,7 +115,6 @@ namespace Flow.EditorView
             if (graphView != null && graphView.Graph == current)
             {
                 graphView.Refresh();
-                graphView.RefreshSelection();
                 return;
             }
             var prev = current;
@@ -156,7 +155,6 @@ namespace Flow.EditorView
                 graphView = view;
                 graphView.style.display = DisplayStyle.Flex;
                 graphView.Refresh();
-                graphView.RefreshSelection();
             }
         }
 
