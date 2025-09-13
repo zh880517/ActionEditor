@@ -31,13 +31,15 @@ namespace Flow.EditorView
         private FlowNodeTypeInfo nodeTypeInfo;
         private FlowDynamicOutputPort dynamicOutputPort;
 
+        private bool isExpanded = true;
+
         public FlowNodeView(FlowNode node)
         {
             Node = node;
             nodeTypeInfo = FlowNodeTypeUtil.GetNodeTypeInfo(node.GetType());
             title = nodeTypeInfo.ShowName;
             base.SetPosition(node.Position);
-            expanded = node.Expanded;
+            isExpanded = node.Expanded;
             //流程输入端口
             if (nodeTypeInfo.HasInput)
             {
@@ -190,6 +192,15 @@ namespace Flow.EditorView
                 FlowGraphEditorUtil.RegisterUndo(Node, "Move Node");
                 Node.Position = newPos;
             }
+        }
+
+        protected override void ToggleCollapse()
+        {
+            isExpanded = !isExpanded;
+            //TODO:折叠处理，原有的折叠处理有bug，重新实现
+            //1、隐藏所有没有进行连接的输入输出端口
+            //2、隐藏属性编辑字段（如果是已经连接的数据端口则不隐藏）
+            //3、如果没有动态输出端口被连接则隐藏整个动态输出端口
         }
     }
 }

@@ -72,6 +72,7 @@ namespace Flow.EditorView
 
         private void CreateGUI()
         {
+            rootVisualElement.RegisterCallback<KeyDownEvent>(OnKeyDownEvent);
             OnCreateUI();
             if (current)
             {
