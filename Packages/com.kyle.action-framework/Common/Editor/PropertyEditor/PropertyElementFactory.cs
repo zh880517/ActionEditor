@@ -42,6 +42,8 @@ namespace PropertyEditor
                 return null;
             if(dataType.IsDefined(typeof(HiddenInPropertyEditor)))
                 return null;
+            if(dataType.IsDefined(typeof(PlaceHolderAttribute)))
+                return typeof(PlaceHolderElement);
             if (elementCache.TryGetValue(dataType, out var unit))
             {
                 return unit.EditorElementType;
@@ -99,6 +101,13 @@ namespace PropertyEditor
                 return null;
             if (field.FieldType.IsDefined(typeof(HiddenInPropertyEditor)))
                 return null;
+            if (field.IsDefined(typeof(PlaceHolderAttribute)) || field.FieldType.IsDefined(typeof(PlaceHolderAttribute)))
+            {
+                var editor = new PlaceHolderElement() { Field = field };
+                editor.OnCreate();
+                return editor;
+            }
+
             var customAttr = field.GetCustomAttribute<CustomPropertyAttribute>();
             if (customAttr != null)
             {
