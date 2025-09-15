@@ -44,7 +44,15 @@ namespace Flow.EditorView
             if (graph == current)
                 return;
             Undo.RegisterCompleteObjectUndo(this, name);
-            openList.Remove(graph);
+            if(openList.Contains(graph))
+            {
+                openList.Remove(graph);
+            }
+            else
+            {
+                FlowPortOperateUtil.RepairFlowPorts(current);
+                FlowDataPortOperateUtil.RepairDataPorts(current);
+            }
             openList.Add(graph);
             current = graph;
             if(rootVisualElement != null)
@@ -87,6 +95,11 @@ namespace Flow.EditorView
 
         protected virtual void OnEnable()
         {
+            if(current)
+            {
+                FlowPortOperateUtil.RepairFlowPorts(current);
+                FlowDataPortOperateUtil.RepairDataPorts(current);
+            }
             if(graphContainerView != null && current)
             {
                 GraphViewRefresh();

@@ -326,12 +326,12 @@ namespace Flow.EditorView
                                 }
                                 break;
                             case FlowNodeView nodeView:
-                                FlowPortOperateUtil.OnNodeRemove(nodeView.Node);
-                                FlowDataPortOperateUtil.OnNodeRemove(nodeView.Node);
                                 OnNodeDelete(nodeView.Node);
                                 nodeView.DisconnectAll();
-                                Graph.Nodes.Remove(nodeView.Node);
                                 nodeViews.Remove(nodeView);
+                                FlowPortOperateUtil.OnNodeRemove(nodeView.Node);
+                                FlowDataPortOperateUtil.OnNodeRemove(nodeView.Node);
+                                Graph.Nodes.Remove(nodeView.Node);
                                 Undo.DestroyObjectImmediate(nodeView.Node);
                                 break;
                         }

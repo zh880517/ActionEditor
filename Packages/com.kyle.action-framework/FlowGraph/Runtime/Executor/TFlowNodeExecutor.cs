@@ -8,12 +8,21 @@
         public FlowNodeResult Execute(FlowGraphRuntimeContext context, FlowNodeRuntimeData data)
         {
             var runtimeData = data as TRuntimeData;
-            var value = runtimeData.Value;
-            FillInputs(context as TContext, data.NodeID, ref value);
-            return Execute(context as TContext, value);
+            if(HasInput)
+            {
+                var value = runtimeData.Value;
+                FillInputs(context as TContext, data.NodeID, ref value);
+                return Execute(context as TContext, value);
+            }
+            else
+            {
+                return Execute(context as TContext, runtimeData.Value);
+            }
         }
         protected abstract FlowNodeResult Execute(TContext context, T data);
 
+        //下面两个接口子类代码自动生成
+        protected bool HasInput => true;
         protected virtual void FillInputs(TContext context, int nodeId, ref T data)
         {
         }

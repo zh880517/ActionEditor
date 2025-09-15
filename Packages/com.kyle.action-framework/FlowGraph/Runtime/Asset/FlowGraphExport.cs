@@ -54,6 +54,14 @@ namespace Flow
                 if(item.Input == node)
                 {
                     exportData.DataEdges.Add(ToRuntimeDataEdge(graph, item));
+                    if(item.Output.IsDefine<IFlowDataProvider>() && !item.Output.IsDefine<IFlowInputable>())
+                    {
+                        exportData.DataNodeDependencies.Add(new FlowDataNodeDependency
+                        {
+                            NodeID = nodeID,
+                            DataNodeID = graph.Nodes.IndexOf(item.Output)
+                        });
+                    }    
                     if (!nodes.Contains(item.Output))
                         nodes.Enqueue(item.Output);
                 }
@@ -77,9 +85,6 @@ namespace Flow
             {
                 EdgeID = edge.EdgeID
             };
-            if (edge.Output.IsDefine<IFlowDataProvider>())
-                runtimeEdge.DataNodeID = graph.Nodes.IndexOf(edge.Output);
-
             int inputNodeIndex = graph.Nodes.IndexOf(edge.Input);
             int fieldHash = UnityEngine.Animator.StringToHash( edge.InputSlot);
             runtimeEdge.InputKey = ((ulong)inputNodeIndex << 32) | (uint)fieldHash;

@@ -7,7 +7,7 @@ namespace Flow.EditorView
     {
         public static void OnNodeRemove(FlowNode node)
         {
-
+            node.Graph.Edges.RemoveAll(e => e.Input == node || e.Output == node);
         }
         public static void ConnectFlowPort(FlowNode output, int index, FlowNode input)
         {
@@ -190,6 +190,12 @@ namespace Flow.EditorView
                     edges.RemoveAt(i);
                     continue;
                 }
+                if(!e.Output.IsDefine<IFlowOutputable>() || !e.Input.IsDefine<IFlowInputable>())
+                {
+                    edges.RemoveAt(i);
+                    continue;
+                }
+
                 if (e.Output.IsDefine<IFlowEntry>())
                 {
                     if (e.OutputIndex != 0)

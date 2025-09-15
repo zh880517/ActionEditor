@@ -11,9 +11,16 @@ namespace Flow
 
     public struct FlowRuntimeDataEdge
     {
-        public int DataNodeID;//如果不为0，表示这个数据是从DataNode输出的,获取数据时需要保证这个节点执行过一次
         public ulong EdgeID;
         public ulong InputKey;// NodeID << 32 | Hash(FieldName)
+    }
+
+    //数据输入端口依赖的数据提供端口
+    // 用于运行时数据节点初始化时，指定数据提供端口节点的执行顺序
+    public struct FlowDataNodeDependency
+    {
+        public int NodeID;
+        public int DataNodeID;
     }
 
     public class FlowGraphRuntimeData
@@ -21,6 +28,7 @@ namespace Flow
         public List<FlowNodeRuntimeData> Nodes = new List<FlowNodeRuntimeData>();
         public List<FlowRuntimeEdge> Edges = new List<FlowRuntimeEdge>();
         public List<FlowRuntimeDataEdge> DataEdges = new List<FlowRuntimeDataEdge>();
+        public List<FlowDataNodeDependency> DataNodeDependencies = new List<FlowDataNodeDependency>();
         public string Name;
     }
 }

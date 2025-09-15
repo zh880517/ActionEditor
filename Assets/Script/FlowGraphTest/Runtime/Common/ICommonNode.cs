@@ -5,6 +5,10 @@ public interface ICommonNode : Flow.IFlowNode
 {
 }
 
+public interface ICommonDataProvider : ICommonNode, Flow.IFlowDataProvider
+{
+}
+
 public interface ICommonOutputable : ICommonNode, Flow.IFlowOutputable
 {
 }

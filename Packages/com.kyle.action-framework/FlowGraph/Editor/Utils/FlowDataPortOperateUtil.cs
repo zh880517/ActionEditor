@@ -6,7 +6,7 @@ namespace Flow.EditorView
     {
         public static void OnNodeRemove(FlowNode node)
         {
-
+            node.Graph.DataEdges.RemoveAll(e => e.Input == node || e.Output == node);
         }
         public static ulong ConnectDataPort(FlowNode output, string ouputFieldName, FlowNode input, string inputFieldName)
         {
