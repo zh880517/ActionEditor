@@ -45,6 +45,7 @@ namespace Flow.EditorView
 
     public class FlowNodeTypeInfo
     {
+        public MonoScript Script;
         public Type NodeType;
         public FieldInfo ValueField;
         public Type DataType => ValueField.FieldType;
@@ -136,10 +137,11 @@ namespace Flow.EditorView
                 return null;
             }
             FlowNodeTypeInfo typeInfo = new FlowNodeTypeInfo();
+            typeInfo.Script = MonoScriptUtil.GetMonoScript(nodeType);
             typeInfo.NodeType = nodeType;
             typeInfo.ValueField = nodeType.GetField("Value");
             var alias = typeInfo.DataType.GetCustomAttribute<AliasAttribute>();
-            typeInfo.ShowName = alias != null ? alias.Name : nodeType.Name;
+            typeInfo.ShowName = alias != null ? alias.Name : ObjectNames.NicifyVariableName(nodeType.Name);
 
             var interfaces = typeInfo.DataType.GetInterfaces();
 
