@@ -34,11 +34,11 @@ namespace Flow.EditorView
             return edge.EdgeID;
         }
 
-        public static ulong ConnectDataPortWithUndo(FlowNode output, string ouputFieldName, FlowNode input, string inputFieldName)
+        public static ulong ConnectDataPortWithUndo(FlowNode output, string ouputFieldName, FlowNode input, string inputFieldName, string undoName)
         {
             if (output == null || input == null)
                 return 0;
-            FlowGraphEditorUtil.RegisterUndo(output, "connect data port", true);
+            FlowGraphEditorUtil.RegisterUndo(output, undoName, true);
             return ConnectDataPort(output, ouputFieldName, input, inputFieldName);
         }
 
@@ -81,11 +81,11 @@ namespace Flow.EditorView
             }
         }
 
-        public static void DisconnectDataPortWithUndo(FlowNode input, string inputFieldName)
+        public static void DisconnectDataPortWithUndo(FlowNode input, string inputFieldName, string undoName)
         {
             if (input == null)
                 return;
-            FlowGraphEditorUtil.RegisterUndo(input, "disconnect data port", true);
+            FlowGraphEditorUtil.RegisterUndo(input, undoName, true);
             DisconnectDataPort(input, inputFieldName);
         }
 

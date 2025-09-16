@@ -317,7 +317,7 @@ namespace Flow.EditorView
                                 if(edge.EdgeID != 0)
                                 {
                                     var input = edge.input as FlowDataPort;
-                                    FlowDataPortOperateUtil.DisconnectDataPort(input.Owner, input.FieldName);
+                                    FlowDataPortOperateUtil.DisconnectDataPortWithUndo(input.Owner, input.FieldName, "remove element");
                                 }
                                 else
                                 {
@@ -355,7 +355,7 @@ namespace Flow.EditorView
                     {
                         var dataInput = input as FlowDataPort;
                         var dataOutput = output as FlowDataPort;
-                        ulong id = FlowDataPortOperateUtil.ConnectDataPort(output.Owner, dataOutput.FieldName, input.Owner, dataInput.FieldName);
+                        ulong id = FlowDataPortOperateUtil.ConnectDataPortWithUndo(output.Owner, dataOutput.FieldName, input.Owner, dataInput.FieldName, "create edge");
                         flowEdge.EdgeID = id;
                     }
                 }
