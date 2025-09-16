@@ -7,7 +7,7 @@ namespace Flow.EditorView
     public static class FlowNodeTypeCollector
     {
         private static Dictionary<string, List<Type>> nodeTypes;
-        private static Dictionary<Type, string> typeTags = new Dictionary<Type, string>();
+        private static readonly Dictionary<Type, string> typeTags = new Dictionary<Type, string>();
 
         public static IReadOnlyList<Type> GetNodeTypes(string tag)
         {

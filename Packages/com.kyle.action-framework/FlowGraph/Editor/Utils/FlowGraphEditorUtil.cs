@@ -51,5 +51,11 @@ namespace Flow.EditorView
             EditorUtility.SetDirty(graph);
             return node;
         }
+
+        public static void Repair(FlowGraph graph)
+        {
+            FlowPortOperateUtil.RepairFlowPorts(graph);
+            FlowDataPortOperateUtil.RepairDataPorts(graph);
+        }
     }
 }

@@ -53,8 +53,12 @@ namespace Flow
             {
                 if(item.Input == node)
                 {
-                    exportData.DataEdges.Add(ToRuntimeDataEdge(graph, item));
-                    if(item.Output.IsDefine<IFlowDataProvider>() && !item.Output.IsDefine<IFlowInputable>())
+                    ulong key = ((ulong)nodeID << 32) | (uint)UnityEngine.Animator.StringToHash(item.InputSlot);
+                    exportData.InputKeyToEdgeID.Add(key, item.EdgeID);
+                    //数据接口的依赖收集，只收集纯数据提供者
+                    if (item.Output.IsDefine<IFlowDataProvider>() 
+                        && !item.Output.IsDefine<IFlowInputable>() 
+                        && !item.Output.IsDefine<IFlowUpdateable>())
                     {
                         exportData.DataNodeDependencies.Add(new FlowDataNodeDependency
                         {
@@ -76,18 +80,6 @@ namespace Flow
                 OutputIndex = edge.OutputIndex,
                 InputNodeID = graph.Nodes.IndexOf(edge.Input)
             };
-            return runtimeEdge;
-        }
-
-        public static FlowRuntimeDataEdge ToRuntimeDataEdge(FlowGraph graph, FlowDataEdge edge)
-        {
-            FlowRuntimeDataEdge runtimeEdge = new FlowRuntimeDataEdge
-            {
-                EdgeID = edge.EdgeID
-            };
-            int inputNodeIndex = graph.Nodes.IndexOf(edge.Input);
-            int fieldHash = UnityEngine.Animator.StringToHash( edge.InputSlot);
-            runtimeEdge.InputKey = ((ulong)inputNodeIndex << 32) | (uint)fieldHash;
             return runtimeEdge;
         }
     }

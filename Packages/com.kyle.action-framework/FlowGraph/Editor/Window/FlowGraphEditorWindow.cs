@@ -50,8 +50,7 @@ namespace Flow.EditorView
             }
             else
             {
-                FlowPortOperateUtil.RepairFlowPorts(current);
-                FlowDataPortOperateUtil.RepairDataPorts(current);
+                FlowGraphEditorUtil.Repair(current);
             }
             openList.Add(graph);
             current = graph;
@@ -97,8 +96,7 @@ namespace Flow.EditorView
         {
             if(current)
             {
-                FlowPortOperateUtil.RepairFlowPorts(current);
-                FlowDataPortOperateUtil.RepairDataPorts(current);
+                FlowGraphEditorUtil.Repair(current);
             }
             if(graphContainerView != null && current)
             {
