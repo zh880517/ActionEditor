@@ -7,9 +7,10 @@ namespace Flow.EditorView
     public static class FlowNodeTypeCollector
     {
         private static Dictionary<string, List<Type>> nodeTypes;
+        private static Dictionary<string, List<Type>> dataTypes;
         private static readonly Dictionary<Type, string> typeTags = new Dictionary<Type, string>();
 
-        public static IReadOnlyList<Type> GetNodeTypes(string tag)
+        private static void InitNodeTypes()
         {
             if (nodeTypes == null)
             {
@@ -20,7 +21,7 @@ namespace Flow.EditorView
                     if (dataType == null)
                         continue;
                     string dataTypeTag = GetTypeTag(dataType);
-                    if(dataTypeTag != null)
+                    if (dataTypeTag != null)
                     {
 
                         if (!nodeTypes.TryGetValue(dataTypeTag, out var list))
@@ -32,10 +33,64 @@ namespace Flow.EditorView
                     }
                 }
             }
-            if (nodeTypes.ContainsKey(tag))
+        }
+
+        private static void InitDataTypes()
+        {
+            if (dataTypes == null)
             {
-                return nodeTypes[tag];
+                dataTypes = new Dictionary<string, List<Type>>();
+                foreach (var type in TypeCollector<IFlowNode>.Types)
+                {
+                    string dataTypeTag = GetTypeTag(type);
+                    if (dataTypeTag != null)
+                    {
+                        if (!dataTypes.TryGetValue(dataTypeTag, out var list))
+                        {
+                            list = new List<Type>();
+                            dataTypes.Add(dataTypeTag, list);
+                        }
+                        list.Add(type);
+                    }
+                }
             }
+        }
+
+        public static IReadOnlyList<Type> GetNodeTypes(string tag)
+        {
+            InitNodeTypes();
+            if (nodeTypes.TryGetValue(tag, out var result))
+            {
+                return result;
+            }
+            return null;
+        }
+
+        public static Type DataTypeToNodeType(Type dataType, string tag)
+        {
+            var types = GetNodeTypes(tag);
+            if (types != null)
+            {
+                foreach (var type in types)
+                {
+                    var dt = type.GetGenericParam(typeof(TFlowNode<>));
+                    if (dt == dataType)
+                    {
+                        return type;
+                    }
+                }
+            }
+            return null;
+        }
+
+        public static IReadOnlyList<Type> GetDataTypes(string tag)
+        {
+            InitDataTypes();
+            if (dataTypes.TryGetValue(tag, out var result))
+            {
+                return result;
+            }
+
             return null;
         }
 

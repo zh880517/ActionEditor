@@ -12,12 +12,12 @@
 
         public override FlowNodeRuntimeData Export()
         {
-            var exportData = CreateExport();
+            var exportData = CreateExport() as TFlowNodeRuntimeData<T>;
             exportData.Value = Value;
             return exportData;
         }
 
-        protected virtual TFlowNodeRuntimeData<T> CreateExport()
+        protected virtual FlowNodeRuntimeData CreateExport()
         {
             return new TFlowNodeRuntimeData<T>();
         }

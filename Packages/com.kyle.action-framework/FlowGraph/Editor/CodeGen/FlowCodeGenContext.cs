@@ -1,11 +1,14 @@
 using CodeGen;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using UnityEditor;
 namespace Flow.EditorView
 {
     public class FlowCodeGenSetting
     {
         public string Tag;
+        public System.Type RuntimeContextType;
         public string Namespace;//生成的脚本命名空间
         public string NodeScriptRoot;//生成的节点脚本根目录，继承自TFlowNode<>
         public string RuntimeDataDefineFile;//生成的RuntimeData脚本文件，同一个Tag的节点共用一个文件
@@ -30,19 +33,57 @@ namespace Flow.EditorView
         {
             foreach (var setting in settings)
             {
-                var types = FlowNodeTypeCollector.GetNodeTypes(setting.Tag);
+                var types = FlowNodeTypeCollector.GetDataTypes(setting.Tag);
                 if (types == null || types.Count == 0)
                     continue;
-
-                //TODO: 生成RuntimeData定义脚本
-                //TODO: 生成Executor定义脚本
-                foreach (var item in types)
+                string contextTypeName = GeneratorUtils.TypeToName(setting.RuntimeContextType, setting.Namespace);
+                var nodeDatas = types.Select(it => new FlowNodeCodeGenData(it)).ToList();
+                //生成RuntimeData定义脚本
+                var runtimeDataDefine = FlowCodeGenHelper.WriteRuntimeDataDefine(types, setting.Namespace);
+                WriteToFile(runtimeDataDefine, setting.RuntimeDataDefineFile);
+                //生成执行器定义脚本
+                var executorDefine = FlowCodeGenHelper.WriteExecutorDefine(nodeDatas, contextTypeName, setting.Namespace);
+                WriteToFile(executorDefine, setting.ExecutorDefineFile);
+                //生成节点脚本
+                foreach (var item in nodeDatas)
                 {
-                    //TODO: 生成节点脚本
-                    //TODO: 生成执行器脚本
+                    string nodeScriptFile = Path.Combine(setting.NodeScriptRoot, $"{item.NodeTypeName}.cs");
+                    var nodeWriter = FlowCodeGenHelper.WriteNodeScript(item, setting.Namespace);
+                    var nodeType = FlowNodeTypeCollector.DataTypeToNodeType(item.DataType, setting.Tag);
+                    if (nodeType != null)
+                    {
+                        //节点存在，节点脚本文件不存在，说明被重命名了
+                        MonoScript script = MonoScriptUtil.GetMonoScript(nodeType);
+                        if(script != null)
+                        {
+                            string oldFile = AssetDatabase.GetAssetPath(script);
+                            if (!string.Equals(oldFile, nodeScriptFile, System.StringComparison.OrdinalIgnoreCase))
+                            {
+                                //重命名
+                                AssetDatabase.RenameAsset(oldFile, nodeScriptFile);
+                            }
+                        }
+                    }
+                    WriteToFile(nodeWriter, nodeScriptFile);
+                }
+                //生成执行器脚本
+                foreach (var item in nodeDatas)
+                {
+                    string executorFile = Path.Combine(setting.ExecutorScriptRoot, $"{item.NodeTypeName}.cs");
+                    if (File.Exists(executorFile))
+                        continue;
+                    var executorWriter = FlowCodeGenHelper.WriteExecutor(item, contextTypeName, setting.Namespace);
+                    WriteToFile(executorWriter, executorFile);
                 }
             }
-            RefrshFiles();
+
+
+            //刷新脚本
+            if(modifiedFiles.Count > 0)
+            {
+                AssetDatabase.Refresh();
+                modifiedFiles.Clear();
+            }
         }
 
         private void WriteToFile(CSharpCodeWriter writer, string filePath)
@@ -55,14 +96,5 @@ namespace Flow.EditorView
             }
         }
 
-
-        private void RefrshFiles()
-        {
-            foreach (var item in modifiedFiles)
-            {
-                AssetDatabase.ImportAsset(item);
-            }
-            modifiedFiles.Clear();
-        }
     }
 }
