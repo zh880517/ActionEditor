@@ -45,7 +45,10 @@ namespace Flow.EditorView
             }
         }
 
-        protected abstract void OnCreate(T graph);
+        protected virtual void OnCreate(T graph)
+        {
+            FlowGraphEditorUtil.CreateNode<EntryNode>(graph, UnityEngine.Vector2.zero);
+        }
         protected abstract void OnExport(T graph);
 
         private void RefrshAssetList()

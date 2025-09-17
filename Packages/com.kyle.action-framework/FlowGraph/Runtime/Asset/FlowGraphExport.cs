@@ -5,7 +5,7 @@ namespace Flow
 {
     public static class FlowGraphExport
     {
-        public static void Export(FlowGraph graph, FlowGraphRuntimeData exportData)
+        public static void ExportToRuntimeData(FlowGraph graph, FlowGraphRuntimeData exportData)
         {
             exportData.Name = graph.name;
             var entryNode = graph.Nodes.FirstOrDefault(n => n.IsDefine<IFlowEntry>());
@@ -13,18 +13,25 @@ namespace Flow
             {
                 throw new System.Exception("FlowGraph must have an Entry node");
             }
-            int index = graph.Edges.FindIndex(it => it.Output == entryNode);
-            if (index < 0)
-            {
-                throw new System.Exception("Entry node must have an output edge");
-            }
-            var startNode = graph.Edges[index].Input;
-            if (startNode == null)
-            {
-                throw new System.Exception("Entry node must have an output edge");
-            }
             Queue<FlowNode> nodes = new Queue<FlowNode>();
-            nodes.Enqueue(startNode);
+            if(entryNode is EntryNode)
+            {
+                int index = graph.Edges.FindIndex(it => it.Output == entryNode);
+                if (index < 0)
+                {
+                    throw new System.Exception("Entry node must have an output edge");
+                }
+                var startNode = graph.Edges[index].Input;
+                if (startNode == null)
+                {
+                    throw new System.Exception("Entry node must have an output edge");
+                }
+                nodes.Enqueue(startNode);
+            }
+            else
+            {
+                nodes.Enqueue(entryNode);
+            }
             while (nodes.Count > 0)
             {
                 var first = nodes.Dequeue();

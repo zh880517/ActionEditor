@@ -46,6 +46,8 @@ public abstract class TypeSelectWindow : ScriptableObject, ISearchWindowProvider
         {
             foreach (var type in types)
             {
+                if(type.IsDefined(typeof(HiddenInTypeSelectAttribute)))
+                    continue;
                 var dpName = GetAlias(type);
                 string name = dpName == null ? ObjectNames.NicifyVariableName(type.Name) : dpName.Name;
                 tmpList.Clear();

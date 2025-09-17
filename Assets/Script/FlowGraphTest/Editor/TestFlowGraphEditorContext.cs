@@ -6,11 +6,6 @@ internal class TestFlowGraphEditorContext : TFlowGraphEditorContext<TestFlowGrap
 {
     public override string AssetRootPath => "Assets";
 
-    protected override void OnCreate(TestFlowGraph graph)
-    {
-        FlowGraphEditorUtil.CreateNode<EntryNode>(graph, Vector2.zero);
-    }
-
     protected override void OnExport(TestFlowGraph graph)
     {
     }

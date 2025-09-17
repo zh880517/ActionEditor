@@ -5,16 +5,17 @@ public static class FileUtil
 {
     private static readonly UTF8Encoding encoding = new UTF8Encoding(false);
 
-    public static void WriteFile(string path, string content)
+    public static bool WriteFile(string path, string content)
     {
         if (File.Exists(path))
         {
             if (File.ReadAllText(path, encoding) == content)
             {
-                return;
+                return false;
             }
         }
         File.WriteAllText(path, content, encoding);
+        return true;
     }
 
     public static void ForceWrite(string path, string content)

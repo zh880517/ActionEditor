@@ -32,7 +32,7 @@ namespace Flow
 
         public virtual void ExportToRuntime(FlowGraphRuntimeData data)
         {
-            FlowGraphExport.Export(this, data);
+            FlowGraphExport.ExportToRuntimeData(this, data);
         }
 
         protected virtual void OnCreate() { }
