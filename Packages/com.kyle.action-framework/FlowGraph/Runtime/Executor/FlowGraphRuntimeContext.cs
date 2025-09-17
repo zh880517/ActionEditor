@@ -20,7 +20,7 @@ namespace Flow
             NodeContext = context;
         }
 
-        public bool TryGetValue<T>(int nodeID, int paramId, ref T value)
+        public bool TryGetInputValue<T>(int nodeID, int paramId, ref T value)
         {
             ulong key = ((ulong)nodeID << 32) | (uint)paramId;
             if(runtimeData.InputKeyToEdgeID.TryGetValue(key, out ulong edgeID))
@@ -35,9 +35,13 @@ namespace Flow
             return false;
         }
 
-        public void SetValue<T>(OutputData<T> data, T value)
+        public void SetOutputValue<T>(OutputData<T> data, T value)
         {
-            if(!variables.TryGetValue(data.Key, out var v))
+            // Key为0表示没有使用该输出
+            if (data.Key == 0)
+                return;
+
+            if (!variables.TryGetValue(data.Key, out var v))
             {
                 var dv = TDynamicVariable<T>.Get();
                 dv.Value = value;
