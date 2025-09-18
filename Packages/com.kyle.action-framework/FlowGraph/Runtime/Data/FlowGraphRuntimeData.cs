@@ -13,7 +13,7 @@ namespace Flow
     public struct FlowDataNodeDependency
     {
         public int NodeID;
-        public int DataNodeID;
+        public List<int> Dependencies;//NodeIndex,方便运行时获取
     }
 
     public class FlowGraphRuntimeData

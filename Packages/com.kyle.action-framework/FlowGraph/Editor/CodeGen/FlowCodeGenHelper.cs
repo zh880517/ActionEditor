@@ -15,19 +15,19 @@ namespace Flow.EditorView
         {
             return $"{type.Name}Executor";
         }
-        public static string DataTypeToRuntimrDataTypeName(Type type)
+        public static string DataTypeToRuntimeDataTypeName(Type type)
         {
             return $"{type.Name}RuntimeData";
         }
 
-        public static CSharpCodeWriter WriteRuntimeDataDefine(IReadOnlyList<Type> types, string nameSpace)
+        public static CSharpCodeWriter WriteRuntimeDataDefine(IReadOnlyList<FlowNodeCodeGenData> types, string nameSpace)
         {
             CSharpCodeWriter writer = new CSharpCodeWriter();
             using (new CSharpCodeWriter.NameSpaceScop(writer, nameSpace))
             {
                 foreach (var item in types)
                 {
-                    writer.WriteLine($"public class {DataTypeToRuntimrDataTypeName(item)} : Flow.TFlowNodeRuntimeData<{GeneratorUtils.TypeToName(item, nameSpace)}>{{}}");
+                    writer.WriteLine($"public class {item.RuntimeDataTypeName} : Flow.TFlowNodeRuntimeData<{GeneratorUtils.TypeToName(item.DataType, nameSpace)}>{{}}");
                 }
             }
             return writer;
@@ -39,7 +39,7 @@ namespace Flow.EditorView
             writer.WriteLine($"context.TryGetInputValue(nodeId, {hashId}, ref data.{field.Name})");
         }
 
-        public static CSharpCodeWriter WriteExecutorDefine(IReadOnlyList<FlowNodeCodeGenData> types, string contextTypeName, string nameSpace)
+        public static CSharpCodeWriter WriteExecutorDefine(IReadOnlyList<FlowNodeCodeGenData> types, string contextTypeName, string tag, string nameSpace)
         {
             CSharpCodeWriter writer = new CSharpCodeWriter();
             using (new CSharpCodeWriter.NameSpaceScop(writer, nameSpace))
@@ -95,6 +95,22 @@ namespace Flow.EditorView
                     }
 
                 }
+
+                //生成节点执行器的初始化
+                using(new CSharpCodeWriter.Scop(writer, $"public static class {tag}ExecutorInit"))
+                {
+                    writer.WriteLine("//在程序入口调用 Init 方法，完成节点执行器的注册");
+                    writer.WriteLine($"private static bool isInit = false;");
+                    using (new CSharpCodeWriter.Scop(writer, $"public static void Init()"))
+                    {
+                        writer.WriteLine("if (isInit) return;");
+                        writer.WriteLine("isInit = true;");
+                        foreach (var item in types)
+                        {
+                            writer.WriteLine($"Flow.FlowNodeExecutor<{item.DataTypeName}>.Executor = new {item.ExecutorTypeName}();");
+                        }
+                    }
+                }
             }
             return writer;
         }
@@ -102,12 +118,11 @@ namespace Flow.EditorView
         public static CSharpCodeWriter WriteNodeScript(FlowNodeCodeGenData node, string nameSpace)
         {
             CSharpCodeWriter writer = new CSharpCodeWriter();
-            writer.WriteLine("using Flow;");
             using (new CSharpCodeWriter.NameSpaceScop(writer, nameSpace))
             {
-                using (new CSharpCodeWriter.Scop(writer, $"public partial class {node.NodeTypeName} : TFlowNode<{node.DataTypeName}>"))
+                using (new CSharpCodeWriter.Scop(writer, $"public partial class {node.NodeTypeName} : Flow.TFlowNode<{node.DataTypeName}>"))
                 {
-                    using (new CSharpCodeWriter.Scop(writer, $"protected override FlowNodeRuntimeData CreateExport()"))
+                    using (new CSharpCodeWriter.Scop(writer, $"protected override Flow.FlowNodeRuntimeData CreateExport()"))
                     {
                         writer.WriteLine($"return new {node.RuntimeDataTypeName}();");
                     }

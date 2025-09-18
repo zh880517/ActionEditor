@@ -10,6 +10,7 @@
     //数据提供节点，无Flow端口，只有数据端口
     public interface IFlowDataProvider : IFlowNode
     {
+        bool IsRealTimeData { get; }//是否为实时数据提供者,如果是则每次请求数据都调用，否则只调用一次缓存结果
     }
 
 

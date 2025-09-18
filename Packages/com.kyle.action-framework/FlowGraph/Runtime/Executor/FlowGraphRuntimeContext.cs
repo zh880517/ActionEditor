@@ -3,9 +3,11 @@ namespace Flow
 {
     public class FlowGraphRuntimeContext
     {
-        protected Dictionary<ulong, DynamicVariable> variables = new Dictionary<ulong, DynamicVariable>();
+        protected readonly Dictionary<ulong, DynamicVariable> variables = new Dictionary<ulong, DynamicVariable>();
+        protected readonly HashSet<int> cachedDataNodeIndexs = new HashSet<int>();
         protected FlowGraphRuntimeData runtimeData;
         protected int currentNodeIndex = -1;
+        protected int depenceIndex = -1;
 
         public bool IsRunning => currentNodeIndex >= 0;
 
@@ -71,10 +73,25 @@ namespace Flow
                     currentNodeIndex = -1;
                     break;
                 }
+                if(depenceIndex > 0)
+                {
+                    var dep = runtimeData.DataNodeDependencies[depenceIndex];
+                    foreach (var item in dep.Dependencies)
+                    {
+                        if (cachedDataNodeIndexs.Contains(item))
+                            continue;
+                        var depNode = runtimeData.Nodes[item];
+                        var depExecutor = depNode.Executor;
+                        depExecutor.Execute(this, depNode);
+                        if(depNode.IsRealTimeData)
+                            cachedDataNodeIndexs.Add(item);
+                    }
+                }
                 var result = executor.Execute(this, node);
                 if(result.IsRunning)
                     break;
-                currentNodeIndex = GetNextNodeIndex(node.NodeID, result.OutputIndex);
+                var nextId = GetNextNodeID(node.NodeID, result.OutputIndex);
+                SetCurrentNode(nextId);
             }
 
             if (currentNodeIndex < 0)
@@ -83,13 +100,19 @@ namespace Flow
             }
         }
 
-        protected int GetNextNodeIndex(int currentId, int portIndex)
+        protected void SetCurrentNode(int nodeId)
+        {
+            currentNodeIndex = runtimeData.Nodes.FindIndex(n => n.NodeID == nodeId);
+            depenceIndex = runtimeData.DataNodeDependencies.FindIndex(n => n.NodeID == nodeId);
+        }
+
+        protected int GetNextNodeID(int currentId, int portIndex)
         {
             foreach (var item in runtimeData.Edges)
             {
                 if(item.OutputNodeID == currentId && item.OutputIndex == portIndex)
                 {
-                    return runtimeData.Nodes.FindIndex(n => n.NodeID == item.InputNodeID);
+                    return item.InputNodeID;
                 }
             }
             return -1;
@@ -102,6 +125,7 @@ namespace Flow
                 item.Value.Recyle();
             }
             variables.Clear();
+            cachedDataNodeIndexs.Clear();
             currentNodeIndex = -1;
             NodeContext = null;
         }

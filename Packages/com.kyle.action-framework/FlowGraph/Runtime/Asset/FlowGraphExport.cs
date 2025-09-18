@@ -32,14 +32,46 @@ namespace Flow
             {
                 nodes.Enqueue(entryNode);
             }
+            List<KeyValuePair<int, int>> nodeDepences = new List<KeyValuePair<int, int>>();
             while (nodes.Count > 0)
             {
                 var first = nodes.Dequeue();
-                CollectNode(graph, first, exportData, nodes);
+                CollectNode(graph, first, exportData, nodes, nodeDepences);
+            }
+            //整理数据节点依赖
+            var groupDepences = nodeDepences.GroupBy(it => it.Key);
+            foreach (var group in groupDepences)
+            {
+                FlowDataNodeDependency dependency = new FlowDataNodeDependency
+                {
+                    NodeID = group.Key,
+                    Dependencies = group.Select(it => it.Value).Distinct().ToList()
+                };
+                exportData.DataNodeDependencies.Add(dependency);
+            }
+            for (int i = 0; i < exportData.DataNodeDependencies.Count; i++)
+            {
+                var dep = exportData.DataNodeDependencies[i];
+                for (int j = 0; j < dep.Dependencies.Count; j++)
+                {
+                    var nodeID = dep.Dependencies[j];
+                    foreach (var kv in nodeDepences)
+                    {
+                        if(kv.Key == nodeID)
+                        {
+                            if(!dep.Dependencies.Contains(kv.Key) && kv.Key != dep.NodeID)
+                                dep.Dependencies.Add(kv.Key);
+                        }
+                    }
+                }
+                for (int j = 0; j < dep.Dependencies.Count; j++)
+                {
+                    dep.Dependencies[j] = exportData.Nodes.FindIndex(it=>it.NodeID == dep.Dependencies[j]);
+                }
             }
         }
 
-        public static void CollectNode(FlowGraph graph, FlowNode node, FlowGraphRuntimeData exportData, Queue<FlowNode> nodes)
+        public static void CollectNode(FlowGraph graph, FlowNode node, FlowGraphRuntimeData exportData, Queue<FlowNode> nodes, List<KeyValuePair<int, int>> nodeDepences)
         {
             int nodeID = graph.Nodes.IndexOf(node);
             if (exportData.Nodes.Exists(it => it.NodeID == nodeID))
@@ -67,11 +99,7 @@ namespace Flow
                         && !item.Output.IsDefine<IFlowInputable>() 
                         && !item.Output.IsDefine<IFlowUpdateable>())
                     {
-                        exportData.DataNodeDependencies.Add(new FlowDataNodeDependency
-                        {
-                            NodeID = nodeID,
-                            DataNodeID = graph.Nodes.IndexOf(item.Output)
-                        });
+                        nodeDepences.Add(new KeyValuePair<int, int>(nodeID, graph.Nodes.IndexOf(item.Output)));
                     }    
                     if (!nodes.Contains(item.Output))
                         nodes.Enqueue(item.Output);

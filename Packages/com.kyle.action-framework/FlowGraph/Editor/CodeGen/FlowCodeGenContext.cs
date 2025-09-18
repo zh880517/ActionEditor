@@ -2,6 +2,7 @@ using CodeGen;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using UnityEditor;
 namespace Flow.EditorView
 {
@@ -33,16 +34,15 @@ namespace Flow.EditorView
         {
             foreach (var setting in settings)
             {
-                var types = FlowNodeTypeCollector.GetDataTypes(setting.Tag);
-                if (types == null || types.Count == 0)
+                var nodeDatas = GetNodeDatas(setting);
+                if (nodeDatas == null)
                     continue;
                 string contextTypeName = GeneratorUtils.TypeToName(setting.RuntimeContextType, setting.Namespace);
-                var nodeDatas = types.Select(it => new FlowNodeCodeGenData(it)).ToList();
                 //生成RuntimeData定义脚本
-                var runtimeDataDefine = FlowCodeGenHelper.WriteRuntimeDataDefine(types, setting.Namespace);
+                var runtimeDataDefine = FlowCodeGenHelper.WriteRuntimeDataDefine(nodeDatas, setting.Namespace);
                 WriteToFile(runtimeDataDefine, setting.RuntimeDataDefineFile);
                 //生成执行器定义脚本
-                var executorDefine = FlowCodeGenHelper.WriteExecutorDefine(nodeDatas, contextTypeName, setting.Namespace);
+                var executorDefine = FlowCodeGenHelper.WriteExecutorDefine(nodeDatas, contextTypeName, setting.Tag, setting.Namespace);
                 WriteToFile(executorDefine, setting.ExecutorDefineFile);
                 //生成节点脚本
                 foreach (var item in nodeDatas)
@@ -84,6 +84,32 @@ namespace Flow.EditorView
                 AssetDatabase.Refresh();
                 modifiedFiles.Clear();
             }
+        }
+
+        private List<FlowNodeCodeGenData> GetNodeDatas(FlowCodeGenSetting setting)
+        {
+            var types = FlowNodeTypeCollector.GetDataTypes(setting.Tag);
+            if (types == null || types.Count == 0)
+                return null;
+            return types.Select(it => ToNodeData(setting, it)).ToList();
+        }
+
+        private FlowNodeCodeGenData ToNodeData(FlowCodeGenSetting setting, System.Type type)
+        {
+            FlowNodeCodeGenData data = new FlowNodeCodeGenData();
+            data.DataType = type;
+            data.DataTypeName = GeneratorUtils.TypeToName(type, setting.Namespace);
+            data.RuntimeDataTypeName = FlowCodeGenHelper.DataTypeToRuntimeDataTypeName(type);
+            data.NodeTypeName = FlowCodeGenHelper.DataTypeToNodeTypeName(type);
+            data.ExecutorTypeName = FlowCodeGenHelper.DataTypeToExecutorTypeName(type);
+            data.IsUpdateable = typeof(IFlowUpdateable).IsAssignableFrom(type);
+            data.IsConditional = typeof(IFlowConditionable).IsAssignableFrom(type);
+            data.IsDynamicOutput = typeof(IFlowDynamicOutputable).IsAssignableFrom(type);
+            data.IsPureDataNode = typeof(IFlowDataProvider).IsAssignableFrom(type) && !typeof(IFlowInputable).IsAssignableFrom(type);
+
+            var fields = type.GetFields(BindingFlags.Public | BindingFlags.Instance);
+            data.InputFields = fields.Where((f) => f.IsDefined(typeof(InputableAttribute), true)).ToArray();
+            return data;
         }
 
         private void WriteToFile(CSharpCodeWriter writer, string filePath)
