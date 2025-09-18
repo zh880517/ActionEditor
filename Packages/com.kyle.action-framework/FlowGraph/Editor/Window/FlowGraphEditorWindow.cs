@@ -50,7 +50,7 @@ namespace Flow.EditorView
             }
             else
             {
-                FlowGraphEditorUtil.Repair(current);
+                FlowGraphEditorUtil.Repair(graph);
             }
             openList.Add(graph);
             current = graph;

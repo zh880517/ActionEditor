@@ -12,7 +12,7 @@ namespace ActionLine.EditorView
 
         private List<Type> types;
 
-        protected override IReadOnlyList<Type> GetTypes()
+        protected override IEnumerable<Type> GetTypes()
         {
             if(types == null)
             {

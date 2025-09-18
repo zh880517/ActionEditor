@@ -11,12 +11,12 @@ namespace Flow.EditorView
         class TypeSelect
         {
             public MonoScript GraphScript;
-            public FlowTypeSelectWindow TypeSelectWindow;
+            public FlowTypeCreateWindow TypeSelectWindow;
         }
         [SerializeField]
         private List<TypeSelect> _typeSelects = new List<TypeSelect>();
 
-        public static FlowTypeSelectWindow GetTypeSelectWindow(FlowGraph graph)
+        public static FlowTypeCreateWindow GetTypeSelectWindow(FlowGraph graph)
         {
             var mono = MonoScript.FromScriptableObject(graph);
             var typeSelect = instance._typeSelects.Find(t => t.GraphScript == mono);
@@ -27,7 +27,7 @@ namespace Flow.EditorView
                 var tagsAttr = graph.GetType().GetCustomAttribute<FlowGraphTagsAttrribute>(true);
                 if (tagsAttr != null)
                 {
-                    typeSelect.TypeSelectWindow = TypeSelectWindow.Create<FlowTypeSelectWindow>();
+                    typeSelect.TypeSelectWindow = TypeSelectWindow.Create<FlowTypeCreateWindow>();
                     typeSelect.TypeSelectWindow.SetTags(tagsAttr.Tags);
                 }
                 instance._typeSelects.Add(typeSelect);
@@ -44,7 +44,7 @@ namespace Flow.EditorView
                 {
                     if (item.TypeSelectWindow == null)
                     {
-                        item.TypeSelectWindow = TypeSelectWindow.Create<FlowTypeSelectWindow>();
+                        item.TypeSelectWindow = TypeSelectWindow.Create<FlowTypeCreateWindow>();
                     }
                     item.TypeSelectWindow.SetTags(tagsAttr.Tags);
                 }

@@ -14,7 +14,7 @@ namespace Flow.EditorView
         public FlowGraph Graph { get; private set; }
         public Vector2 MouseLocalPosition { get; private set; }
         private readonly List<FlowNodeView> nodeViews = new List<FlowNodeView>();
-        private readonly FlowTypeSelectWindow flowTypeSelect;
+        private readonly FlowTypeCreateWindow flowTypeSelect;
         private MiniMap miniMap;
         private readonly ToolbarToggle miniMapToggle = new ToolbarToggle();
         public FlowGraphView(FlowGraph graph)
@@ -39,9 +39,10 @@ namespace Flow.EditorView
             RegisterCallback<MouseMoveEvent>(OnMouseMoveEvent);
             nodeCreationRequest = (c) =>
             {
-                flowTypeSelect.Current = this;
                 var worldMousePosition = EditorWindow.ScreenPositionToWorldPosition(c.screenMousePosition);
-                flowTypeSelect.MousePosition = contentViewContainer.WorldToLocal(worldMousePosition);
+                FlowTypeCreateData data = new FlowTypeCreateData { WorldPosition = worldMousePosition };
+                flowTypeSelect.Current = this;
+                flowTypeSelect.Data = data;
                 SearchWindow.Open(new SearchWindowContext(c.screenMousePosition), flowTypeSelect);
             };
             RegisterCallback<DynamicOuputPortCreateEvent>(OnDynamicOuputPortCreateEvent);
@@ -92,6 +93,17 @@ namespace Flow.EditorView
                     .ToList();
         }
 
+        public void ShowNodeCreate(FlowTypeCreateData data)
+        {
+            NodeCreationContext c = new NodeCreationContext
+            {
+                screenMousePosition = EditorWindow.WorldPositionToScreenPosition(data.WorldPosition),
+                target = this
+            };
+            flowTypeSelect.Current = this;
+            flowTypeSelect.Data = data;
+            SearchWindow.Open(new SearchWindowContext(c.screenMousePosition), flowTypeSelect);
+        }
 
         public void Refresh()
         {
@@ -506,14 +518,21 @@ namespace Flow.EditorView
             return System.DateTime.Now.ToString();
         }
 
-        public void OnNodeCreate(System.Type type, Vector2 localPosition)
+        public void OnNodeCreate(System.Type type, FlowTypeCreateData data)
         {
             RegisterGraphUndo(Graph, "create node");
-            FlowNode node = FlowGraphEditorUtil.CreateNode(Graph, type, localPosition);
+            var pos = contentViewContainer.WorldToLocal(data.WorldPosition);
+            FlowNode node = FlowGraphEditorUtil.CreateNode(Graph, type, pos);
             Undo.RegisterCreatedObjectUndo(node, "create node");
-            var nodeView = new FlowNodeView(node);
-            nodeViews.Add(nodeView);
-            AddElement(nodeView);
+            if (data.OutputNode != null)
+            {
+                FlowPortOperateUtil.ConnectFlowPort(data.OutputNode, data.OutputIndex, node);
+            }
+            else if (data.InputNode != null)
+            {
+                FlowPortOperateUtil.ConnectFlowPort(node, 0, data.InputNode);
+            }
+            Refresh();
         }
 
         public FlowGraphCopyData ToCopyData(IEnumerable<GraphElement> elements)

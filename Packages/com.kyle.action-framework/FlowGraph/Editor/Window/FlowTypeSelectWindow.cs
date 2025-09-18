@@ -1,29 +1,26 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
-using UnityEngine;
 
 namespace Flow.EditorView
 {
-    public class FlowTypeSelectWindow : TypeSelectWindow
+    public abstract class FlowTypeSelectWindow : TypeSelectWindow
     {
-        private readonly List<Type> _types = new List<Type>();
-        public FlowGraphView Current { get; set; }
-        public Vector2 MousePosition { get; set; }
-        protected override IReadOnlyList<Type> GetTypes()
+        protected readonly List<Type> types = new List<Type>();
+        protected override IEnumerable<Type> GetTypes()
         {
-            return _types;
+            return types;
         }
 
         public void SetTags(string[] tags)
         {
-            _types.Clear();
+            types.Clear();
             foreach (var item in tags)
             {
                 var types = FlowNodeTypeCollector.GetNodeTypes(item);
                 if (types != null)
                 {
-                    _types.AddRange(types);
+                    this.types.AddRange(types);
                 }
             }
         }
@@ -60,9 +57,5 @@ namespace Flow.EditorView
             return base.GetAlias(type);
         }
 
-        protected override void OnSelect(Type type, Vector2 localMousePosition)
-        {
-            Current?.OnNodeCreate(type, MousePosition);
-        }
     }
 }

@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using UnityEditor.Experimental.GraphView;
+using UnityEngine.UIElements;
 using UnityEngine;
-using static UnityEditor.Experimental.GraphView.Port;
 
 namespace Flow.EditorView
 {
@@ -22,6 +22,24 @@ namespace Flow.EditorView
         public void OnDropOutsidePort(Edge edge, Vector2 position)
         {
             //TODO:弹出节点创建窗口，在选择节点后创建节点并连接
+            var graphView = edge.GetFirstOfType<FlowGraphView>();
+            if (graphView != null)
+            {
+                var port = edge.input ?? edge.output;
+                if(port is FlowPort flowPort)
+                {
+                    FlowTypeCreateData data = new FlowTypeCreateData 
+                    {
+                        WorldPosition = position,
+                        OutputNode = flowPort.IsInput ? null : flowPort.Owner,
+                        OutputIndex = flowPort.IsInput ? -1 : flowPort.Index,
+                        InputNode = flowPort.IsInput ? flowPort.Owner : null
+                    };
+
+                    graphView.ShowNodeCreate(data);
+
+                }
+            }
         }
 
         public void OnDrop(GraphView graphView, Edge edge)
@@ -29,7 +47,7 @@ namespace Flow.EditorView
             m_EdgesToCreate.Clear();
             m_EdgesToCreate.Add(edge);
             m_EdgesToDelete.Clear();
-            if (edge.input.capacity == Capacity.Single)
+            if (edge.input.capacity == Port.Capacity.Single)
             {
                 foreach (Edge connection in edge.input.connections)
                 {
@@ -37,7 +55,7 @@ namespace Flow.EditorView
                         m_EdgesToDelete.Add(connection);
                 }
             }
-            if (edge.output.capacity == Capacity.Single)
+            if (edge.output.capacity == Port.Capacity.Single)
             {
                 foreach (Edge connection in edge.output.connections)
                 {

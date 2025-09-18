@@ -34,7 +34,7 @@ public abstract class TypeSelectWindow : ScriptableObject, ISearchWindowProvider
     [SerializeField]
     private Texture2D icon;
     protected virtual string RootName => "选择类型";
-    protected abstract IReadOnlyList<System.Type> GetTypes();
+    protected abstract IEnumerable<System.Type> GetTypes();
 
     public List<SearchTreeEntry> CreateSearchTree(SearchWindowContext context)
     {
