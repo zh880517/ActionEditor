@@ -7,6 +7,7 @@ namespace Flow.EditorView
     public struct FlowTypeCreateData
     {
         public Vector2 WorldPosition;
+        public bool IsSearch;
         public FlowNode OutputNode;
         public int OutputIndex;
         public FlowNode InputNode;

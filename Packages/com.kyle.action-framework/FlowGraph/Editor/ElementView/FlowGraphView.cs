@@ -16,7 +16,6 @@ namespace Flow.EditorView
         private readonly List<FlowNodeView> nodeViews = new List<FlowNodeView>();
         private readonly FlowTypeCreateWindow flowTypeSelect;
         private MiniMap miniMap;
-        private readonly ToolbarToggle miniMapToggle = new ToolbarToggle();
         public FlowGraphView(FlowGraph graph)
         {
             Graph = graph;
@@ -47,20 +46,10 @@ namespace Flow.EditorView
             };
             RegisterCallback<DynamicOuputPortCreateEvent>(OnDynamicOuputPortCreateEvent);
             SetMinMapActive(false);
-            miniMapToggle.RegisterValueChangedCallback(evt =>
-            {
-                SetMinMapActive(evt.newValue);
-            });
-            miniMapToggle.text = "显示缩略图";
-            miniMapToggle.style.position = Position.Absolute;
-            miniMapToggle.style.top = 0;
-            miniMapToggle.style.right = 0;
-            Add(miniMapToggle);
         }
 
         private void SetMinMapActive(bool active)
         {
-            miniMapToggle.SetValueWithoutNotify(active);
             if(active)
             {
                 if (miniMap == null)
@@ -520,6 +509,11 @@ namespace Flow.EditorView
 
         public void OnNodeCreate(System.Type type, FlowTypeCreateData data)
         {
+            if(data.IsSearch)
+            {
+                OnSelectSameTypeNode(type);
+                return;
+            }
             RegisterGraphUndo(Graph, "create node");
             var pos = contentViewContainer.WorldToLocal(data.WorldPosition);
             FlowNode node = FlowGraphEditorUtil.CreateNode(Graph, type, pos);
@@ -628,6 +622,40 @@ namespace Flow.EditorView
             }
 
             Refresh();
+        }
+
+        public override void BuildContextualMenu(ContextualMenuPopulateEvent evt)
+        {
+            base.BuildContextualMenu(evt);
+            evt.menu.AppendAction("Search Select", OnContextMenuNodeSearch, DropdownMenuAction.AlwaysEnabled);
+            if(evt.target is FlowNodeView view)
+            {
+                evt.menu.AppendAction("Select Same Type Node", (a)=>OnSelectSameTypeNode(view.Node.GetType()), DropdownMenuAction.AlwaysEnabled);
+            }
+            evt.menu.AppendSeparator();
+            if(miniMap == null || miniMap.style.display == DisplayStyle.None)
+                evt.menu.AppendAction("显示缩略图", (a)=>SetMinMapActive(true), DropdownMenuAction.AlwaysEnabled);
+            else
+                evt.menu.AppendAction("隐藏缩略图", (a) => SetMinMapActive(false), DropdownMenuAction.AlwaysEnabled);
+        }
+
+        private void OnContextMenuNodeSearch(DropdownMenuAction a)
+        {
+            FlowTypeCreateData data = new FlowTypeCreateData { IsSearch = true, WorldPosition = a.eventInfo.mousePosition };
+            ShowNodeCreate(data);
+        }
+
+        private void OnSelectSameTypeNode(System.Type type)
+        {
+            EditorData.Selections.Clear();
+            foreach (var item in Graph.Nodes)
+            {
+                if (item.GetType() == type)
+                {
+                    EditorData.Selections.Add(new SelectionData { Type = SelectionType.Node, Node = item });
+                }
+            }
+            RefreshSelection();
         }
     }
 }
