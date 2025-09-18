@@ -140,7 +140,7 @@ namespace Flow.EditorView
                 {
                     if(node.IsUpdateable)
                     {
-                        writer.WriteLine("//protected override UpdateNodeContext CreateNodeContext() => UpdateNodeContext.None;");
+                        writer.WriteLine("//protected override UpdateNodeContext CreateNodeContext() => RecyleablePool<T>.Get();");
                         writer.WriteLine($"//protected override void OnEnter({contextTypeName} context, {node.DataTypeName} data, UpdateNodeContext nodeContext) {{}}");
                         if(node.IsDynamicOutput)
                         {

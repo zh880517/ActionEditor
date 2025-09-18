@@ -52,13 +52,6 @@ namespace Flow.EditorView
             }
         }
 
-        /*
-        public static T LoadOrCreate<T>(string path) where T : FlowGraph
-        {
-
-        }
-        */
-
         #endregion
         private bool initialized = false;
         public Type GetEditorWindowType()

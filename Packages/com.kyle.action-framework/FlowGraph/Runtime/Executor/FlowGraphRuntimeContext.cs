@@ -8,12 +8,15 @@ namespace Flow
         protected FlowGraphRuntimeData runtimeData;
         protected int currentNodeIndex = -1;
         protected int depenceIndex = -1;
-
+        private readonly string debugKey;//调试标识,用于在编辑中查找执行脚本的角色的位移标识
+        private FlowRuntimeDebuger debuger;
+        public int RuningFrame { get; private set; }
         public bool IsRunning => currentNodeIndex >= 0;
 
-        public FlowGraphRuntimeContext(FlowGraphRuntimeData data)
+        public FlowGraphRuntimeContext(FlowGraphRuntimeData data, string debugKey)
         {
             runtimeData = data;
+            this.debugKey = debugKey;
         }
 
         public UpdateNodeContext NodeContext { get; private set; }
@@ -42,7 +45,8 @@ namespace Flow
             // Key为0表示没有使用该输出
             if (data.Key == 0)
                 return;
-
+            //调试
+            debuger?.OnNodeParamChange(data.Key, value?.ToString(), RuningFrame);
             if (!variables.TryGetValue(data.Key, out var v))
             {
                 var dv = TDynamicVariable<T>.Get();
@@ -58,7 +62,9 @@ namespace Flow
 
         public virtual void Start()
         {
-            currentNodeIndex = 0;
+            RuningFrame = 0;
+            debuger = FlowDebugContext.CreateDebuger(runtimeData.Name, debugKey);
+            SetCurrentNode(runtimeData.Nodes[0].NodeID);
         }
 
         public void Update()
@@ -73,6 +79,7 @@ namespace Flow
                     currentNodeIndex = -1;
                     break;
                 }
+                //执行依赖的数据节点
                 if(depenceIndex > 0)
                 {
                     var dep = runtimeData.DataNodeDependencies[depenceIndex];
@@ -81,19 +88,31 @@ namespace Flow
                         if (cachedDataNodeIndexs.Contains(item))
                             continue;
                         var depNode = runtimeData.Nodes[item];
+                        //调试
+                        debuger?.OnDataNode(depNode.NodeID, RuningFrame);
+
                         var depExecutor = depNode.Executor;
                         depExecutor.Execute(this, depNode);
                         if(depNode.IsRealTimeData)
                             cachedDataNodeIndexs.Add(item);
                     }
                 }
+
+                //节点执行
+                //调试
+                if (NodeContext == null)
+                    debuger?.OnNodeStart(node.NodeID, RuningFrame);
+
                 var result = executor.Execute(this, node);
                 if(result.IsRunning)
                     break;
+                //调试
+                debuger?.OnNodeOutput(node.NodeID, result.OutputIndex, RuningFrame);
+                
                 var nextId = GetNextNodeID(node.NodeID, result.OutputIndex);
                 SetCurrentNode(nextId);
             }
-
+            RuningFrame++;
             if (currentNodeIndex < 0)
             {
                 Stop();
@@ -128,6 +147,8 @@ namespace Flow
             cachedDataNodeIndexs.Clear();
             currentNodeIndex = -1;
             NodeContext = null;
+            FlowDebugContext.Stop(debuger);
+            debuger = null;
         }
     }
 }

@@ -79,12 +79,13 @@
                 nodeContext = CreateNodeContext();
                 OnEnter(context, data, nodeContext);
             }
-            if (!OnUpdate(context, data, nodeContext))
-            {
-                OnExit(context, data, nodeContext);
-                return FlowNodeResult.Next;
-            }
-            return FlowNodeResult.Running;
+            if (OnUpdate(context, data, nodeContext))
+                return FlowNodeResult.Running;
+
+            OnExit(context, data, nodeContext);
+            nodeContext.Recyle();
+            context.SetNodeContext(null);
+            return FlowNodeResult.Next;
         }
 
         protected virtual UpdateNodeContext CreateNodeContext() => UpdateNodeContext.None;
@@ -119,6 +120,8 @@
                 return FlowNodeResult.Running;
             }
             OnExit(context, data, nodeContext);
+            nodeContext.Recyle();
+            context.SetNodeContext(null);
             if (result == ResultType.True)
                 return FlowNodeResult.True;
             else
@@ -151,6 +154,8 @@
                 return FlowNodeResult.Running;
             }
             OnExit(context, data, nodeContext);
+            nodeContext.Recyle();
+            context.SetNodeContext(null);
             return new FlowNodeResult { IsRunning = false, OutputIndex = portIndex };
         }
 

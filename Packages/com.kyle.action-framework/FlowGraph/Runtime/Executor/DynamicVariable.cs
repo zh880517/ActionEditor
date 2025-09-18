@@ -28,6 +28,7 @@ namespace Flow
 
         public override void Recyle()
         {
+            Value = default;
             pool?.Add(this);
         }
 
