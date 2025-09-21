@@ -16,9 +16,6 @@ namespace Flow
         public Vector3 Position;
         [HideInInspector]
         public Vector3 Scale = Vector3.one;
-        [HideInInspector]
-        [SerializeField]
-        private uint keyIndex = 0;
 
         public virtual bool CheckDelete(FlowNode node)
         {
