@@ -19,7 +19,7 @@ namespace Flow
 
         public virtual bool CheckDelete(FlowNode node)
         {
-            return true;
+            return !(node is EntryNode);
         }
 
         public virtual void ExportToRuntime(FlowGraphRuntimeData data)
