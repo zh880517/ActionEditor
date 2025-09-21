@@ -18,10 +18,11 @@ namespace Flow
 
     public class FlowGraphRuntimeData
     {
+        public string Name;
         public List<FlowNodeRuntimeData> Nodes = new List<FlowNodeRuntimeData>();//第一个节点必须是入口节点的下一个节点
         public List<FlowRuntimeEdge> Edges = new List<FlowRuntimeEdge>();
         public Dictionary<ulong, ulong> InputKeyToEdgeID = new Dictionary<ulong, ulong>();// InputKey -> EdgeID
         public List<FlowDataNodeDependency> DataNodeDependencies = new List<FlowDataNodeDependency>();
-        public string Name;
+        public Dictionary<int, long> NodeUIDs = new Dictionary<int, long>();// NodeID -> NodeUID, 用于调试器显示
     }
 }

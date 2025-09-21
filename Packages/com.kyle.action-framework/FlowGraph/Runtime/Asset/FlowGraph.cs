@@ -20,11 +20,6 @@ namespace Flow
         [SerializeField]
         private uint keyIndex = 0;
 
-        public ulong GenUID()
-        {
-            return FlowGUIDGenertor.GenID(keyIndex++);
-        }
-
         public virtual bool CheckDelete(FlowNode node)
         {
             return true;

@@ -21,13 +21,19 @@ namespace Flow.EditorView
                     continue;
                 }
             }
+            //生成唯一ID,使用Ticks保证唯一性，但如果在同一Tick内生成了多个连接，则需要自增
+            ulong id = (ulong)System.DateTime.Now.Ticks;
+            while (graph.DataEdges.Exists(it=>it.EdgeID == id))
+            {
+                id++;
+            }
             var edge = new FlowDataEdge
             {
                 Output = output,
                 OutputSlot = ouputFieldName,
                 Input = input,
                 InputSlot = inputFieldName,
-                EdgeID = graph.GenUID()
+                EdgeID = id,
             };
             SetNodeSlotID(output, ouputFieldName, edge.EdgeID);
             graph.DataEdges.Add(edge);

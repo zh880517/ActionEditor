@@ -69,6 +69,11 @@ namespace Flow
                     dep.Dependencies[j] = exportData.Nodes.FindIndex(it=>it.NodeID == dep.Dependencies[j]);
                 }
             }
+            foreach (var item in exportData.Nodes)
+            {
+                var node = graph.Nodes[item.NodeID];
+                exportData.NodeUIDs[item.NodeID] = node.UID;
+            }
         }
 
         public static void CollectNode(FlowGraph graph, FlowNode node, FlowGraphRuntimeData exportData, Queue<FlowNode> nodes, List<KeyValuePair<int, int>> nodeDepences)

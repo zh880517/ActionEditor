@@ -17,8 +17,8 @@
     public struct FlowDebugNodeData
     {
         public FlowDebugNodeType Type;
+        public long NodeID;
         public int FrameIndex;
-        public int NodeID;
         public int OutputIndex;
         public ulong EdgeID;
         public string OutputValue;

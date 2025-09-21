@@ -10,6 +10,8 @@ namespace Flow
         public Rect Position;
         [HideInInspector]
         public bool Expanded = true;
+        [HideInInspector]
+        public long UID;
         public abstract bool IsDefine<T>();
         public virtual void OnCreate() { }
 

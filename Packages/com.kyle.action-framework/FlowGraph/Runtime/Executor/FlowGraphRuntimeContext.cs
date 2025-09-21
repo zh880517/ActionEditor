@@ -89,7 +89,7 @@ namespace Flow
                             continue;
                         var depNode = runtimeData.Nodes[item];
                         //调试
-                        debuger?.OnDataNode(depNode.NodeID, RuningFrame);
+                        debuger?.OnDataNode(GetNodeUID(depNode.NodeID), RuningFrame);
 
                         var depExecutor = depNode.Executor;
                         depExecutor.Execute(this, depNode);
@@ -101,13 +101,13 @@ namespace Flow
                 //节点执行
                 //调试
                 if (NodeContext == null)
-                    debuger?.OnNodeStart(node.NodeID, RuningFrame);
+                    debuger?.OnNodeStart(GetNodeUID(node.NodeID), RuningFrame);
 
                 var result = executor.Execute(this, node);
                 if(result.IsRunning)
                     break;
                 //调试
-                debuger?.OnNodeOutput(node.NodeID, result.OutputIndex, RuningFrame);
+                debuger?.OnNodeOutput(GetNodeUID(node.NodeID), result.OutputIndex, RuningFrame);
                 
                 var nextId = GetNextNodeID(node.NodeID, result.OutputIndex);
                 SetCurrentNode(nextId);
@@ -134,6 +134,13 @@ namespace Flow
                     return item.InputNodeID;
                 }
             }
+            return -1;
+        }
+
+        protected long GetNodeUID(int nodeId)
+        {
+            if (runtimeData.NodeUIDs.TryGetValue(nodeId, out long uid))
+                return uid;
             return -1;
         }
 

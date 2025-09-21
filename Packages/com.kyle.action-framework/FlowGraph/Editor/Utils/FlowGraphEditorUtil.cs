@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
+using static UnityEditor.Progress;
 
 namespace Flow.EditorView
 {
@@ -49,6 +50,10 @@ namespace Flow.EditorView
             node.OnCreate();
             AssetDatabase.AddObjectToAsset(node, graph);
             EditorUtility.SetDirty(graph);
+            if (AssetDatabase.TryGetGUIDAndLocalFileIdentifier(node, out string guid, out long id))
+            {
+                node.UID = id;
+            }
             return node;
         }
 
