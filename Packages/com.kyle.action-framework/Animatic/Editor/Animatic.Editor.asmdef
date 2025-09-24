@@ -1,8 +1,10 @@
 {
-    "name": "ActionFramework.Common.Editor",
+    "name": "Animatic.Editor",
     "rootNamespace": "",
     "references": [
-        "GUID:edca0bc4151401e458d0a30a4e81774a"
+        "GUID:edca0bc4151401e458d0a30a4e81774a",
+        "GUID:4c21a2e7390f04d489b274fe2134650a",
+        "GUID:91adeb9f99a5ac94e99642e7fefd6120"
     ],
     "includePlatforms": [
         "Editor"
