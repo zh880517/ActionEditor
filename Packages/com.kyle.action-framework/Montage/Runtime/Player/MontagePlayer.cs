@@ -12,59 +12,13 @@ namespace Montage
         public float FadeTime;
         public float FadeDuration;
     }
-
-    public enum PlayerStatus
+    public class MontagePlayer : MontageParam
     {
-        Stopped,
-        Playing,
-        Paused,
-    }
-
-    public class MontagePlayer : IMontagePlayer
-    {
-        #region Params
-        public struct ParamInfo
-        {
-            public string Name;
-            public float Value;
-        }
-        protected List<ParamInfo> paramInfos = new List<ParamInfo>();
-
-        public void SetParam(string name, float value)
-        {
-            for (int i = 0; i < paramInfos.Count; i++)
-            {
-                var p = paramInfos[i];
-                if (p.Name == name)
-                {
-                    p.Value = value;
-                    paramInfos[i] = p;
-                    return;
-                }
-            }
-            paramInfos.Add(new ParamInfo { Name = name, Value = value });
-        }
-
-        public float GetParam(string name)
-        {
-            for (int i = 0; i < paramInfos.Count; i++)
-            {
-                var p = paramInfos[i];
-                if (p.Name == name)
-                {
-                    return p.Value;
-                }
-            }
-            return 0;
-        }
-        #endregion
-
-        public PlayerStatus Status { get; private set; } = PlayerStatus.Stopped;
-        public MontageAsset Asset { get; private set; }
-        private MotionStateInfo stateInfo;
-        private PlayableGraph graph;
-        private AnimationMixerPlayable mixerPlayable;
-        private readonly List<MontageMotionState> states = new List<MontageMotionState>();
+        public MontageAsset Asset { get; protected set; }
+        protected MotionStateInfo stateInfo;
+        protected PlayableGraph graph;
+        protected readonly List<MontageMotionState> states = new List<MontageMotionState>();
+        protected AnimationMixerPlayable mixerPlayable;
 
         public void Create(string name, MontageAsset asset, Animator animator)
         {
@@ -73,6 +27,22 @@ namespace Montage
             var output = AnimationPlayableOutput.Create(graph, asset.name, animator);
             mixerPlayable = AnimationMixerPlayable.Create(graph, 0);
             output.SetSourcePlayable(mixerPlayable);
+        }
+
+        public void SetAsset(MontageAsset asset)
+        {
+            if (Asset == asset)
+                return;
+            Asset = asset;
+            ResetStateInfo();
+            for (int i = 0; i < states.Count; i++)
+            {
+                var state = states[i];
+                mixerPlayable.DisconnectInput(state.DestinationInputPort);
+                state.Destroy();
+            }
+            states.Clear();
+            mixerPlayable.SetInputCount(0);
         }
 
         public void EditorRebuildCheck()
@@ -89,12 +59,16 @@ namespace Montage
                     {
                         var s = states[j];
                         mixerPlayable.DisconnectInput(s.DestinationInputPort);
-                        s.DestinationInputPort = s.DestinationInputPort - 1;
+                        s.DestinationInputPort--;
                         s.Connect(mixerPlayable);
                     }
                     states.RemoveAt(i);
                     --i;
                 }
+            }
+            if(mixerPlayable.GetInputCount() != states.Count)
+            {
+                mixerPlayable.SetInputCount(states.Count);
             }
             for (int i = 0; i < states.Count; i++)
             {
@@ -126,7 +100,6 @@ namespace Montage
                 else
                 {
                     stateInfo.State = null;
-                    Status = PlayerStatus.Stopped;
                 }
             }
             else if (stateInfo.Next == state)
@@ -183,8 +156,6 @@ namespace Montage
                 return;
             ResetStateInfo();
             stateInfo.State = state;
-            if (Status == PlayerStatus.Stopped)
-                Status = PlayerStatus.Playing;
         }
 
         public void CrossFade(string name)
@@ -192,7 +163,17 @@ namespace Montage
             var state = GetState(name);
             if (state == null)
                 return;
-
+            if(stateInfo.State == state)
+            {
+                if(stateInfo.Next != null)
+                {
+                    stateInfo.Next.Time = 0;
+                    stateInfo.Next = null;
+                    stateInfo.FadeTime = 0;
+                    stateInfo.FadeDuration = 0;
+                }
+                return;
+            }
             if (stateInfo.Next == state)
                 return;
             if (stateInfo.State == null)
@@ -206,14 +187,12 @@ namespace Montage
                 stateInfo.FadeTime = 0;
                 stateInfo.FadeDuration = Asset.DefaultFadeDuration;
             }
-            if (Status == PlayerStatus.Stopped)
-                Status = PlayerStatus.Playing;
         }
 
 
         public void Update(float dt)
         {
-            if (Status != PlayerStatus.Playing)
+            if (stateInfo.State == null)
                 return;
             float weight = 1;
             //处理动画的淡入淡出时间
@@ -226,6 +205,7 @@ namespace Montage
                 }
                 else
                 {
+                    stateInfo.State.Time = 0;
                     stateInfo.State = stateInfo.Next;
                     stateInfo.Next = null;
                     stateInfo.FadeTime = 0;
@@ -238,12 +218,14 @@ namespace Montage
                 var state = states[i];
                 if (state == stateInfo.State)
                 {
+                    state.Weight = weight;
                     mixerPlayable.SetInputWeight(state.DestinationInputPort, weight);
                     state.Time += dt;
                     state.OnUpdate();
                 }
                 else if (state == stateInfo.Next)
                 {
+                    state.Weight = 1 - weight;
                     mixerPlayable.SetInputWeight(state.DestinationInputPort, 1 - weight);
                     state.Time += dt;
                     state.OnUpdate();
@@ -251,6 +233,7 @@ namespace Montage
                 else
                 {
                     state.Time = 0;
+                    state.Weight = 0;
                     mixerPlayable.SetInputWeight(state.DestinationInputPort, 0);
                 }
             }

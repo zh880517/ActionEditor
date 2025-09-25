@@ -16,6 +16,7 @@ namespace Montage
     {
         public virtual float Length => 0;
         public MotionWrapMode WrapMode = MotionWrapMode.Clamp;
+        public AvatarMask Mask;
         public virtual bool Valid => true;
         [SerializeField, HideInInspector]
         private int version = 0;
