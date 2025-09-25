@@ -17,5 +17,12 @@ namespace Animatic
         public virtual float Length => 0;
         public MotionWrapMode WrapMode = MotionWrapMode.Clamp;
         public virtual bool Valid => true;
+        [SerializeField, HideInInspector]
+        private int version = 0;
+        public int Version => version;
+        public void OnModify()
+        {
+            version++;
+        }
     }
 }

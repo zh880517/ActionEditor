@@ -16,6 +16,8 @@ namespace Animatic
         {
             this.motion = motion;
         }
+
+
         public override void Init(PlayableGraph graph)
         {
             mixerPlayable = AnimationMixerPlayable.Create(graph, motion.Motions.Count);

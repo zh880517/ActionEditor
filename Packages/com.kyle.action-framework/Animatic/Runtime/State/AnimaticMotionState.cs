@@ -11,10 +11,13 @@ namespace Animatic
         public IAnimaticPlayer Player { get; set; }
         public int DestinationInputPort { get; set; } = -1;// 连接的目标Playable的输入端口
         public double Time { get; set; }// 当前时间
+        private int version = -1;// 动画版本号，用于检测动画资源是否被修改
+        public bool IsChanged => version != Motion.Version;// 动画资源是否被修改
         public AnimaticMotionState(AnimaticMotion motion)
         {
             Name = motion.name;
             Length = motion.Length;
+            version = motion.Version;
         }
 
         public abstract void Init(PlayableGraph graph);
