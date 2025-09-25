@@ -1,9 +1,9 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 
-namespace Animatic
+namespace Montage
 {
-    public class AnimaticSpliceClip : AnimaticMotion
+    public class MontageSpliceMotion : MontageMotion
     {
         [System.Serializable]
         public struct Splice

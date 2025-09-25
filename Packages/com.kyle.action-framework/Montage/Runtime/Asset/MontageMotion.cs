@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-namespace Animatic
+namespace Montage
 {
     public enum MotionWrapMode
     {
@@ -12,7 +12,7 @@ namespace Animatic
         PingPong = 2,
     }
 
-    public class AnimaticMotion : ScriptableObject
+    public class MontageMotion : ScriptableObject
     {
         public virtual float Length => 0;
         public MotionWrapMode WrapMode = MotionWrapMode.Clamp;

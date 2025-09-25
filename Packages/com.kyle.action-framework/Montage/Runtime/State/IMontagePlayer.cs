@@ -1,6 +1,6 @@
-﻿namespace Animatic
+﻿namespace Montage
 {
-    public interface IAnimaticPlayer
+    public interface IMontagePlayer
     {
         public float GetParam(string name);
     }

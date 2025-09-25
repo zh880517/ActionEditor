@@ -3,24 +3,24 @@ using System.Collections.Generic;
 using UnityEngine.Playables;
 using UnityEngine.Animations;
 
-namespace Animatic
+namespace Montage
 {
-    public struct AnimaticStateInfo
+    public struct MotionStateInfo
     {
-        public AnimaticMotionState State;
-        public AnimaticMotionState Next;
+        public MontageMotionState State;
+        public MontageMotionState Next;
         public float FadeTime;
         public float FadeDuration;
     }
 
-    public enum AnimaticPlayerStatus
+    public enum PlayerStatus
     {
         Stopped,
         Playing,
         Paused,
     }
 
-    public class AnimaticPlayer : IAnimaticPlayer
+    public class MontagePlayer : IMontagePlayer
     {
         #region Params
         public struct ParamInfo
@@ -59,14 +59,14 @@ namespace Animatic
         }
         #endregion
 
-        public AnimaticPlayerStatus Status { get; private set; } = AnimaticPlayerStatus.Stopped;
-        public AnimaticAsset Asset { get; private set; }
-        private AnimaticStateInfo stateInfo;
+        public PlayerStatus Status { get; private set; } = PlayerStatus.Stopped;
+        public MontageAsset Asset { get; private set; }
+        private MotionStateInfo stateInfo;
         private PlayableGraph graph;
         private AnimationMixerPlayable mixerPlayable;
-        private readonly List<AnimaticMotionState> states = new List<AnimaticMotionState>();
+        private readonly List<MontageMotionState> states = new List<MontageMotionState>();
 
-        public void Create(string name, AnimaticAsset asset, Animator animator)
+        public void Create(string name, MontageAsset asset, Animator animator)
         {
             Asset = asset;
             graph = PlayableGraph.Create(name);
@@ -101,7 +101,7 @@ namespace Animatic
                 var state = states[i];
                 if (state.IsChanged)
                 {
-                    var newState = AnimaticUtil.CreateState(state.Motion);
+                    var newState = MontageUtil.CreateState(state.Motion);
                     newState.Player = this;
                     newState.DestinationInputPort = state.DestinationInputPort;
                     mixerPlayable.DisconnectInput(state.DestinationInputPort);
@@ -115,7 +115,7 @@ namespace Animatic
             }
         }
 
-        private void OnStateChange(AnimaticMotionState state, AnimaticMotionState newState)
+        private void OnStateChange(MontageMotionState state, MontageMotionState newState)
         {
             if (stateInfo.State == state)
             {
@@ -126,7 +126,7 @@ namespace Animatic
                 else
                 {
                     stateInfo.State = null;
-                    Status = AnimaticPlayerStatus.Stopped;
+                    Status = PlayerStatus.Stopped;
                 }
             }
             else if (stateInfo.Next == state)
@@ -144,7 +144,7 @@ namespace Animatic
             }
         }
 
-        private AnimaticMotionState GetState(string name)
+        private MontageMotionState GetState(string name)
         {
             var state = states.Find(it => it.Name == name);
             if(state == null)
@@ -153,7 +153,7 @@ namespace Animatic
                 if(!motion)
                     return null;
                 mixerPlayable.SetInputCount(states.Count + 1);
-                state = AnimaticUtil.CreateState(motion);
+                state = MontageUtil.CreateState(motion);
                 state.Player = this;
                 state.DestinationInputPort = states.Count;
                 state.Init(graph);
@@ -173,7 +173,7 @@ namespace Animatic
             {
                 stateInfo.Next.Time = 0;
             }
-            stateInfo = new AnimaticStateInfo();
+            stateInfo = new MotionStateInfo();
         }
 
         public void Play(string name)
@@ -183,8 +183,8 @@ namespace Animatic
                 return;
             ResetStateInfo();
             stateInfo.State = state;
-            if (Status == AnimaticPlayerStatus.Stopped)
-                Status = AnimaticPlayerStatus.Playing;
+            if (Status == PlayerStatus.Stopped)
+                Status = PlayerStatus.Playing;
         }
 
         public void CrossFade(string name)
@@ -206,14 +206,14 @@ namespace Animatic
                 stateInfo.FadeTime = 0;
                 stateInfo.FadeDuration = Asset.DefaultFadeDuration;
             }
-            if (Status == AnimaticPlayerStatus.Stopped)
-                Status = AnimaticPlayerStatus.Playing;
+            if (Status == PlayerStatus.Stopped)
+                Status = PlayerStatus.Playing;
         }
 
 
         public void Update(float dt)
         {
-            if (Status != AnimaticPlayerStatus.Playing)
+            if (Status != PlayerStatus.Playing)
                 return;
             float weight = 1;
             //处理动画的淡入淡出时间

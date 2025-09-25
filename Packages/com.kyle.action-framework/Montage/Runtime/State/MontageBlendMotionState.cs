@@ -2,17 +2,17 @@
 using UnityEngine.Animations;
 using UnityEngine.Playables;
 
-namespace Animatic
+namespace Montage
 {
-    public class AnimaticBlendClipState : AnimaticMotionState
+    public class MontageBlendMotionState : MontageMotionState
     {
-        public override AnimaticMotion Motion => motion;
-        private readonly AnimaticBlendClip motion;
+        public override MontageMotion Motion => motion;
+        private readonly MontageBlendMotion motion;
         private AnimationMixerPlayable mixerPlayable;
         private AnimationClipPlayable[] playables;
         private float[] thresholds;
 
-        public AnimaticBlendClipState(AnimaticBlendClip motion) : base(motion)
+        public MontageBlendMotionState(MontageBlendMotion motion) : base(motion)
         {
             this.motion = motion;
         }

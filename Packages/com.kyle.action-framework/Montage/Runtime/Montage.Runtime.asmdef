@@ -1,5 +1,5 @@
 {
-    "name": "Animatic.Runtime",
+    "name": "Montage.Runtime",
     "rootNamespace": "",
     "references": [
         "GUID:edca0bc4151401e458d0a30a4e81774a"

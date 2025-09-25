@@ -1,8 +1,8 @@
 ﻿using UnityEngine;
 
-namespace Animatic
+namespace Montage
 {
-    public class AnimaticClip : AnimaticMotion
+    public class MontageClipMotion : MontageMotion
     {
         public override float Length
         {

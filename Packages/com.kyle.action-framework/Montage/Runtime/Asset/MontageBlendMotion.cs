@@ -2,12 +2,12 @@
 using System.Linq;
 using UnityEngine;
 
-namespace Animatic
+namespace Montage
 {
     /// <summary>
     /// 多方向融合动画片段，使用时使用0-1的值进行融合控制,计算方式
     /// </summary>
-    public class AnimaticBlendClip : AnimaticMotion
+    public class MontageBlendMotion : MontageMotion
     {
         [System.Serializable]
         public struct Motion

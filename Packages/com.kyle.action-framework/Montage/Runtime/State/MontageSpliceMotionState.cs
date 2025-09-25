@@ -2,9 +2,9 @@
 using UnityEngine.Animations;
 using UnityEngine.Playables;
 
-namespace Animatic
+namespace Montage
 {
-    public class AnimaticSpliceClipState : AnimaticMotionState
+    public class MontageSpliceMotionState : MontageMotionState
     {
         public struct ClipTimeInfo
         {
@@ -13,12 +13,12 @@ namespace Animatic
             public double EndTime;
         }
 
-        public override AnimaticMotion Motion => motion;
-        private readonly AnimaticSpliceClip motion;
+        public override MontageMotion Motion => motion;
+        private readonly MontageSpliceMotion motion;
         private AnimationMixerPlayable mixerPlayable;
         public AnimationClipPlayable[] playables;
         public ClipTimeInfo[] timeInfos;
-        public AnimaticSpliceClipState(AnimaticSpliceClip motion) : base(motion)
+        public MontageSpliceMotionState(MontageSpliceMotion motion) : base(motion)
         {
             this.motion = motion;
         }

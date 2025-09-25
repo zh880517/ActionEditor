@@ -1,14 +1,14 @@
 ﻿using UnityEngine.Animations;
 using UnityEngine.Playables;
 
-namespace Animatic
+namespace Montage
 {
-    public class AnimaticClipState : AnimaticMotionState
+    public class MontageClipMotionState : MontageMotionState
     {
-        public override AnimaticMotion Motion => motion;
-        private readonly AnimaticClip motion;
+        public override MontageMotion Motion => motion;
+        private readonly MontageClipMotion motion;
         private AnimationClipPlayable playable;
-        public AnimaticClipState(AnimaticClip motion) : base(motion)
+        public MontageClipMotionState(MontageClipMotion motion) : base(motion)
         {
             this.motion = motion;
         }
