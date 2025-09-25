@@ -20,9 +20,9 @@ namespace Animatic
         Paused,
     }
 
-    public class AnimaticController
+    public class AnimaticPlayer : IAnimaticPlayer
     {
-        #region Params 待移出
+        #region Params
         public struct ParamInfo
         {
             public string Name;
@@ -61,16 +61,14 @@ namespace Animatic
 
         public AnimaticPlayerStatus Status { get; private set; } = AnimaticPlayerStatus.Stopped;
         public AnimaticAsset Asset { get; private set; }
-        private IAnimaticPlayer player;
         private AnimaticStateInfo stateInfo;
         private PlayableGraph graph;
         private AnimationMixerPlayable mixerPlayable;
         private readonly List<AnimaticMotionState> states = new List<AnimaticMotionState>();
 
-        public void Create(string name, AnimaticAsset asset, Animator animator, IAnimaticPlayer player)
+        public void Create(string name, AnimaticAsset asset, Animator animator)
         {
             Asset = asset;
-            this.player = player;
             graph = PlayableGraph.Create(name);
             var output = AnimationPlayableOutput.Create(graph, asset.name, animator);
             mixerPlayable = AnimationMixerPlayable.Create(graph, 0);
@@ -104,7 +102,7 @@ namespace Animatic
                 if (state.IsChanged)
                 {
                     var newState = AnimaticUtil.CreateState(state.Motion);
-                    newState.Player = player;
+                    newState.Player = this;
                     newState.DestinationInputPort = state.DestinationInputPort;
                     mixerPlayable.DisconnectInput(state.DestinationInputPort);
                     state.Destroy();
@@ -156,7 +154,7 @@ namespace Animatic
                     return null;
                 mixerPlayable.SetInputCount(states.Count + 1);
                 state = AnimaticUtil.CreateState(motion);
-                state.Player = player;
+                state.Player = this;
                 state.DestinationInputPort = states.Count;
                 state.Init(graph);
                 state.Connect(mixerPlayable);
