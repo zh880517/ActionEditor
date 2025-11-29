@@ -3,6 +3,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
+public class EmptyArray<T>
+{
+    public readonly static T[] Array = new T[0];
+}
+
 public class SdpLite
 {
     public enum DataType
@@ -98,7 +103,11 @@ public class SdpLite
             SdpVisit<bool[]>.Pack = SdpLitePacker.Pack;
             SdpVisit<List<bool>>.Pack = SdpLitePacker.Pack;
             SdpVisit<byte>.Pack = SdpLitePacker.Pack;
+            SdpVisit<byte[]>.Pack = SdpLitePacker.Pack;
+            SdpVisit<List<byte>>.Pack = SdpLitePacker.Pack;
             SdpVisit<sbyte>.Pack = SdpLitePacker.Pack;
+            SdpVisit<sbyte[]>.Pack = SdpLitePacker.Pack;
+            SdpVisit<List<sbyte>>.Pack = SdpLitePacker.Pack;
             SdpVisit<short>.Pack = SdpLitePacker.Pack;
             SdpVisit<ushort>.Pack = SdpLitePacker.Pack;
             SdpVisit<float>.Pack = SdpLitePacker.Pack;
@@ -108,7 +117,6 @@ public class SdpLite
             SdpVisit<long>.Pack = SdpLitePacker.Pack;
             SdpVisit<ulong>.Pack = SdpLitePacker.Pack;
             SdpVisit<string>.Pack = SdpLitePacker.Pack;
-            SdpVisit<byte[]>.Pack = SdpLitePacker.PackBytes;
             gDefault = new Packer();
         }
 
@@ -157,38 +165,6 @@ public class SdpLite
         }
 
         public MemoryStream GetStream() { return _memory; }
-
-        public void Pack<T>(uint tag, bool require, T val)
-        {
-            var pack = SdpVisit<T>.Pack;
-            if (pack != null)
-            {
-                pack(this, tag, require, val);
-            }
-            else
-            {
-                throw new SdpLiteException("no pack function for type " + typeof(T).FullName);
-            }
-        }
-
-        public void Pack<T>(uint tag, bool require, T[] val)
-        {
-            SdpArrayVisit<T>.Pack(this, tag, require, val);
-        }
-        public void Pack<T>(uint tag, bool require, List<T> val)
-        {
-            SdpListVisit<T>.Pack(this, tag, require, val);
-        }
-
-        public void Pack<T>(uint tag, bool require, HashSet<T> val)
-        {
-            SdpHashSetVisit<T>.Pack(this, tag, require, val);
-        }
-
-        public void Pack<TK, TV>(uint tag, bool require, Dictionary<TK, TV> val)
-        {
-            SdpDictionaryVisit<TK, TV>.Pack(this, tag, require, val);
-        }
 
         public void Pack(uint tag, bool val)
         {
@@ -331,54 +307,6 @@ public class SdpLite
             _memory.Write(bytes, offset, length);
         }
 
-        public void Pack(uint tag, bool[] value)
-        {
-            int length = value.Length / 8;
-            if (value.Length % 8 != 0)
-            {
-                length += 1;
-            }
-            PackHeader(tag, SdpLite.DataType.String);
-            Pack((uint)length);
-            for (int i = 0; i < length; i++)
-            {
-                byte b = 0;
-                for (int j = 0; j < 8; j++)
-                {
-                    int index = i * 8 + j;
-                    if (index < value.Length && value[index])
-                    {
-                        b |= (byte)(1 << j);
-                    }
-                }
-                Pack(b);
-            }
-        }
-
-        public void Pack(uint tag, List<bool> value)
-        {
-            int length = value.Count / 8;
-            if (value.Count % 8 != 0)
-            {
-                length += 1;
-            }
-            PackHeader(tag, SdpLite.DataType.String);
-            Pack((uint)length);
-            for (int i = 0; i < length; i++)
-            {
-                byte b = 0;
-                for (int j = 0; j < 8; j++)
-                {
-                    int index = i * 8 + j;
-                    if (index < value.Count && value[index])
-                    {
-                        b |= (byte)(1 << j);
-                    }
-                }
-                Pack(b);
-            }
-        }
-
         public void Pack(string str, uint bytesLen)
         {
             if(bytesLen > _bytes.Length)
@@ -432,8 +360,15 @@ public class SdpLite
         static Unpacker()
         {
             SdpVisit<bool>.UnPack = SdpLiteUnPacker.UnPack;
+            SdpVisit<bool[]>.UnPack = SdpLiteUnPacker.UnPack;
+            SdpVisit<List<bool>>.UnPack = SdpLiteUnPacker.UnPack;
             SdpVisit<byte>.UnPack = SdpLiteUnPacker.UnPack;
+            SdpVisit<byte[]>.UnPack = SdpLiteUnPacker.UnPack;
+            SdpVisit<List<byte>>.UnPack = SdpLiteUnPacker.UnPack;
             SdpVisit<sbyte>.UnPack = SdpLiteUnPacker.UnPack;
+            SdpVisit<sbyte[]>.UnPack = SdpLiteUnPacker.UnPack;
+            SdpVisit<List<sbyte>>.UnPack = SdpLiteUnPacker.UnPack;
+
             SdpVisit<short>.UnPack = SdpLiteUnPacker.UnPack;
             SdpVisit<ushort>.UnPack = SdpLiteUnPacker.UnPack;
             SdpVisit<float>.UnPack = SdpLiteUnPacker.UnPack;
@@ -485,24 +420,6 @@ public class SdpLite
             _data = data;
             _position = offset;
             _end = offset + count;
-        }
-
-        public void Unpack<T>(DataType type, ref T value)
-        {
-            var unpack = SdpVisit<T>.UnPack;
-            if (unpack != null)
-            {
-                unpack(this, type, ref value);
-            }
-            else
-            {
-                throw new SdpLiteException("no unpack function for type " + typeof(T).FullName);
-            }
-        }
-
-        public void Unpack<T>(DataType type, ref T[] value)
-        {
-            Unpack<T>(type, ref value);
         }
 
         public void Unpack(DataType type, out bool value)
