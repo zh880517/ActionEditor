@@ -48,14 +48,12 @@ public class SdpLitePacker
         if (value != 0 || require)
             packer.Pack(tag, value);
     }
-
-    public static void Pack<T>(SdpLite.Packer packer, uint tag, bool require, T value) where T : System.Enum
+    public static void PackEnum<T>(SdpLite.Packer packer, uint tag, bool require, T value) where T : System.Enum
     {
         int v = System.Convert.ToInt32(value);
         if (v != 0 || require)
             packer.Pack(tag, v);
     }
-
     public static void Pack(SdpLite.Packer packer, uint tag, bool require, uint value)
     {
         if (value != 0 || require)
@@ -84,64 +82,52 @@ public class SdpLitePacker
             packer.Pack(value, bytesLen);
         }
     }
-    public delegate void PackFunc<T>(SdpLite.Packer packer, uint tag, bool require, T value);
-    public static void Pack<T>(SdpLite.Packer packer, uint tag, bool require, T[] value, PackFunc<T> func)
+
+    public static void PackBytes(SdpLite.Packer packer, uint tag, bool require, byte[] value)
     {
-        int count = value != null ? value.Length : 0;
+        uint count = (uint)(value != null ? value.Length : 0);
         if (require || count > 0)
         {
-            packer.PackHeader(tag, SdpLite.DataType.Vector);
-            packer.Pack((uint)count);
+            packer.PackHeader(tag, SdpLite.DataType.String);
+            packer.Pack(count);
             if (count > 0)
             {
-                foreach (var item in value)
-                {
-                    func(packer, 0, true, item);
-                }
+                packer.Pack(value, 0, (int)count);
             }
         }
     }
-    public static void Pack<T>(SdpLite.Packer packer, uint tag, bool require, IList<T> value, PackFunc<T> func)
+    public static void Pack(SdpLite.Packer packer, uint tag, bool require, bool[] value)
     {
-        uint count = (uint)value.Count;
+        uint count = (uint)(value != null ? value.Length : 0);
         if (require || count > 0)
         {
-            packer.PackHeader(tag, SdpLite.DataType.Vector);
-            packer.Pack(count);
-            foreach (var item in value)
+            if(count > 0)
             {
-                func(packer, 0, true, item);
+                packer.Pack(tag, value);
+            }
+            else
+            {
+                packer.PackHeader(tag, SdpLite.DataType.String);
+                packer.Pack(0);
+            }
+        }
+    }
+    public static void Pack(SdpLite.Packer packer, uint tag, bool require, List<bool> value)
+    {
+        uint count = (uint)(value != null ? value.Count : 0);
+        if (require || count > 0)
+        {
+            if (count > 0)
+            {
+                packer.Pack(tag, value);
+            }
+            else
+            {
+                packer.PackHeader(tag, SdpLite.DataType.String);
+                packer.Pack(0);
             }
         }
     }
 
-    public static void Pack<T>(SdpLite.Packer packer, uint tag, bool require, ISet<T> value, PackFunc<T> func)
-    {
-        uint count = (uint)value.Count;
-        if (require || count > 0)
-        {
-            packer.PackHeader(tag, SdpLite.DataType.Vector);
-            packer.Pack(count);
-            foreach (var item in value)
-            {
-                func(packer, 0, true, item);
-            }
-        }
-    }
-
-    public static void Pack<TKey, TValue>(SdpLite.Packer packer, uint tag, bool require, IDictionary<TKey, TValue> value, PackFunc<TKey> keyFunc, PackFunc<TValue> valueFunc)
-    {
-        uint count = (uint)value.Count;
-        if (require || count > 0)
-        {
-            packer.PackHeader(tag, SdpLite.DataType.Map);
-            packer.Pack(count);
-            foreach (var kv in value)
-            {
-                keyFunc(packer, 0, true, kv.Key);
-                valueFunc(packer, 0, true, kv.Value);
-            }
-        }
-    }
 }
 
