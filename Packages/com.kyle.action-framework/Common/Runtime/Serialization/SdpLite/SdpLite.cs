@@ -3,11 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-public class EmptyArray<T>
-{
-    public readonly static T[] Array = new T[0];
-}
-
 public class SdpLite
 {
     public enum DataType
