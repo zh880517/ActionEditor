@@ -331,11 +331,15 @@ namespace DataVisit
                 PackHeader(0, SevenBitDataType.StructEnd);
                 return;
             }
+            int id = DynamicTypeVisit<T>.GetTypeId(value);
+            var visitFunc = DynamicTypeVisit<T>.GetVisit(id);
+            if(id == -1 || visitFunc == null)
+            {
+                throw new Exception($"Dynamic type value is null for tag = {tag}, name = {name}.");
+            }
             var posBefore = _memory.Position;
             PackHeader(tag, SevenBitDataType.DynamicBegin);//写入动态类型开始
             var posAfterHeader = _memory.Position;
-            int id = DynamicTypeVisit<T>.GetTypeId(value);
-            var visitFunc = DynamicTypeVisit<T>.GetVisit(id);
 
             Visit(0, string.Empty, true, ref id);//写入类型id
             PackHeader(1, SevenBitDataType.StructBegin);//写入实际类型

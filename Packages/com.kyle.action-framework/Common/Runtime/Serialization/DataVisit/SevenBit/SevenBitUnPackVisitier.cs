@@ -451,8 +451,14 @@ namespace DataVisit
                     int typeId = 0;
                     Visit(0, string.Empty, false, ref typeId);
                     var visit = DynamicTypeVisit<T>.GetVisit(typeId);
-                    
                     UnPackHeader(out uint _, out SevenBitDataType structType);
+                    if(visit == null)
+                    {
+                        //如果对应的ID没有注册类型，就跳过这个结构体，说明改类型被删除。
+                        value = null;
+                        SkipField(structType);
+                        return;
+                    }
                     if (structType != SevenBitDataType.StructBegin)
                         ThrowIncompatibleType(structType);
                     visit(this, 1, string.Empty, false, ref value);
