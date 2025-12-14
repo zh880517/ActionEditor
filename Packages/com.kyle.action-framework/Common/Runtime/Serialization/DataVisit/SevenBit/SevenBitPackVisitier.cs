@@ -278,23 +278,12 @@ namespace DataVisit
             }
         }
 
-        public void VisitArray<T>(uint tag, string name, bool require, ref T[] value)
+        public void VisitEnum<T>(uint tag, string name, bool require, ref T value) where T : Enum
         {
-            if (value == null)
-            {
-                if (require)
-                {
-                    PackHeader(tag, SevenBitDataType.Vector);
-                    PackNumber(0);
-                }
+            int v = Convert.ToInt32(value);
+            if (v == 0 || require)
                 return;
-            }
-            PackHeader(tag, SevenBitDataType.Vector);
-            PackNumber((uint)value.Length);
-            for (int i = 0; i < value.Length; i++)
-            {
-                TypeVisit<T>.Visit(this, 0, "", true, ref value[i]);
-            }
+            PackInt(tag, v);
         }
 
         public void VisitStruct<T>(uint tag, string name, bool require, ref T value) where T : struct
@@ -315,7 +304,7 @@ namespace DataVisit
 
         public void VisitClass<T>(uint tag, string name, bool require, ref T value) where T : class, new()
         {
-            if (value == null)
+            if (value == null && require)
             {
                 PackHeader(tag, SevenBitDataType.StructBegin);
                 PackHeader(0, SevenBitDataType.StructEnd);
@@ -325,7 +314,7 @@ namespace DataVisit
             PackHeader(tag, SevenBitDataType.StructBegin);
             var posAfterHeader = _memory.Position;
             TypeVisit<T>.Visit(this, 0, "", false, ref value);
-            if(!require && _memory.Position == posAfterHeader)
+            if (!require && _memory.Position == posAfterHeader)
             {
                 //没有内容，回退
                 _memory.Position = posBefore;
@@ -334,6 +323,78 @@ namespace DataVisit
             }
             PackHeader(0, SevenBitDataType.StructEnd);
         }
+        public void VisitDynamicClass<T>(uint tag, string name, bool require, ref T value) where T : class, new()
+        {
+            if (value == null && require)
+            {
+                PackHeader(tag, SevenBitDataType.StructBegin);
+                PackHeader(0, SevenBitDataType.StructEnd);
+                return;
+            }
+            var posBefore = _memory.Position;
+            PackHeader(tag, SevenBitDataType.DynamicBegin);//写入动态类型开始
+            var posAfterHeader = _memory.Position;
+            int id = DynamicTypeVisit<T>.GetTypeId(value);
+            var visitFunc = DynamicTypeVisit<T>.GetVisit(id);
+
+            Visit(0, string.Empty, true, ref id);//写入类型id
+            PackHeader(1, SevenBitDataType.StructBegin);//写入实际类型
+            visitFunc(this, 0, "", false, ref value);
+            if (!require && _memory.Position == posAfterHeader)
+            {
+                //没有内容，回退
+                _memory.Position = posBefore;
+                _memory.SetLength(posBefore);
+                return;
+            }
+            PackHeader(0, SevenBitDataType.StructEnd);//写入实际类型结束
+
+            PackHeader(0, SevenBitDataType.StructEnd);//写入动态类型结束
+        }
+        public void VisitArray<T>(uint tag, string name, bool require, ref T[] value)
+        {
+            if (value == null)
+            {
+                if (require)
+                {
+                    PackHeader(tag, SevenBitDataType.Vector);
+                    PackNumber(0);
+                }
+                return;
+            }
+            PackHeader(tag, SevenBitDataType.Vector);
+            PackNumber((uint)value.Length);
+            for (int i = 0; i < value.Length; i++)
+            {
+                if (TypeVisit<T>.IsCustomStruct)
+                    PackHeader(0, SevenBitDataType.StructBegin);
+                TypeVisit<T>.Visit(this, 0, "", true, ref value[i]);
+                if (TypeVisit<T>.IsCustomStruct)
+                    PackHeader(0, SevenBitDataType.StructEnd);
+            }
+        }
+
+        public void VisitDynamicArray<T>(uint tag, string name, bool require, ref T[] value) where T : class, new()
+        {
+            if (value == null)
+            {
+                if (require)
+                {
+                    PackHeader(tag, SevenBitDataType.Vector);
+                    PackNumber(0);
+                }
+                return;
+            }
+            PackHeader(tag, SevenBitDataType.Vector);
+            PackNumber((uint)value.Length);
+            for (int i = 0; i < value.Length; i++)
+            {
+                if (value[i] == null)
+                    PackHeader(0, SevenBitDataType.StructEnd);
+                else
+                    VisitDynamicClass(0, "", true, ref value[i]);
+            }
+        }
 
         public void VisitDictionary<TKey, TValue>(uint tag, string name, bool require, ref Dictionary<TKey, TValue> value)
         {
@@ -341,28 +402,55 @@ namespace DataVisit
             {
                 if (require)
                 {
-                    PackHeader(tag, SevenBitDataType.Map);
+                    PackHeader(tag, SevenBitDataType.Vector);
                     PackNumber(0);
                 }
                 return;
             }
-            PackHeader(tag, SevenBitDataType.Map);
+            PackHeader(tag, SevenBitDataType.Vector);
             PackNumber((uint)value.Count);
             foreach (var kv in value)
             {
                 var key = kv.Key;
                 var val = kv.Value;
-                TypeVisit<TKey>.Visit(this, 0, "", true, ref key);
-                TypeVisit<TValue>.Visit(this, 0, "", true, ref val);
+                //字典按照数组处理，key和value作为结构体成员
+                PackHeader(0, SevenBitDataType.StructBegin);
+                
+                TypeVisit<TKey>.Visit(this, 0, "", false, ref key);
+
+                if(TypeVisit<TValue>.IsCustomStruct)
+                    PackHeader(1, SevenBitDataType.StructBegin);
+                TypeVisit<TValue>.Visit(this, 1, "", false, ref val);
+                if (TypeVisit<TValue>.IsCustomStruct)
+                    PackHeader(0, SevenBitDataType.StructEnd);
+
+                PackHeader(0, SevenBitDataType.StructEnd);
             }
         }
 
-        public void VisitEnum<T>(uint tag, string name, bool require, ref T value) where T : Enum
+        public void VisitDynamicDictionary<TKey, TValue>(uint tag, string name, bool require, ref Dictionary<TKey, TValue> value) where TValue : class, new()
         {
-            int v = Convert.ToInt32(value);
-            if (v == 0 || require)
+            if (value == null)
+            {
+                if (require)
+                {
+                    PackHeader(tag, SevenBitDataType.Vector);
+                    PackNumber(0);
+                }
                 return;
-            PackInt(tag, v);
+            }
+            PackHeader(tag, SevenBitDataType.Vector);
+            PackNumber((uint)value.Count);
+            foreach (var kv in value)
+            {
+                var key = kv.Key;
+                var val = kv.Value;
+                //字典按照数组处理，key和value作为结构体成员
+                PackHeader(0, SevenBitDataType.StructBegin);
+                TypeVisit<TKey>.Visit(this, 0, "", false, ref key);
+                VisitDynamicClass(1, "", false, ref val);
+                PackHeader(0, SevenBitDataType.StructEnd);
+            }
         }
 
         public void VisitHashSet<T>(uint tag, string name, bool require, ref HashSet<T> value)
@@ -381,10 +469,13 @@ namespace DataVisit
             foreach (var item in value)
             {
                 var itemCopy = item;
+                if (TypeVisit<T>.IsCustomStruct)
+                    PackHeader(0, SevenBitDataType.StructBegin);
                 TypeVisit<T>.Visit(this, 0, "", true, ref itemCopy);
+                if (TypeVisit<T>.IsCustomStruct)
+                    PackHeader(0, SevenBitDataType.StructEnd);
             }
         }
-
         public void VisitList<T>(uint tag, string name, bool require, ref List<T> value)
         {
             if (value == null)
@@ -401,9 +492,31 @@ namespace DataVisit
             for (int i = 0; i < value.Count; i++)
             {
                 var item = value[i];
+                if (TypeVisit<T>.IsCustomStruct)
+                    PackHeader(0, SevenBitDataType.StructBegin);
                 TypeVisit<T>.Visit(this, 0, "", true, ref item);
+                if (TypeVisit<T>.IsCustomStruct)
+                    PackHeader(0, SevenBitDataType.StructEnd);
             }
         }
-
+        public void VisitDynamicList<T>(uint tag, string name, bool require, ref List<T> value) where T : class, new()
+        {
+            if (value == null)
+            {
+                if (require)
+                {
+                    PackHeader(tag, SevenBitDataType.Vector);
+                    PackNumber(0);
+                }
+                return;
+            }
+            PackHeader(tag, SevenBitDataType.Vector);
+            PackNumber((uint)value.Count);
+            for (int i = 0; i < value.Count; i++)
+            {
+                var item = value[i];
+                VisitDynamicClass(0, "", true, ref item);
+            }
+        }
     }
 }

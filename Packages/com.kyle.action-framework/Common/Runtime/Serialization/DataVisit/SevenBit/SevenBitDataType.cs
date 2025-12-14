@@ -8,8 +8,8 @@
         Double = 3,
         String = 4,
         Vector = 5,
-        Map = 6,
-        StructBegin = 7,
+        StructBegin = 6,
+        DynamicBegin = 7,
         StructEnd = 8,
     }
 

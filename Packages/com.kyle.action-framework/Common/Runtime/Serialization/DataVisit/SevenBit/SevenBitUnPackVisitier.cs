@@ -125,18 +125,13 @@ namespace DataVisit
                         }
                     }
                     break;
-                case SevenBitDataType.Map:
-                    {
-                        UnPackNumber(out uint size);
-                        for (UInt32 i = 0; i < size; ++i)
-                        {
-                            SkipField();
-                            SkipField();
-                        }
-                    }
-                    break;
                 case SevenBitDataType.StructBegin:
                     SkipToStructEnd();
+                    break;
+                case SevenBitDataType.DynamicBegin:
+                    SkipField();
+                    UnPackHeader(out uint _, out SevenBitDataType dynamicType);
+                    SkipField(dynamicType);
                     break;
                 case SevenBitDataType.StructEnd:
                     break;
@@ -400,189 +395,15 @@ namespace DataVisit
             }
         }
 
-        public void VisitArray<T>(uint tag, string name, bool require, ref T[] value)
-        {
-            if (SkipToTag(tag)) 
-            {
-                UnPackHeader(out uint _, out SevenBitDataType type);
-                if (type == SevenBitDataType.Vector)
-                {
-                    UnPackNumber(out uint size);
-                    if (value == null || value.Length != size)
-                    {
-                        value = new T[size];
-                    }
-                    if (TypeVisit<T>.IsCustomStruct)
-                    {
-                        for (uint i = 0; i < size; i++)
-                        {
-                            T item = TypeVisit<T>.New();
-                            UnPackHeader(out uint _, out SevenBitDataType fieldType);
-                            if (fieldType != SevenBitDataType.StructEnd)
-                                ThrowIncompatibleType(fieldType);
-                            TypeVisit<T>.Visit(this, 0, string.Empty, false, ref item);
-                            SkipToStructEnd();
-                            value[i] = item;
-                        }
-                    }
-                    else
-                    {
-                        for (uint i = 0; i < size; i++)
-                        {
-                            TypeVisit<T>.Visit(this, 0, string.Empty, false, ref value[i]);
-                        }
-                    }
-                    return;
-                }
-                else
-                {
-                    ThrowIncompatibleType(type);
-                }
-            }
-            value = EmptyArray<T>.Array;
-        }
-
-        public void VisitDictionary<TKey, TValue>(uint tag, string name, bool require, ref Dictionary<TKey, TValue> value)
-        {
-            value?.Clear();
-            if(SkipToTag(tag))
-            {
-                UnPackHeader(out uint _, out SevenBitDataType type);
-                if(type == SevenBitDataType.Map)
-                {
-                    value ??= new Dictionary<TKey, TValue>();
-                    UnPackNumber(out uint size);
-                    if(TypeVisit<TValue>.IsCustomStruct)
-                    {
-
-                        for (uint i = 0; i < size; i++)
-                        {
-                            TKey key = default;
-                            TypeVisit<TKey>.Visit(this, 0, string.Empty, false, ref key);
-
-                            TValue val = TypeVisit<TValue>.New();
-                            UnPackHeader(out uint _, out SevenBitDataType fieldType);
-                            if (fieldType != SevenBitDataType.StructEnd)
-                                TypeVisit<TValue>.Visit(this, 0, string.Empty, false, ref val);
-                            SkipToStructEnd();
-
-                            value.Add(key, val);
-                        }
-                    }
-                    else
-                    {
-                        for (uint i = 0; i < size; i++)
-                        {
-                            TKey key = default;
-                            TValue val = TypeVisit<TValue>.New();
-                            TypeVisit<TKey>.Visit(this, 0, string.Empty, false, ref key);
-                            TypeVisit<TValue>.Visit(this, 0, string.Empty, false, ref val);
-                            value.Add(key, val);
-                        }
-
-                    }
-                }
-                else
-                {
-                    ThrowIncompatibleType(type);
-                }
-            }
-        }
-
         public void VisitEnum<T>(uint tag, string name, bool require, ref T value) where T : Enum
         {
             ulong v = UnPackULong(tag);
             value = (T)Enum.ToObject(typeof(T), v);
         }
 
-        public void VisitHashSet<T>(uint tag, string name, bool require, ref HashSet<T> value)
-        {
-            value?.Clear();
-            if (SkipToTag(tag))
-            {
-                UnPackHeader(out uint _, out SevenBitDataType type);
-                if (type == SevenBitDataType.Vector)
-                {
-                    UnPackNumber(out uint size);
-                    value ??= new HashSet<T>();
-                    if(TypeVisit<T>.IsCustomStruct)
-                    {
-                        for (uint i = 0; i < size; i++)
-                        {
-                            T item = TypeVisit<T>.New();
-                            UnPackHeader(out uint _, out SevenBitDataType fieldType);
-                            if (fieldType != SevenBitDataType.StructEnd)
-                                ThrowIncompatibleType(fieldType);
-                            TypeVisit<T>.Visit(this, 0, string.Empty, false, ref item);
-                            SkipToStructEnd();
-                            value.Add(item);
-                        }
-                    }
-                    else
-                    {
-                        for (uint i = 0; i < size; i++)
-                        {
-                            T item = TypeVisit<T>.New();
-                            TypeVisit<T>.Visit(this, 0, string.Empty, false, ref item);
-                            value.Add(item);
-                        }
-                    }
-                    return;
-                }
-                else
-                {
-                    ThrowIncompatibleType(type);
-                }
-            }
-        }
-
-        public void VisitList<T>(uint tag, string name, bool require, ref List<T> value)
-        {
-            value?.Clear();
-            if (SkipToTag(tag))
-            {
-                UnPackHeader(out uint _, out SevenBitDataType type);
-                if (type == SevenBitDataType.Vector)
-                {
-                    UnPackNumber(out uint size);
-                    value ??= new List<T>();
-                    if (TypeVisit<T>.IsCustomStruct)
-                    {
-                        for (uint i = 0; i < size; i++)
-                        {
-                            T item = TypeVisit<T>.New();
-                            
-                            UnPackHeader(out uint _, out SevenBitDataType fieldType);
-                            if(fieldType != SevenBitDataType.StructEnd)
-                                ThrowIncompatibleType(fieldType);
-                            TypeVisit<T>.Visit(this, 0, string.Empty, false, ref item);
-                            SkipToStructEnd();
-
-                            value.Add(item);
-                        }
-                    }
-                    else
-                    {
-                        for (uint i = 0; i < size; i++)
-                        {
-                            T item = TypeVisit<T>.New();
-                            TypeVisit<T>.Visit(this, 0, string.Empty, false, ref item);
-                            value.Add(item);
-                        }
-
-                    }
-                    return;
-                }
-                else
-                {
-                    ThrowIncompatibleType(type);
-                }
-            }
-        }
-
         public void VisitStruct<T>(uint tag, string name, bool require, ref T value) where T : struct
         {
-            if(SkipToTag(tag))
+            if (SkipToTag(tag))
             {
                 UnPackHeader(out uint _, out SevenBitDataType type);
                 if (type == SevenBitDataType.StructBegin)
@@ -606,7 +427,8 @@ namespace DataVisit
                 UnPackHeader(out uint _, out SevenBitDataType type);
                 if (type == SevenBitDataType.StructBegin)
                 {
-                    value ??= new T();
+                    if(value == null || value.GetType() != typeof(T))
+                        value = new T();
                     TypeVisit<T>.Visit(this, 0, string.Empty, false, ref value);
                     SkipToStructEnd();
                     return;
@@ -618,6 +440,255 @@ namespace DataVisit
             }
             //暂时不重置，减少不必要的对象创建
             //value = new T();
+        }
+        public void VisitDynamicClass<T>(uint tag, string name, bool require, ref T value) where T : class, new()
+        {
+            if (SkipToTag(tag))
+            {
+                UnPackHeader(out uint _, out SevenBitDataType type);
+                if (type == SevenBitDataType.DynamicBegin)
+                {
+                    int typeId = 0;
+                    Visit(0, string.Empty, false, ref typeId);
+                    var visit = DynamicTypeVisit<T>.GetVisit(typeId);
+                    
+                    UnPackHeader(out uint _, out SevenBitDataType structType);
+                    if (structType != SevenBitDataType.StructBegin)
+                        ThrowIncompatibleType(structType);
+                    visit(this, 1, string.Empty, false, ref value);
+                    SkipToStructEnd();
+
+                    SkipToStructEnd();
+                    return;
+                }
+                else if(type == SevenBitDataType.StructBegin)
+                {
+                    value = null;
+                    SkipToStructEnd();
+                }
+                else
+                {
+                    ThrowIncompatibleType(type);
+                }
+            }
+        }
+        public void VisitArray<T>(uint tag, string name, bool require, ref T[] value)
+        {
+            if (SkipToTag(tag)) 
+            {
+                UnPackHeader(out uint _, out SevenBitDataType type);
+                if (type == SevenBitDataType.Vector)
+                {
+                    UnPackNumber(out uint size);
+                    if (value == null || value.Length != size)
+                    {
+                        value = new T[size];
+                    }
+                    for (uint i = 0; i < size; i++)
+                    {
+                        if (TypeVisit<T>.IsCustomStruct)
+                        {
+                            UnPackHeader(out uint _, out SevenBitDataType fieldType);
+                            if (fieldType != SevenBitDataType.StructBegin)
+                                ThrowIncompatibleType(fieldType);
+                        }
+                        TypeVisit<T>.Visit(this, 0, string.Empty, false, ref value[i]);
+                        if (TypeVisit<T>.IsCustomStruct)
+                            SkipToStructEnd();
+                    }
+                    return;
+                }
+                else
+                {
+                    ThrowIncompatibleType(type);
+                }
+            }
+            value = EmptyArray<T>.Array;
+        }
+        public void VisitDynamicArray<T>(uint tag, string name, bool require, ref T[] value) where T : class, new()
+        {
+            if (SkipToTag(tag))
+            {
+                UnPackHeader(out uint _, out SevenBitDataType type);
+                if (type == SevenBitDataType.Vector)
+                {
+                    UnPackNumber(out uint size);
+                    if (value == null || value.Length != size)
+                    {
+                        value = new T[size];
+                    }
+                    for (uint i = 0; i < size; i++)
+                    {
+                        VisitDynamicClass(0, string.Empty, false, ref value[i]);
+                    }
+                    return;
+                }
+                else
+                {
+                    ThrowIncompatibleType(type);
+                }
+            }
+            value = EmptyArray<T>.Array;
+        }
+
+        public void VisitDictionary<TKey, TValue>(uint tag, string name, bool require, ref Dictionary<TKey, TValue> value)
+        {
+            value?.Clear();
+            if(SkipToTag(tag))
+            {
+                UnPackHeader(out uint _, out SevenBitDataType type);
+                if(type == SevenBitDataType.Vector)
+                {
+                    value ??= new Dictionary<TKey, TValue>();
+                    UnPackNumber(out uint size);
+                    for (uint i = 0; i < size; i++)
+                    {
+                        UnPackHeader(out uint _, out SevenBitDataType t);
+                        if (t == SevenBitDataType.StructBegin)
+                        {
+                            TKey key = default;
+                            TValue val = TypeVisit<TValue>.New();
+                            TypeVisit<TKey>.Visit(this, 0, string.Empty, false, ref key);
+                            if (TypeVisit<TValue>.IsCustomStruct)
+                            {
+                                UnPackHeader(out uint _, out SevenBitDataType valueType);
+                                if (valueType != SevenBitDataType.StructBegin)
+                                    ThrowIncompatibleType(valueType);
+                            }
+                            TypeVisit<TValue>.Visit(this, 1, string.Empty, false, ref val);
+                            if (TypeVisit<TValue>.IsCustomStruct)
+                                SkipToStructEnd();
+                            value.Add(key, val);
+                            SkipToStructEnd();
+                        }
+                    }
+                }
+                else
+                {
+                    ThrowIncompatibleType(type);
+                }
+            }
+        }
+        public void VisitDynamicDictionary<TKey, TValue>(uint tag, string name, bool require, ref Dictionary<TKey, TValue> value) where TValue : class, new()
+        {
+            value?.Clear();
+            if (SkipToTag(tag))
+            {
+                UnPackHeader(out uint _, out SevenBitDataType type);
+                if (type == SevenBitDataType.Vector)
+                {
+                    value ??= new Dictionary<TKey, TValue>();
+                    UnPackNumber(out uint size);
+                    for (uint i = 0; i < size; i++)
+                    {
+                        UnPackHeader(out uint _, out SevenBitDataType t);
+                        if (t == SevenBitDataType.StructBegin)
+                        {
+                            TKey key = default;
+                            TypeVisit<TKey>.Visit(this, 0, string.Empty, false, ref key);
+                            TValue val = default;
+                            VisitDynamicClass(1, string.Empty, false, ref val);
+                            value.Add(key, val);
+                            SkipToStructEnd();
+                        }
+                    }
+                }
+                else
+                {
+                    ThrowIncompatibleType(type);
+                }
+            }
+        }
+
+        public void VisitHashSet<T>(uint tag, string name, bool require, ref HashSet<T> value)
+        {
+            value?.Clear();
+            if (SkipToTag(tag))
+            {
+                UnPackHeader(out uint _, out SevenBitDataType type);
+                if (type == SevenBitDataType.Vector)
+                {
+                    UnPackNumber(out uint size);
+                    value ??= new HashSet<T>();
+
+                    for (uint i = 0; i < size; i++)
+                    {
+                        if (TypeVisit<T>.IsCustomStruct)
+                        {
+                            UnPackHeader(out uint _, out SevenBitDataType fieldType);
+                            if (fieldType != SevenBitDataType.StructBegin)
+                                ThrowIncompatibleType(fieldType);
+                        }
+                        T item = TypeVisit<T>.New();
+                        TypeVisit<T>.Visit(this, 0, string.Empty, false, ref item);
+                        if (TypeVisit<T>.IsCustomStruct)
+                            SkipToStructEnd();
+                        value.Add(item);
+                    }
+                    return;
+                }
+                else
+                {
+                    ThrowIncompatibleType(type);
+                }
+            }
+        }
+
+        public void VisitList<T>(uint tag, string name, bool require, ref List<T> value)
+        {
+            value?.Clear();
+            if (SkipToTag(tag))
+            {
+                UnPackHeader(out uint _, out SevenBitDataType type);
+                if (type == SevenBitDataType.Vector)
+                {
+                    UnPackNumber(out uint size);
+                    value ??= new List<T>();
+                    for (uint i = 0; i < size; i++)
+                    {
+                        if (TypeVisit<T>.IsCustomStruct)
+                        {
+                            UnPackHeader(out uint _, out SevenBitDataType fieldType);
+                            if (fieldType != SevenBitDataType.StructBegin)
+                                ThrowIncompatibleType(fieldType);
+                        }
+                        T item = TypeVisit<T>.New();
+                        TypeVisit<T>.Visit(this, 0, string.Empty, false, ref item);
+                        if (TypeVisit<T>.IsCustomStruct)
+                            SkipToStructEnd();
+                        value.Add(item);
+                    }
+                    return;
+                }
+                else
+                {
+                    ThrowIncompatibleType(type);
+                }
+            }
+        }
+        public void VisitDynamicList<T>(uint tag, string name, bool require, ref List<T> value) where T : class, new()
+        {
+            value?.Clear();
+            if (SkipToTag(tag))
+            {
+                UnPackHeader(out uint _, out SevenBitDataType type);
+                if (type == SevenBitDataType.Vector)
+                {
+                    UnPackNumber(out uint size);
+                    value ??= new List<T>();
+                    for (uint i = 0; i < size; i++)
+                    {
+                        T item = default;
+                        VisitDynamicClass(0, string.Empty, false, ref item);
+                        value.Add(item);
+                    }
+                    return;
+                }
+                else
+                {
+                    ThrowIncompatibleType(type);
+                }
+            }
         }
 
         public static void ThrowIncompatibleType(SevenBitDataType type)
