@@ -6,7 +6,7 @@ namespace ActionLine.EditorView
 {
     public class ActionLineEditorContext : ScriptableObject
     {
-        [SerializeField]
+        [System.Serializable]
         private struct ViewPortData
         {
             public float Scale;
