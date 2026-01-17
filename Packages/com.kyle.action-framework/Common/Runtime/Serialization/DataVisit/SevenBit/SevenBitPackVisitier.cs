@@ -4,7 +4,7 @@ using System.IO;
 
 namespace DataVisit
 {
-    public class SevenBitPackVisitier : IVisitier
+    public class SevenBitPackVisitier : SevenBitBase, IVisitier
     {
         private readonly MemoryStream _memory;
         private unsafe void Write(byte* bytes, int size)
@@ -104,19 +104,19 @@ namespace DataVisit
             _memory = memory ?? new MemoryStream();
         }
 
-        public void Visit(uint tag, string name, bool require, ref bool value)
+        public void Visit(uint tag, string name, uint flag, ref bool value)
         {
-            if (!value && !require)
+            if (!value && !IsRequired(flag))
                 return;
             PackHeader(tag, SevenBitDataType.Positive);
             PackNumber(1);
         }
 
-        public void Visit(uint tag, string name, bool require, ref bool[] value)
+        public void Visit(uint tag, string name, uint flag, ref bool[] value)
         {
             if (value == null)
             {
-                if(require)
+                if(IsRequired(flag))
                 {
                     PackHeader(tag, SevenBitDataType.String);
                     PackNumber(0);
@@ -128,19 +128,19 @@ namespace DataVisit
             Write(value);
         }
 
-        public void Visit(uint tag, string name, bool require, ref byte value)
+        public void Visit(uint tag, string name, uint flag, ref byte value)
         {
-            if(value == 0 || require)
+            if(value == 0 || IsRequired(flag))
                 return;
             PackHeader(tag, SevenBitDataType.Positive);
             PackNumber(value);
         }
 
-        public void Visit(uint tag, string name, bool require, ref byte[] value)
+        public void Visit(uint tag, string name, uint flag, ref byte[] value)
         {
             if (value == null)
             {
-                if (require)
+                if (IsRequired(flag))
                 {
                     PackHeader(tag, SevenBitDataType.String);
                     PackNumber(0);
@@ -158,18 +158,18 @@ namespace DataVisit
             }
         }
 
-        public void Visit(uint tag, string name, bool require, ref sbyte value)
+        public void Visit(uint tag, string name, uint flag, ref sbyte value)
         {
-            if(value == 0 || require)
+            if(value == 0 || IsRequired(flag))
                 return;
             PackInt(tag, value);
         }
 
-        public void Visit(uint tag, string name, bool require, ref sbyte[] value)
+        public void Visit(uint tag, string name, uint flag, ref sbyte[] value)
         {
             if (value == null)
             {
-                if (require)
+                if (IsRequired(flag))
                 {
                     PackHeader(tag, SevenBitDataType.String);
                     PackNumber(0);
@@ -187,37 +187,37 @@ namespace DataVisit
             }
         }
 
-        public void Visit(uint tag, string name, bool require, ref short value)
+        public void Visit(uint tag, string name, uint flag, ref short value)
         {
-            if (value == 0 || require)
+            if (value == 0 || IsRequired(flag))
                 return;
             PackInt(tag, value);
         }
 
-        public void Visit(uint tag, string name, bool require, ref ushort value)
+        public void Visit(uint tag, string name, uint flag, ref ushort value)
         {
-            if (value == 0 || require)
+            if (value == 0 || IsRequired(flag))
                 return;
             PackUInt(tag, value);
         }
 
-        public void Visit(uint tag, string name, bool require, ref int value)
+        public void Visit(uint tag, string name, uint flag, ref int value)
         {
-            if (value == 0 || require)
+            if (value == 0 || IsRequired(flag))
                 return;
             PackInt(tag, value);
         }
 
-        public void Visit(uint tag, string name, bool require, ref uint value)
+        public void Visit(uint tag, string name, uint flag, ref uint value)
         {
-            if (value == 0 || require)
+            if (value == 0 || IsRequired(flag))
                 return;
             PackUInt(tag, value);
         }
 
-        public void Visit(uint tag, string name, bool require, ref long value)
+        public void Visit(uint tag, string name, uint flag, ref long value)
         {
-            if (value == 0 || require)
+            if (value == 0 || IsRequired(flag))
                 return;
             if (value >= 0)
             {
@@ -231,35 +231,35 @@ namespace DataVisit
             }
         }
 
-        public void Visit(uint tag, string name, bool require, ref ulong value)
+        public void Visit(uint tag, string name, uint flag, ref ulong value)
         {
-            if (value == 0 || require)
+            if (value == 0 || IsRequired(flag))
                 return;
             PackHeader(tag, SevenBitDataType.Positive);
             PackNumber(value);
         }
 
-        public void Visit(uint tag, string name, bool require, ref float value)
+        public void Visit(uint tag, string name, uint flag, ref float value)
         {
-            if (value == 0 || require)
+            if (value == 0 || IsRequired(flag))
                 return;
             PackHeader(tag, SevenBitDataType.Float);
             PackNumber(value);
         }
 
-        public void Visit(uint tag, string name, bool require, ref double value)
+        public void Visit(uint tag, string name, uint flag, ref double value)
         {
-            if (value == 0 || require)
+            if (value == 0 || IsRequired(flag))
                 return;
             PackHeader(tag, SevenBitDataType.Double);
             PackNumber(value);
         }
 
-        public void Visit(uint tag, string name, bool require, ref string value)
+        public void Visit(uint tag, string name, uint flag, ref string value)
         {
             if (string.IsNullOrEmpty(value))
             {
-                if (require)
+                if (IsRequired(flag))
                 {
                     PackHeader(tag, SevenBitDataType.String);
                     PackNumber(0);
@@ -278,21 +278,21 @@ namespace DataVisit
             }
         }
 
-        public void VisitEnum<T>(uint tag, string name, bool require, ref T value) where T : Enum
+        public void VisitEnum<T>(uint tag, string name, uint flag, ref T value) where T : Enum
         {
             int v = Convert.ToInt32(value);
-            if (v == 0 || require)
+            if (v == 0 || IsRequired(flag))
                 return;
             PackInt(tag, v);
         }
 
-        public void VisitStruct<T>(uint tag, string name, bool require, ref T value) where T : struct
+        public void VisitStruct<T>(uint tag, string name, uint flag, ref T value) where T : struct
         {
             var posBefore = _memory.Position;
             PackHeader(tag, SevenBitDataType.StructBegin);
             var posAfterHeader = _memory.Position;
-            TypeVisit<T>.Visit(this, 0, "", false, ref value);
-            if (!require && _memory.Position == posAfterHeader)
+            TypeVisit<T>.Visit(this, 0, "", flag & UnRequiredFlag, ref value);
+            if (!IsRequired(flag) && _memory.Position == posAfterHeader)
             {
                 //没有内容，回退
                 _memory.Position = posBefore;
@@ -302,9 +302,9 @@ namespace DataVisit
             PackHeader(0, SevenBitDataType.StructEnd);
         }
 
-        public void VisitClass<T>(uint tag, string name, bool require, ref T value) where T : class, new()
+        public void VisitClass<T>(uint tag, string name, uint flag, ref T value) where T : class, new()
         {
-            if (value == null && require)
+            if (value == null && IsRequired(flag))
             {
                 PackHeader(tag, SevenBitDataType.StructBegin);
                 PackHeader(0, SevenBitDataType.StructEnd);
@@ -313,8 +313,8 @@ namespace DataVisit
             var posBefore = _memory.Position;
             PackHeader(tag, SevenBitDataType.StructBegin);
             var posAfterHeader = _memory.Position;
-            TypeVisit<T>.Visit(this, 0, "", false, ref value);
-            if (!require && _memory.Position == posAfterHeader)
+            TypeVisit<T>.Visit(this, 0, "", flag & UnRequiredFlag, ref value);
+            if (!IsRequired(flag) && _memory.Position == posAfterHeader)
             {
                 //没有内容，回退
                 _memory.Position = posBefore;
@@ -323,9 +323,9 @@ namespace DataVisit
             }
             PackHeader(0, SevenBitDataType.StructEnd);
         }
-        public void VisitDynamicClass<T>(uint tag, string name, bool require, ref T value) where T : class, new()
+        public void VisitDynamicClass<T>(uint tag, string name, uint flag, ref T value) where T : class, new()
         {
-            if (value == null && require)
+            if (value == null && IsRequired(flag))
             {
                 PackHeader(tag, SevenBitDataType.StructBegin);
                 PackHeader(0, SevenBitDataType.StructEnd);
@@ -341,10 +341,10 @@ namespace DataVisit
             PackHeader(tag, SevenBitDataType.DynamicBegin);//写入动态类型开始
             var posAfterHeader = _memory.Position;
 
-            Visit(0, string.Empty, true, ref id);//写入类型id
+            Visit(0, string.Empty, flag | RequiredFlag, ref id);//写入类型id
             PackHeader(1, SevenBitDataType.StructBegin);//写入实际类型
-            visitFunc(this, 0, "", false, ref value);
-            if (!require && _memory.Position == posAfterHeader)
+            visitFunc(this, 0, "", flag & UnRequiredFlag, ref value);
+            if (!IsRequired(flag) && _memory.Position == posAfterHeader)
             {
                 //没有内容，回退
                 _memory.Position = posBefore;
@@ -355,11 +355,11 @@ namespace DataVisit
 
             PackHeader(0, SevenBitDataType.StructEnd);//写入动态类型结束
         }
-        public void VisitArray<T>(uint tag, string name, bool require, ref T[] value)
+        public void VisitArray<T>(uint tag, string name, uint flag, ref T[] value)
         {
             if (value == null)
             {
-                if (require)
+                if (IsRequired(flag))
                 {
                     PackHeader(tag, SevenBitDataType.Vector);
                     PackNumber(0);
@@ -372,17 +372,17 @@ namespace DataVisit
             {
                 if (TypeVisit<T>.IsCustomStruct)
                     PackHeader(0, SevenBitDataType.StructBegin);
-                TypeVisit<T>.Visit(this, 0, "", true, ref value[i]);
+                TypeVisit<T>.Visit(this, 0, "", flag | RequiredFlag, ref value[i]);
                 if (TypeVisit<T>.IsCustomStruct)
                     PackHeader(0, SevenBitDataType.StructEnd);
             }
         }
 
-        public void VisitDynamicArray<T>(uint tag, string name, bool require, ref T[] value) where T : class, new()
+        public void VisitDynamicArray<T>(uint tag, string name, uint flag, ref T[] value) where T : class, new()
         {
             if (value == null)
             {
-                if (require)
+                if (IsRequired(flag))
                 {
                     PackHeader(tag, SevenBitDataType.Vector);
                     PackNumber(0);
@@ -396,15 +396,15 @@ namespace DataVisit
                 if (value[i] == null)
                     PackHeader(0, SevenBitDataType.StructEnd);
                 else
-                    VisitDynamicClass(0, "", true, ref value[i]);
+                    VisitDynamicClass(0, "", flag | RequiredFlag, ref value[i]);
             }
         }
 
-        public void VisitDictionary<TKey, TValue>(uint tag, string name, bool require, ref Dictionary<TKey, TValue> value)
+        public void VisitDictionary<TKey, TValue>(uint tag, string name, uint flag, ref Dictionary<TKey, TValue> value)
         {
             if(value == null)
             {
-                if (require)
+                if (IsRequired(flag))
                 {
                     PackHeader(tag, SevenBitDataType.Vector);
                     PackNumber(0);
@@ -420,11 +420,11 @@ namespace DataVisit
                 //字典按照数组处理，key和value作为结构体成员
                 PackHeader(0, SevenBitDataType.StructBegin);
                 
-                TypeVisit<TKey>.Visit(this, 0, "", false, ref key);
+                TypeVisit<TKey>.Visit(this, 0, "", flag & UnRequiredFlag, ref key);
 
                 if(TypeVisit<TValue>.IsCustomStruct)
                     PackHeader(1, SevenBitDataType.StructBegin);
-                TypeVisit<TValue>.Visit(this, 1, "", false, ref val);
+                TypeVisit<TValue>.Visit(this, 1, "", flag & UnRequiredFlag, ref val);
                 if (TypeVisit<TValue>.IsCustomStruct)
                     PackHeader(0, SevenBitDataType.StructEnd);
 
@@ -432,11 +432,11 @@ namespace DataVisit
             }
         }
 
-        public void VisitDynamicDictionary<TKey, TValue>(uint tag, string name, bool require, ref Dictionary<TKey, TValue> value) where TValue : class, new()
+        public void VisitDynamicDictionary<TKey, TValue>(uint tag, string name, uint flag, ref Dictionary<TKey, TValue> value) where TValue : class, new()
         {
             if (value == null)
             {
-                if (require)
+                if (IsRequired(flag))
                 {
                     PackHeader(tag, SevenBitDataType.Vector);
                     PackNumber(0);
@@ -451,17 +451,17 @@ namespace DataVisit
                 var val = kv.Value;
                 //字典按照数组处理，key和value作为结构体成员
                 PackHeader(0, SevenBitDataType.StructBegin);
-                TypeVisit<TKey>.Visit(this, 0, "", false, ref key);
-                VisitDynamicClass(1, "", false, ref val);
+                TypeVisit<TKey>.Visit(this, 0, "", flag & UnRequiredFlag, ref key);
+                VisitDynamicClass(1, "", flag & UnRequiredFlag, ref val);
                 PackHeader(0, SevenBitDataType.StructEnd);
             }
         }
 
-        public void VisitHashSet<T>(uint tag, string name, bool require, ref HashSet<T> value)
+        public void VisitHashSet<T>(uint tag, string name, uint flag, ref HashSet<T> value)
         {
             if (value == null)
             {
-                if (require)
+                if (IsRequired(flag))
                 {
                     PackHeader(tag, SevenBitDataType.Vector);
                     PackNumber(0);
@@ -475,16 +475,16 @@ namespace DataVisit
                 var itemCopy = item;
                 if (TypeVisit<T>.IsCustomStruct)
                     PackHeader(0, SevenBitDataType.StructBegin);
-                TypeVisit<T>.Visit(this, 0, "", true, ref itemCopy);
+                TypeVisit<T>.Visit(this, 0, "", flag | RequiredFlag, ref itemCopy);
                 if (TypeVisit<T>.IsCustomStruct)
                     PackHeader(0, SevenBitDataType.StructEnd);
             }
         }
-        public void VisitList<T>(uint tag, string name, bool require, ref List<T> value)
+        public void VisitList<T>(uint tag, string name, uint flag, ref List<T> value)
         {
             if (value == null)
             {
-                if (require)
+                if (IsRequired(flag))
                 {
                     PackHeader(tag, SevenBitDataType.Vector);
                     PackNumber(0);
@@ -498,16 +498,16 @@ namespace DataVisit
                 var item = value[i];
                 if (TypeVisit<T>.IsCustomStruct)
                     PackHeader(0, SevenBitDataType.StructBegin);
-                TypeVisit<T>.Visit(this, 0, "", true, ref item);
+                TypeVisit<T>.Visit(this, 0, "", flag | RequiredFlag, ref item);
                 if (TypeVisit<T>.IsCustomStruct)
                     PackHeader(0, SevenBitDataType.StructEnd);
             }
         }
-        public void VisitDynamicList<T>(uint tag, string name, bool require, ref List<T> value) where T : class, new()
+        public void VisitDynamicList<T>(uint tag, string name, uint flag, ref List<T> value) where T : class, new()
         {
             if (value == null)
             {
-                if (require)
+                if (IsRequired(flag))
                 {
                     PackHeader(tag, SevenBitDataType.Vector);
                     PackNumber(0);
@@ -519,7 +519,7 @@ namespace DataVisit
             for (int i = 0; i < value.Count; i++)
             {
                 var item = value[i];
-                VisitDynamicClass(0, "", true, ref item);
+                VisitDynamicClass(0, "", flag|RequiredFlag, ref item);
             }
         }
     }

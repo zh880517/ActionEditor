@@ -18,4 +18,15 @@
         public uint tag;
         public SevenBitDataType type;
     }
+
+    public class SevenBitBase
+    {
+        public const uint RequiredFlag = 1;
+        public const uint UnRequiredFlag = ~RequiredFlag;
+
+        public static bool IsRequired(uint flag)
+        {
+            return (flag & RequiredFlag) != 0;
+        }
+    }
 }

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace DataVisit
 {
-    public class SevenBitUnPackVisitier : IVisitier
+    public class SevenBitUnPackVisitier : SevenBitBase, IVisitier
     {
         private ArraySegment<byte> _data;
         private int _pos;
@@ -200,13 +200,13 @@ namespace DataVisit
             return 0;
         }
 
-        public void Visit(uint tag, string name, bool require, ref bool value)
+        public void Visit(uint tag, string name, uint flag, ref bool value)
         {
             var v = UnPackUInt(tag);
             value = v != 0;
         }
 
-        public void Visit(uint tag, string name, bool require, ref bool[] value)
+        public void Visit(uint tag, string name, uint flag, ref bool[] value)
         {
             if (SkipToTag(tag))
             {
@@ -233,12 +233,12 @@ namespace DataVisit
             value = EmptyArray<bool>.Array;
         }
 
-        public void Visit(uint tag, string name, bool require, ref byte value)
+        public void Visit(uint tag, string name, uint flag, ref byte value)
         {
             value = (byte)UnPackUInt(tag);
         }
 
-        public void Visit(uint tag, string name, bool require, ref byte[] value)
+        public void Visit(uint tag, string name, uint flag, ref byte[] value)
         {
             if (SkipToTag(tag))
             {
@@ -262,12 +262,12 @@ namespace DataVisit
             value = EmptyArray<byte>.Array;
         }
 
-        public void Visit(uint tag, string name, bool require, ref sbyte value)
+        public void Visit(uint tag, string name, uint flag, ref sbyte value)
         {
             value = (sbyte)UnPackUInt(tag);
         }
 
-        public void Visit(uint tag, string name, bool require, ref sbyte[] value)
+        public void Visit(uint tag, string name, uint flag, ref sbyte[] value)
         {
             if (SkipToTag(tag))
             {
@@ -294,37 +294,37 @@ namespace DataVisit
             value = EmptyArray<sbyte>.Array;
         }
 
-        public void Visit(uint tag, string name, bool require, ref short value)
+        public void Visit(uint tag, string name, uint flag, ref short value)
         {
             value = (short)UnPackUInt(tag);
         }
 
-        public void Visit(uint tag, string name, bool require, ref ushort value)
+        public void Visit(uint tag, string name, uint flag, ref ushort value)
         {
             value = (ushort)UnPackUInt(tag);
         }
 
-        public void Visit(uint tag, string name, bool require, ref int value)
+        public void Visit(uint tag, string name, uint flag, ref int value)
         {
             value = (int)UnPackUInt(tag);
         }
 
-        public void Visit(uint tag, string name, bool require, ref uint value)
+        public void Visit(uint tag, string name, uint flag, ref uint value)
         {
             value = UnPackUInt(tag);
         }
 
-        public void Visit(uint tag, string name, bool require, ref long value)
+        public void Visit(uint tag, string name, uint flag, ref long value)
         {
             value = (long)UnPackULong(tag);
         }
 
-        public void Visit(uint tag, string name, bool require, ref ulong value)
+        public void Visit(uint tag, string name, uint flag, ref ulong value)
         {
             value = UnPackULong(tag);
         }
 
-        public void Visit(uint tag, string name, bool require, ref float value)
+        public void Visit(uint tag, string name, uint flag, ref float value)
         {
             value = 0;
             if (SkipToTag(tag))
@@ -350,7 +350,7 @@ namespace DataVisit
             }
         }
 
-        public void Visit(uint tag, string name, bool require, ref double value)
+        public void Visit(uint tag, string name, uint flag, ref double value)
         {
             value = 0;
             if (SkipToTag(tag))
@@ -376,7 +376,7 @@ namespace DataVisit
             }
         }
 
-        public void Visit(uint tag, string name, bool require, ref string value)
+        public void Visit(uint tag, string name, uint flag, ref string value)
         {
             value = string.Empty;
             if (SkipToTag(tag))
@@ -395,20 +395,20 @@ namespace DataVisit
             }
         }
 
-        public void VisitEnum<T>(uint tag, string name, bool require, ref T value) where T : Enum
+        public void VisitEnum<T>(uint tag, string name, uint flag, ref T value) where T : Enum
         {
             ulong v = UnPackULong(tag);
             value = (T)Enum.ToObject(typeof(T), v);
         }
 
-        public void VisitStruct<T>(uint tag, string name, bool require, ref T value) where T : struct
+        public void VisitStruct<T>(uint tag, string name, uint flag, ref T value) where T : struct
         {
             if (SkipToTag(tag))
             {
                 UnPackHeader(out uint _, out SevenBitDataType type);
                 if (type == SevenBitDataType.StructBegin)
                 {
-                    TypeVisit<T>.Visit(this, 0, string.Empty, false, ref value);
+                    TypeVisit<T>.Visit(this, 0, string.Empty, flag & UnRequiredFlag, ref value);
                     SkipToStructEnd();
                     return;
                 }
@@ -420,7 +420,7 @@ namespace DataVisit
             //value = default;
         }
 
-        public void VisitClass<T>(uint tag, string name, bool require, ref T value) where T : class, new()
+        public void VisitClass<T>(uint tag, string name, uint flag, ref T value) where T : class, new()
         {
             if (SkipToTag(tag))
             {
@@ -429,7 +429,7 @@ namespace DataVisit
                 {
                     if(value == null || value.GetType() != typeof(T))
                         value = new T();
-                    TypeVisit<T>.Visit(this, 0, string.Empty, false, ref value);
+                    TypeVisit<T>.Visit(this, 0, string.Empty, flag & UnRequiredFlag, ref value);
                     SkipToStructEnd();
                     return;
                 }
@@ -441,7 +441,7 @@ namespace DataVisit
             //暂时不重置，减少不必要的对象创建
             //value = new T();
         }
-        public void VisitDynamicClass<T>(uint tag, string name, bool require, ref T value) where T : class, new()
+        public void VisitDynamicClass<T>(uint tag, string name, uint flag, ref T value) where T : class, new()
         {
             if (SkipToTag(tag))
             {
@@ -449,7 +449,7 @@ namespace DataVisit
                 if (type == SevenBitDataType.DynamicBegin)
                 {
                     int typeId = 0;
-                    Visit(0, string.Empty, false, ref typeId);
+                    Visit(0, string.Empty, flag & (~RequiredFlag), ref typeId);
                     var visit = DynamicTypeVisit<T>.GetVisit(typeId);
                     UnPackHeader(out uint _, out SevenBitDataType structType);
                     if(visit == null)
@@ -461,7 +461,7 @@ namespace DataVisit
                     }
                     if (structType != SevenBitDataType.StructBegin)
                         ThrowIncompatibleType(structType);
-                    visit(this, 1, string.Empty, false, ref value);
+                    visit(this, 1, string.Empty, flag & UnRequiredFlag, ref value);
                     SkipToStructEnd();
 
                     SkipToStructEnd();
@@ -478,7 +478,7 @@ namespace DataVisit
                 }
             }
         }
-        public void VisitArray<T>(uint tag, string name, bool require, ref T[] value)
+        public void VisitArray<T>(uint tag, string name, uint flag, ref T[] value)
         {
             if (SkipToTag(tag)) 
             {
@@ -498,7 +498,7 @@ namespace DataVisit
                             if (fieldType != SevenBitDataType.StructBegin)
                                 ThrowIncompatibleType(fieldType);
                         }
-                        TypeVisit<T>.Visit(this, 0, string.Empty, false, ref value[i]);
+                        TypeVisit<T>.Visit(this, 0, string.Empty, flag & UnRequiredFlag, ref value[i]);
                         if (TypeVisit<T>.IsCustomStruct)
                             SkipToStructEnd();
                     }
@@ -511,7 +511,7 @@ namespace DataVisit
             }
             value = EmptyArray<T>.Array;
         }
-        public void VisitDynamicArray<T>(uint tag, string name, bool require, ref T[] value) where T : class, new()
+        public void VisitDynamicArray<T>(uint tag, string name, uint flag, ref T[] value) where T : class, new()
         {
             if (SkipToTag(tag))
             {
@@ -525,7 +525,7 @@ namespace DataVisit
                     }
                     for (uint i = 0; i < size; i++)
                     {
-                        VisitDynamicClass(0, string.Empty, false, ref value[i]);
+                        VisitDynamicClass(0, string.Empty, flag & UnRequiredFlag, ref value[i]);
                     }
                     return;
                 }
@@ -537,7 +537,7 @@ namespace DataVisit
             value = EmptyArray<T>.Array;
         }
 
-        public void VisitDictionary<TKey, TValue>(uint tag, string name, bool require, ref Dictionary<TKey, TValue> value)
+        public void VisitDictionary<TKey, TValue>(uint tag, string name, uint flag, ref Dictionary<TKey, TValue> value)
         {
             value?.Clear();
             if(SkipToTag(tag))
@@ -554,14 +554,14 @@ namespace DataVisit
                         {
                             TKey key = default;
                             TValue val = TypeVisit<TValue>.New();
-                            TypeVisit<TKey>.Visit(this, 0, string.Empty, false, ref key);
+                            TypeVisit<TKey>.Visit(this, 0, string.Empty, flag & UnRequiredFlag, ref key);
                             if (TypeVisit<TValue>.IsCustomStruct)
                             {
                                 UnPackHeader(out uint _, out SevenBitDataType valueType);
                                 if (valueType != SevenBitDataType.StructBegin)
                                     ThrowIncompatibleType(valueType);
                             }
-                            TypeVisit<TValue>.Visit(this, 1, string.Empty, false, ref val);
+                            TypeVisit<TValue>.Visit(this, 1, string.Empty, flag & UnRequiredFlag, ref val);
                             if (TypeVisit<TValue>.IsCustomStruct)
                                 SkipToStructEnd();
                             value.Add(key, val);
@@ -575,7 +575,7 @@ namespace DataVisit
                 }
             }
         }
-        public void VisitDynamicDictionary<TKey, TValue>(uint tag, string name, bool require, ref Dictionary<TKey, TValue> value) where TValue : class, new()
+        public void VisitDynamicDictionary<TKey, TValue>(uint tag, string name, uint flag, ref Dictionary<TKey, TValue> value) where TValue : class, new()
         {
             value?.Clear();
             if (SkipToTag(tag))
@@ -591,9 +591,9 @@ namespace DataVisit
                         if (t == SevenBitDataType.StructBegin)
                         {
                             TKey key = default;
-                            TypeVisit<TKey>.Visit(this, 0, string.Empty, false, ref key);
+                            TypeVisit<TKey>.Visit(this, 0, string.Empty, flag & UnRequiredFlag, ref key);
                             TValue val = default;
-                            VisitDynamicClass(1, string.Empty, false, ref val);
+                            VisitDynamicClass(1, string.Empty, flag & UnRequiredFlag, ref val);
                             value.Add(key, val);
                             SkipToStructEnd();
                         }
@@ -606,7 +606,7 @@ namespace DataVisit
             }
         }
 
-        public void VisitHashSet<T>(uint tag, string name, bool require, ref HashSet<T> value)
+        public void VisitHashSet<T>(uint tag, string name, uint flag, ref HashSet<T> value)
         {
             value?.Clear();
             if (SkipToTag(tag))
@@ -626,7 +626,7 @@ namespace DataVisit
                                 ThrowIncompatibleType(fieldType);
                         }
                         T item = TypeVisit<T>.New();
-                        TypeVisit<T>.Visit(this, 0, string.Empty, false, ref item);
+                        TypeVisit<T>.Visit(this, 0, string.Empty, flag & UnRequiredFlag, ref item);
                         if (TypeVisit<T>.IsCustomStruct)
                             SkipToStructEnd();
                         value.Add(item);
@@ -640,7 +640,7 @@ namespace DataVisit
             }
         }
 
-        public void VisitList<T>(uint tag, string name, bool require, ref List<T> value)
+        public void VisitList<T>(uint tag, string name, uint flag, ref List<T> value)
         {
             value?.Clear();
             if (SkipToTag(tag))
@@ -659,7 +659,7 @@ namespace DataVisit
                                 ThrowIncompatibleType(fieldType);
                         }
                         T item = TypeVisit<T>.New();
-                        TypeVisit<T>.Visit(this, 0, string.Empty, false, ref item);
+                        TypeVisit<T>.Visit(this, 0, string.Empty, flag & UnRequiredFlag, ref item);
                         if (TypeVisit<T>.IsCustomStruct)
                             SkipToStructEnd();
                         value.Add(item);
@@ -672,7 +672,7 @@ namespace DataVisit
                 }
             }
         }
-        public void VisitDynamicList<T>(uint tag, string name, bool require, ref List<T> value) where T : class, new()
+        public void VisitDynamicList<T>(uint tag, string name, uint flag, ref List<T> value) where T : class, new()
         {
             value?.Clear();
             if (SkipToTag(tag))
@@ -685,7 +685,7 @@ namespace DataVisit
                     for (uint i = 0; i < size; i++)
                     {
                         T item = default;
-                        VisitDynamicClass(0, string.Empty, false, ref item);
+                        VisitDynamicClass(0, string.Empty, flag & UnRequiredFlag, ref item);
                         value.Add(item);
                     }
                     return;
