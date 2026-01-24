@@ -2,6 +2,11 @@
 
 namespace DataVisit
 {
+    public static class VisitFlag
+    {
+        public const uint Required = 1;//必选字段,不会因为缺省而跳过
+    }
+
     public interface IVisitier
     {
         void Visit(uint tag, string name, uint flag, ref bool value);

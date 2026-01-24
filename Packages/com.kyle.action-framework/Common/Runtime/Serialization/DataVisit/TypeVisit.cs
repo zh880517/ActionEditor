@@ -23,8 +23,8 @@ public class TypeVisit<T>
 
 public class DynamicTypeVisit<T> : TypeVisit<T> where T : class, new()
 {
-    private readonly static Dictionary<int, Delegate> idToVisits = new Dictionary<int, Delegate>();
-    private readonly static Dictionary<System.Type, int> typeToIds = new Dictionary<System.Type, int>();
+    private static readonly Dictionary<int, Delegate> idToVisits = new Dictionary<int, Delegate>();
+    private static readonly Dictionary<System.Type, int> typeToIds = new Dictionary<System.Type, int>();
 
     public static int GetTypeId(T v)
     {
