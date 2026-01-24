@@ -6,10 +6,21 @@ namespace DataVisit
     [AttributeUsage(AttributeTargets.Field, Inherited = true)]
     public class VisitTypeTagAttribute : Attribute
     {
-        public Type Tag;
+        public Type TagType;
         public VisitTypeTagAttribute(Type tag) 
         {
-            Tag = tag;
+            TagType = tag;
+        }
+    }
+
+    //用来表示某个Enum是某个Catalog生成的TypeID Enum
+    [AttributeUsage(AttributeTargets.Enum)]
+    public class VisitTypeIDCatalogAttribute : Attribute
+    {
+        public Type CatalogType;
+        public VisitTypeIDCatalogAttribute(Type catalogType)
+        {
+            CatalogType = catalogType;
         }
     }
 }
