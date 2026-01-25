@@ -1,0 +1,79 @@
+﻿using System.Collections.Generic;
+using DataVisit;
+
+public class TypeVisit
+{
+    public delegate void Delegate(IVisitier visitier, uint tag, string name, uint flag, ref object value);
+    protected static readonly Dictionary<int, Delegate> idToVisits = new Dictionary<int, Delegate>();
+    protected static readonly Dictionary<System.Type, int> typeToIds = new Dictionary<System.Type, int>();
+    public static int GetTypeId(object v)
+    {
+        if (v == null)
+            return -1;
+        var type = v.GetType();
+        if (typeToIds.TryGetValue(type, out int id))
+            return id;
+        throw new System.Exception($"Type {type} not register in DynamicTypeVisit");
+    }
+
+    public static Delegate GetVisit(int typeId)
+    {
+        if (idToVisits.TryGetValue(typeId, out Delegate visit))
+            return visit;
+        throw new System.Exception($"TypeId {typeId} not register in DynamicTypeVisit");
+    }
+}
+
+//主要提供给容器序列化和反序列化使用
+public class TypeVisitT<T> : TypeVisit
+{
+    public delegate void VisitDelegate(IVisitier visitier, uint tag, string name,uint flag, ref T value);
+    public delegate T CreatorDelegate();
+    public static VisitDelegate VisitFunc;
+    public static CreatorDelegate New = ()=> default;
+    public static bool IsCustomStruct = false;//是否是自定义结构体，容器和泛型在处理时会有区别
+
+    public static void Visit(IVisitier visitier, uint tag, string name,uint flag, ref T value)
+    {
+        if (VisitFunc != null)
+        {
+            VisitFunc.Invoke(visitier, tag, name, flag, ref value);
+            return;
+        }
+        throw new System.Exception($"None visit define for type {typeof(T)}");
+    }
+
+    public static void RegusterStruct(VisitDelegate visit)
+    {
+        VisitFunc = visit;
+        IsCustomStruct = true;
+    }
+}
+
+public class TypeVisitClassT<T> : TypeVisitT<T> where T : class, new()
+{
+
+    public static void Register(int id, VisitDelegate visit)
+    {
+        System.Type type = typeof(T);
+
+        if (typeToIds.ContainsKey(type))
+        {
+            throw new System.Exception($"Type {type} already register in DynamicTypeVisit>");
+        }
+        if (idToVisits.ContainsKey(id))
+        {
+            throw new System.Exception($"TypeId {id} already register in DynamicTypeVisit>");
+        }
+        New = () => new T();
+        VisitFunc = visit;
+        typeToIds[type] = id;
+        static void func(IVisitier visitier, uint tag, string name, uint flag, ref object value)
+        {
+            var v = (T)value;
+            VisitFunc(visitier, tag, name, flag, ref v);
+            value = v;
+        }
+        idToVisits[id] = func;
+    }
+}

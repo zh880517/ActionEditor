@@ -7,21 +7,21 @@
         {
             if (_isRegistered)return;
             _isRegistered = true;
-            TypeVisit<bool>.VisitFunc = VisitBoolean;
-            TypeVisit<byte>.VisitFunc = VisitByte;
-            TypeVisit<sbyte>.VisitFunc = VisitSByte;
-            TypeVisit<short>.VisitFunc = VisitInt16;
-            TypeVisit<ushort>.VisitFunc = VisitUInt16;
-            TypeVisit<int>.VisitFunc = VisitInt32;
-            TypeVisit<uint>.VisitFunc = VisitUInt32;
-            TypeVisit<long>.VisitFunc = VisitInt64;
-            TypeVisit<ulong>.VisitFunc = VisitUInt64;
-            TypeVisit<float>.VisitFunc = VisitFloat;
-            TypeVisit<double>.VisitFunc = VisitDouble;
-            TypeVisit<string>.VisitFunc = VisitString;
-            TypeVisit<bool[]>.VisitFunc = VisitBooleanArray;
-            TypeVisit<byte[]>.VisitFunc = VisitByteArray;
-            TypeVisit<sbyte[]>.VisitFunc = VisitSByteArray;
+            TypeVisitT<bool>.VisitFunc = VisitBoolean;
+            TypeVisitT<byte>.VisitFunc = VisitByte;
+            TypeVisitT<sbyte>.VisitFunc = VisitSByte;
+            TypeVisitT<short>.VisitFunc = VisitInt16;
+            TypeVisitT<ushort>.VisitFunc = VisitUInt16;
+            TypeVisitT<int>.VisitFunc = VisitInt32;
+            TypeVisitT<uint>.VisitFunc = VisitUInt32;
+            TypeVisitT<long>.VisitFunc = VisitInt64;
+            TypeVisitT<ulong>.VisitFunc = VisitUInt64;
+            TypeVisitT<float>.VisitFunc = VisitFloat;
+            TypeVisitT<double>.VisitFunc = VisitDouble;
+            TypeVisitT<string>.VisitFunc = VisitString;
+            TypeVisitT<bool[]>.VisitFunc = VisitBooleanArray;
+            TypeVisitT<byte[]>.VisitFunc = VisitByteArray;
+            TypeVisitT<sbyte[]>.VisitFunc = VisitSByteArray;
         }
         private static void VisitBoolean(IVisitier visitier, uint tag, string name, uint flag, ref bool value)
         {

@@ -65,13 +65,13 @@ namespace CodeGen
         }
 
         //写入文件，如果写入的内容和已经存在的一致就不再写入，防止文件被修改导致Unity重新编译
-        public static void WriteToFile(string filePath, string context)
+        public static bool WriteToFile(string filePath, string context)
         {
             if (File.Exists(filePath))
             {
                 string existContext = File.ReadAllText(filePath, Encoding.UTF8);
                 if (existContext == context)
-                    return;
+                    return false;
             }
             else
             {
@@ -80,6 +80,7 @@ namespace CodeGen
                     Directory.CreateDirectory(dir);
             }
             File.WriteAllText(filePath, context, Encoding.UTF8);
+            return true;
         }
 
     }

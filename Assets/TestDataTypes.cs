@@ -1,42 +1,44 @@
 using System.Collections.Generic;
 using DataVisit;
-
+public class TestDataCatalogAttribute : VisitCatalogAttribute
+{
+    public TestDataCatalogAttribute() : base(1, "TestNamespace", "Assets/TestData/")
+    {
+    }
+}
 [TestDataCatalog]
 public class PlayerData
 {
-    [VisitField(1, 1)] public int id;
-    [VisitField(2, 2)] public string name;
-    [VisitField(3, 3)] public int level;
-    [VisitField(4, 4)] public float health;
+    [VisitField(1, 0)] public int id;
+    [VisitField(2, 0)] public string name;
+    [VisitField(3, 0)] public int level;
+    [VisitField(4, 0)] public float health;
 }
 
 [TestDataCatalog]
 public class InventoryData
 {
-    [VisitField(1, 1)] public int ownerId;
-    [VisitField(2, 2)] public List<int> itemIds;
-    [VisitField(3, 3)] public Dictionary<int, int> itemCounts;
+    [VisitField(1, 0)] public int ownerId;
+    [VisitField(2, 0)] public List<int> itemIds;
+    [VisitField(3, 0)] public Dictionary<int, int> itemCounts;
 }
 
 [TestDataCatalog]
-[VisitDynamicType]
 public class SkillBase
 {
-    [VisitField(1, 1)] public int skillId;
-    [VisitField(2, 2)] public string skillName;
+    [VisitField(1, 0)] public int skillId;
+    [VisitField(2, 0)] public string skillName;
 }
 
 [TestDataCatalog]
 public class AttackSkill : SkillBase
 {
-    public const int TYPE_ID = 1;
     [VisitField(3, 3)] public int damage;
 }
 
 [TestDataCatalog]
 public class BuffSkill : SkillBase
 {
-    public const int TYPE_ID = 2;
     [VisitField(3, 3)] public float duration;
     [VisitField(4, 4)] public int buffType;
 }

@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEditor;
-using UnityEngine;
 
 namespace CodeGen.DataVisit
 {
@@ -17,86 +17,78 @@ namespace CodeGen.DataVisit
             {
                 return;
             }
-
+            HashSet<string> modifyFiles = new HashSet<string>();
             foreach (var catalog in catalogs)
             {
-                DataVisitCodeGenerator.GenerateCatalog(catalog);
+                if(catalog.Types.Count == 0)
+                    continue;
+                GenerateCatalog(catalog, modifyFiles);
             }
 
-            AssetDatabase.Refresh();
+            if(modifyFiles.Count > 0) 
+                AssetDatabase.Refresh();
         }
-        public static void GenerateCatalog(CatalogData catalog)
+        private static void GenerateCatalog(CatalogData catalog, HashSet<string> modifyFils)
         {
-            var writer = new CSharpCodeWriter(true);
-            var nameSpace = catalog.CatalogAttribute.NameSpace;
-            var catalogName = catalog.CatalogAttribute.CatalogName;
+            string funcFilePath = GenerateVisitClass(catalog);
+            if (funcFilePath != null)
+                modifyFils?.Add(funcFilePath);
+            string registerFilePath = GenerateVisistRegisterClass(catalog);
+            if (registerFilePath != null)
+                modifyFils?.Add(registerFilePath);
             
-            writer.WriteLine("using System.Collections.Generic;");
+        }
+
+        //生成Visit函数，单独一个文件
+        private static string GenerateVisitClass(CatalogData catalog)
+        {
+            CSharpCodeWriter writer = new CSharpCodeWriter();
             writer.WriteLine("using DataVisit;");
-            
-            using (new CSharpCodeWriter.NameSpaceScop(writer, nameSpace))
+            writer.WriteLine("//Generate by tools : DataVisitCodeGenerator.GenerateAll()");
+            using (new CSharpCodeWriter.NameSpaceScop(writer, catalog.NameSpace))
             {
-                GenerateVisitClass(writer, catalog, catalogName);
-                writer.NewLine();
-                
-                var dynamicTypes = DataVisitTypeCollector.CollectDynamicTypes(catalog);
-                if (dynamicTypes.Count > 0)
+                using (new CSharpCodeWriter.Scop(writer, $"public partial class {catalog.GenTypeName}"))
                 {
-                    GenerateDynamicTypeRegister(writer, dynamicTypes, catalogName, nameSpace);
-                    writer.NewLine();
-                }
-                
-                GenerateInitClass(writer, catalog, catalogName, nameSpace, dynamicTypes);
-            }
-            
-            string filePath = Path.Combine(catalog.CatalogAttribute.GeneratePath, $"{catalogName}Visit.cs");
-            GeneratorUtils.WriteToFile(filePath, writer.ToString());
-            
-            Debug.Log($"Generated: {filePath}");
-        }
-
-        private static void GenerateVisitClass(CSharpCodeWriter writer, CatalogData catalog, string catalogName)
-        {
-            using (new CSharpCodeWriter.Scop(writer, $"public static class {catalogName}Visit"))
-            {
-                foreach (var typeInfo in catalog.Types)
-                {
-                    GenerateVisitMethod(writer, typeInfo, catalog.CatalogAttribute.NameSpace);
-                    writer.NewLine();
+                    foreach (var typeInfo in catalog.Types)
+                    {
+                        GenerateVisitMethod(writer, typeInfo, catalog.NameSpace);
+                        writer.NewLine();
+                    }
                 }
             }
+            string filePath = Path.Combine(catalog.GeneratePath, $"{catalog.GenTypeName}_Func.cs");
+            if (GeneratorUtils.WriteToFile(filePath, writer.ToString()))
+                return filePath;
+            return null;
         }
 
+        //生成Visit方法
         private static void GenerateVisitMethod(CSharpCodeWriter writer, TypeData typeInfo, string nameSpace)
         {
             string typeName = GeneratorUtils.TypeToName(typeInfo.Type, nameSpace);
-            string methodName = $"Visit{typeInfo.TypeName}";
-            string signature = $"public static void {methodName}(IVisitier visitier, uint tag, string name, uint flag, ref {typeName} value)";
+            string signature = $"private static void Visit{typeInfo.TypeName}(IVisitier visitier, uint tag, string name, uint flag, ref {typeName} value)";
             
             using (new CSharpCodeWriter.Scop(writer, signature))
             {
                 if(typeInfo.Base != null)
                 {
                     string baseTypeName = GeneratorUtils.TypeToName(typeInfo.Base.Type, nameSpace);
-                    writer.WriteLine($"var _base = ({baseTypeName})value");
-                    writer.WriteLine($"TypeVisit<{baseTypeName}>.Visit(visitier, 0, \"\", 0, ref _base);");
+                    writer.WriteLine($"var _base = ({baseTypeName})value;");
+                    writer.WriteLine($"visitier.VisitClass(0, \"\", 0, ref _base);");
                 }
                 foreach (var field in typeInfo.Fields)
                 {
-                    GenerateFieldVisit(writer, field, nameSpace);
+                    GenerateFieldVisit(writer, field);
                 }
             }
         }
-
-        private static void GenerateFieldVisit(CSharpCodeWriter writer, FieldData field, string nameSpace)
+        //生成字段访问代码
+        private static void GenerateFieldVisit(CSharpCodeWriter writer, FieldData field)
         {
-            string fieldAccess = $"value.{field.FieldName}";
-            uint tag = field.Tag;
-            string visitMethod = GetVisitMethodName(field.FieldType, field.IsDynamic);
-            
-            writer.WriteLine($"visitier.{visitMethod}({tag}, nameof({field.FieldName}), {field.Tag}, ref {fieldAccess});");
+            string visitMethod = GetVisitMethodName(field.FieldType, field.IsDynamic);   
+            writer.WriteLine($"visitier.{visitMethod}({field.FieldIndex}, nameof(value.{field.FieldName}), {field.Tag}, ref value.{field.FieldName});");
         }
-
+        //根据字段类型获取访问方法名
         private static string GetVisitMethodName(Type fieldType, bool isDynamic)
         {
             if (fieldType == typeof(bool)) return "Visit";
@@ -131,93 +123,54 @@ namespace CodeGen.DataVisit
             return "Visit";
         }
 
-        private static void GenerateDynamicTypeRegister(CSharpCodeWriter writer, List<DynamicTypeInfo> dynamicTypes, string catalogName, string nameSpace)
+        //生成访问注册类，单独一个文件
+        private static string GenerateVisistRegisterClass(CatalogData catalog)
         {
-            using (new CSharpCodeWriter.Scop(writer, $"public static class {catalogName}DynamicTypeRegister"))
+            CSharpCodeWriter writer = new CSharpCodeWriter();
+            writer.WriteLine("using DataVisit;");
+            writer.WriteLine("//Generate by tools : DataVisitCodeGenerator.GenerateAll()");
+            using (new CSharpCodeWriter.NameSpaceScop(writer, catalog.NameSpace))
             {
-                foreach (var dynamicType in dynamicTypes)
+                using (new CSharpCodeWriter.Scop(writer, $"public partial class {catalog.GenTypeName}"))
                 {
-                    GenerateDynamicTypeEnum(writer, dynamicType, nameSpace);
-                    writer.NewLine();
-                    GenerateDynamicTypeRegisterMethod(writer, dynamicType, nameSpace);
-                    writer.NewLine();
-                }
-            }
-        }
-
-        private static void GenerateDynamicTypeEnum(CSharpCodeWriter writer, DynamicTypeInfo dynamicType, string nameSpace)
-        {
-            string baseTypeName = GeneratorUtils.TypeToName(dynamicType.BaseType, nameSpace);
-            string enumName = $"{dynamicType.BaseType.Name}TypeID";
-            
-            using (new CSharpCodeWriter.Scop(writer, $"public enum {enumName}"))
-            {
-                writer.WriteLine($"[VisitTypeTag(typeof({baseTypeName}))]");
-                writer.WriteLine($"{dynamicType.BaseType.Name} = 0,");
-                
-                foreach (var child in dynamicType.ChildTypes)
-                {
-                    string childTypeName = GeneratorUtils.TypeToName(child.Type, nameSpace);
-                    writer.WriteLine($"[VisitTypeTag(typeof({childTypeName}))]");
-                    writer.WriteLine($"{child.Type.Name} = {child.TypeId},");
-                }
-            }
-        }
-
-        private static void GenerateDynamicTypeRegisterMethod(CSharpCodeWriter writer, DynamicTypeInfo dynamicType, string nameSpace)
-        {
-            string baseTypeName = GeneratorUtils.TypeToName(dynamicType.BaseType, nameSpace);
-            string methodName = $"Register{dynamicType.BaseType.Name}Types";
-            
-            using (new CSharpCodeWriter.Scop(writer, $"public static void {methodName}()"))
-            {
-                foreach (var child in dynamicType.ChildTypes)
-                {
-                    string childTypeName = GeneratorUtils.TypeToName(child.Type, nameSpace);
-                    writer.WriteLine($"DynamicTypeVisit<{baseTypeName}>.RegisterType<{childTypeName}>({child.TypeId});");
-                }
-            }
-        }
-
-        private static void GenerateInitClass(CSharpCodeWriter writer, CatalogData catalog, string catalogName, string nameSpace, List<DynamicTypeInfo> dynamicTypes)
-        {
-            using (new CSharpCodeWriter.Scop(writer, $"public static class {catalogName}VisitInit"))
-            {
-                writer.WriteLine("private static bool _isInit = false;");
-                writer.NewLine();
-                
-                using (new CSharpCodeWriter.Scop(writer, "public static void Init()"))
-                {
-                    writer.WriteLine("if (_isInit) return;");
-                    writer.WriteLine("_isInit = true;");
-                    writer.NewLine();
-                    
-                    foreach (var typeInfo in catalog.Types)
+                    //生成TypeID枚举
+                    //生成VisitTypeIDCatalog特性,方便再次生成是查找
+                    writer.WriteLine($"[VisitTypeIDCatalog(typeof({GeneratorUtils.TypeToName(catalog.AttributeType, catalog.NameSpace)}))]");
+                    using (new CSharpCodeWriter.Scop(writer, "public enum TypeID"))
                     {
-                        string typeName = GeneratorUtils.TypeToName(typeInfo.Type, nameSpace);
-                        string methodName = $"{catalogName}Visit.Visit{typeInfo.TypeName}";
-                        
-                        writer.WriteLine($"TypeVisit<{typeName}>.VisitFunc = {methodName};");
-                        writer.WriteLine($"TypeVisit<{typeName}>.IsCustomStruct = {(typeInfo.IsStruct ? "true" : "false")};");
-                        
-                        if (!typeInfo.IsStruct)
+                        //按值排序，防止生成时顺序变化造成代码差异
+                        var sorted = catalog.TypeIDs.OrderBy(it => it.Value);
+                        foreach (var kv in sorted)
                         {
-                            writer.WriteLine($"TypeVisit<{typeName}>.New = () => new {typeName}();");
+                            string typeName = GeneratorUtils.TypeToName(kv.Key, catalog.NameSpace);
+                            writer.WriteLine($"[VisitTypeTag(typeof({typeName}))]");
+                            writer.WriteLine($"{kv.Key.Name} = 0x{kv.Value:x},");//十六进制表示,方便查看
                         }
-                        
-                        writer.NewLine();
                     }
-                    
-                    if (dynamicTypes.Count > 0)
+                    writer.WriteLine($"private static bool isInit = false;");
+                    using (new CSharpCodeWriter.Scop(writer, "public static void Init()"))
                     {
-                        foreach (var dynamicType in dynamicTypes)
+                        writer.WriteLine($"if(isInit)return;");
+                        writer.WriteLine($"isInit = true;");
+                        foreach (var typeInfo in catalog.Types)
                         {
-                            string methodName = $"{catalogName}DynamicTypeRegister.Register{dynamicType.BaseType.Name}Types";
-                            writer.WriteLine($"{methodName}();");
+                            string typeName = GeneratorUtils.TypeToName(typeInfo.Type, catalog.NameSpace);
+                            if (typeInfo.IsStruct)
+                            {
+                                writer.WriteLine($"TypeVisitT<{typeName}>.RegusterStruct(Visit({typeInfo.TypeName}));");
+                            }
+                            else
+                            {
+                                writer.WriteLine($"TypeVisitClassT<{typeName}>.Register((int)TypeID.{typeInfo.TypeName}, Visit{typeInfo.TypeName});");
+                            }
                         }
                     }
                 }
             }
+            string filePath = Path.Combine(catalog.GeneratePath, $"{catalog.GenTypeName}.cs");
+            if (GeneratorUtils.WriteToFile(filePath, writer.ToString()))
+                return filePath;
+            return null;
         }
     }
 }

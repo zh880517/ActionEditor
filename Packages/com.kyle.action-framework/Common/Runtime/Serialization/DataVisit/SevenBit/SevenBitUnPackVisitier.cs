@@ -408,7 +408,7 @@ namespace DataVisit
                 UnPackHeader(out uint _, out SevenBitDataType type);
                 if (type == SevenBitDataType.StructBegin)
                 {
-                    TypeVisit<T>.Visit(this, 0, string.Empty, flag & UnRequiredFlag, ref value);
+                    TypeVisitT<T>.Visit(this, 0, string.Empty, flag & UnRequiredFlag, ref value);
                     SkipToStructEnd();
                     return;
                 }
@@ -429,7 +429,7 @@ namespace DataVisit
                 {
                     if(value == null || value.GetType() != typeof(T))
                         value = new T();
-                    TypeVisit<T>.Visit(this, 0, string.Empty, flag & UnRequiredFlag, ref value);
+                    TypeVisitT<T>.Visit(this, 0, string.Empty, flag & UnRequiredFlag, ref value);
                     SkipToStructEnd();
                     return;
                 }
@@ -450,7 +450,7 @@ namespace DataVisit
                 {
                     int typeId = 0;
                     Visit(0, string.Empty, flag & (~RequiredFlag), ref typeId);
-                    var visit = DynamicTypeVisit<T>.GetVisit(typeId);
+                    var visit = TypeVisit.GetVisit(typeId);
                     UnPackHeader(out uint _, out SevenBitDataType structType);
                     if(visit == null)
                     {
@@ -461,7 +461,9 @@ namespace DataVisit
                     }
                     if (structType != SevenBitDataType.StructBegin)
                         ThrowIncompatibleType(structType);
-                    visit(this, 1, string.Empty, flag & UnRequiredFlag, ref value);
+                    object obj = value;
+                    visit(this, 1, string.Empty, flag & UnRequiredFlag, ref obj);
+                    value = (T)obj;
                     SkipToStructEnd();
 
                     SkipToStructEnd();
@@ -492,14 +494,14 @@ namespace DataVisit
                     }
                     for (uint i = 0; i < size; i++)
                     {
-                        if (TypeVisit<T>.IsCustomStruct)
+                        if (TypeVisitT<T>.IsCustomStruct)
                         {
                             UnPackHeader(out uint _, out SevenBitDataType fieldType);
                             if (fieldType != SevenBitDataType.StructBegin)
                                 ThrowIncompatibleType(fieldType);
                         }
-                        TypeVisit<T>.Visit(this, 0, string.Empty, flag & UnRequiredFlag, ref value[i]);
-                        if (TypeVisit<T>.IsCustomStruct)
+                        TypeVisitT<T>.Visit(this, 0, string.Empty, flag & UnRequiredFlag, ref value[i]);
+                        if (TypeVisitT<T>.IsCustomStruct)
                             SkipToStructEnd();
                     }
                     return;
@@ -553,16 +555,16 @@ namespace DataVisit
                         if (t == SevenBitDataType.StructBegin)
                         {
                             TKey key = default;
-                            TValue val = TypeVisit<TValue>.New();
-                            TypeVisit<TKey>.Visit(this, 0, string.Empty, flag & UnRequiredFlag, ref key);
-                            if (TypeVisit<TValue>.IsCustomStruct)
+                            TValue val = TypeVisitT<TValue>.New();
+                            TypeVisitT<TKey>.Visit(this, 0, string.Empty, flag & UnRequiredFlag, ref key);
+                            if (TypeVisitT<TValue>.IsCustomStruct)
                             {
                                 UnPackHeader(out uint _, out SevenBitDataType valueType);
                                 if (valueType != SevenBitDataType.StructBegin)
                                     ThrowIncompatibleType(valueType);
                             }
-                            TypeVisit<TValue>.Visit(this, 1, string.Empty, flag & UnRequiredFlag, ref val);
-                            if (TypeVisit<TValue>.IsCustomStruct)
+                            TypeVisitT<TValue>.Visit(this, 1, string.Empty, flag & UnRequiredFlag, ref val);
+                            if (TypeVisitT<TValue>.IsCustomStruct)
                                 SkipToStructEnd();
                             value.Add(key, val);
                             SkipToStructEnd();
@@ -591,7 +593,7 @@ namespace DataVisit
                         if (t == SevenBitDataType.StructBegin)
                         {
                             TKey key = default;
-                            TypeVisit<TKey>.Visit(this, 0, string.Empty, flag & UnRequiredFlag, ref key);
+                            TypeVisitT<TKey>.Visit(this, 0, string.Empty, flag & UnRequiredFlag, ref key);
                             TValue val = default;
                             VisitDynamicClass(1, string.Empty, flag & UnRequiredFlag, ref val);
                             value.Add(key, val);
@@ -619,15 +621,15 @@ namespace DataVisit
 
                     for (uint i = 0; i < size; i++)
                     {
-                        if (TypeVisit<T>.IsCustomStruct)
+                        if (TypeVisitT<T>.IsCustomStruct)
                         {
                             UnPackHeader(out uint _, out SevenBitDataType fieldType);
                             if (fieldType != SevenBitDataType.StructBegin)
                                 ThrowIncompatibleType(fieldType);
                         }
-                        T item = TypeVisit<T>.New();
-                        TypeVisit<T>.Visit(this, 0, string.Empty, flag & UnRequiredFlag, ref item);
-                        if (TypeVisit<T>.IsCustomStruct)
+                        T item = TypeVisitT<T>.New();
+                        TypeVisitT<T>.Visit(this, 0, string.Empty, flag & UnRequiredFlag, ref item);
+                        if (TypeVisitT<T>.IsCustomStruct)
                             SkipToStructEnd();
                         value.Add(item);
                     }
@@ -652,15 +654,15 @@ namespace DataVisit
                     value ??= new List<T>();
                     for (uint i = 0; i < size; i++)
                     {
-                        if (TypeVisit<T>.IsCustomStruct)
+                        if (TypeVisitT<T>.IsCustomStruct)
                         {
                             UnPackHeader(out uint _, out SevenBitDataType fieldType);
                             if (fieldType != SevenBitDataType.StructBegin)
                                 ThrowIncompatibleType(fieldType);
                         }
-                        T item = TypeVisit<T>.New();
-                        TypeVisit<T>.Visit(this, 0, string.Empty, flag & UnRequiredFlag, ref item);
-                        if (TypeVisit<T>.IsCustomStruct)
+                        T item = TypeVisitT<T>.New();
+                        TypeVisitT<T>.Visit(this, 0, string.Empty, flag & UnRequiredFlag, ref item);
+                        if (TypeVisitT<T>.IsCustomStruct)
                             SkipToStructEnd();
                         value.Add(item);
                     }

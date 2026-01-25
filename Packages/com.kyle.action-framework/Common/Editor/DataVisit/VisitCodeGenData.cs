@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using DataVisit;
 
 namespace CodeGen.DataVisit
 {
@@ -13,9 +12,8 @@ namespace CodeGen.DataVisit
         public string GenTypeName;
         public int NextTypeID;
 
-        public VisitCatalogAttribute CatalogAttribute;
-        public Dictionary<Type, int> ExistTypeIDs = new Dictionary<Type, int>();
-        public List<TypeData> Types = new List<TypeData>();
+        public Dictionary<Type, int> TypeIDs = new Dictionary<Type, int>();
+        public readonly List<TypeData> Types = new List<TypeData>();
     }
 
     public class TypeData
@@ -23,9 +21,7 @@ namespace CodeGen.DataVisit
         public Type Type;
         public TypeData Base;
         public bool IsStruct;
-        public bool IsDynamicType;
-        public List<FieldData> Fields = new List<FieldData>();
-        public Type BaseType;
+        public readonly List<FieldData> Fields = new List<FieldData>();
         public int TypeId;
         public string TypeName => Type.Name;
         public string FullTypeName => Type.FullName;
@@ -36,7 +32,6 @@ namespace CodeGen.DataVisit
         public System.Reflection.FieldInfo Field;
         public bool IsCollections;
         public TypeData CustomFieldType;
-        public VisitFieldAttribute FieldAttribute;
         public bool IsDynamic;
         public int FieldIndex;
         public uint Tag;
@@ -45,16 +40,4 @@ namespace CodeGen.DataVisit
         public Type FieldType => Field.FieldType;
     }
 
-    public class DynamicTypeInfo
-    {
-        public Type BaseType;
-        public List<DynamicChildType> ChildTypes = new List<DynamicChildType>();
-    }
-
-    public class DynamicChildType
-    {
-        public Type Type;
-        public int TypeId;
-        public Type ExistingEnumField;
-    }
 }

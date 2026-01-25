@@ -291,7 +291,7 @@ namespace DataVisit
             var posBefore = _memory.Position;
             PackHeader(tag, SevenBitDataType.StructBegin);
             var posAfterHeader = _memory.Position;
-            TypeVisit<T>.Visit(this, 0, "", flag & UnRequiredFlag, ref value);
+            TypeVisitT<T>.Visit(this, 0, "", flag & UnRequiredFlag, ref value);
             if (!IsRequired(flag) && _memory.Position == posAfterHeader)
             {
                 //没有内容，回退
@@ -313,7 +313,7 @@ namespace DataVisit
             var posBefore = _memory.Position;
             PackHeader(tag, SevenBitDataType.StructBegin);
             var posAfterHeader = _memory.Position;
-            TypeVisit<T>.Visit(this, 0, "", flag & UnRequiredFlag, ref value);
+            TypeVisitT<T>.Visit(this, 0, "", flag & UnRequiredFlag, ref value);
             if (!IsRequired(flag) && _memory.Position == posAfterHeader)
             {
                 //没有内容，回退
@@ -331,8 +331,8 @@ namespace DataVisit
                 PackHeader(0, SevenBitDataType.StructEnd);
                 return;
             }
-            int id = DynamicTypeVisit<T>.GetTypeId(value);
-            var visitFunc = DynamicTypeVisit<T>.GetVisit(id);
+            int id = TypeVisit.GetTypeId(value);
+            var visitFunc = TypeVisit.GetVisit(id);
             if(id == -1 || visitFunc == null)
             {
                 throw new Exception($"Dynamic type value is null for tag = {tag}, name = {name}.");
@@ -343,7 +343,8 @@ namespace DataVisit
 
             Visit(0, string.Empty, flag | RequiredFlag, ref id);//写入类型id
             PackHeader(1, SevenBitDataType.StructBegin);//写入实际类型
-            visitFunc(this, 0, "", flag & UnRequiredFlag, ref value);
+            object obj = value;
+            visitFunc(this, 0, "", flag & UnRequiredFlag, ref obj);
             if (!IsRequired(flag) && _memory.Position == posAfterHeader)
             {
                 //没有内容，回退
@@ -370,10 +371,10 @@ namespace DataVisit
             PackNumber((uint)value.Length);
             for (int i = 0; i < value.Length; i++)
             {
-                if (TypeVisit<T>.IsCustomStruct)
+                if (TypeVisitT<T>.IsCustomStruct)
                     PackHeader(0, SevenBitDataType.StructBegin);
-                TypeVisit<T>.Visit(this, 0, "", flag | RequiredFlag, ref value[i]);
-                if (TypeVisit<T>.IsCustomStruct)
+                TypeVisitT<T>.Visit(this, 0, "", flag | RequiredFlag, ref value[i]);
+                if (TypeVisitT<T>.IsCustomStruct)
                     PackHeader(0, SevenBitDataType.StructEnd);
             }
         }
@@ -420,12 +421,12 @@ namespace DataVisit
                 //字典按照数组处理，key和value作为结构体成员
                 PackHeader(0, SevenBitDataType.StructBegin);
                 
-                TypeVisit<TKey>.Visit(this, 0, "", flag & UnRequiredFlag, ref key);
+                TypeVisitT<TKey>.Visit(this, 0, "", flag & UnRequiredFlag, ref key);
 
-                if(TypeVisit<TValue>.IsCustomStruct)
+                if(TypeVisitT<TValue>.IsCustomStruct)
                     PackHeader(1, SevenBitDataType.StructBegin);
-                TypeVisit<TValue>.Visit(this, 1, "", flag & UnRequiredFlag, ref val);
-                if (TypeVisit<TValue>.IsCustomStruct)
+                TypeVisitT<TValue>.Visit(this, 1, "", flag & UnRequiredFlag, ref val);
+                if (TypeVisitT<TValue>.IsCustomStruct)
                     PackHeader(0, SevenBitDataType.StructEnd);
 
                 PackHeader(0, SevenBitDataType.StructEnd);
@@ -451,7 +452,7 @@ namespace DataVisit
                 var val = kv.Value;
                 //字典按照数组处理，key和value作为结构体成员
                 PackHeader(0, SevenBitDataType.StructBegin);
-                TypeVisit<TKey>.Visit(this, 0, "", flag & UnRequiredFlag, ref key);
+                TypeVisitT<TKey>.Visit(this, 0, "", flag & UnRequiredFlag, ref key);
                 VisitDynamicClass(1, "", flag & UnRequiredFlag, ref val);
                 PackHeader(0, SevenBitDataType.StructEnd);
             }
@@ -473,10 +474,10 @@ namespace DataVisit
             foreach (var item in value)
             {
                 var itemCopy = item;
-                if (TypeVisit<T>.IsCustomStruct)
+                if (TypeVisitT<T>.IsCustomStruct)
                     PackHeader(0, SevenBitDataType.StructBegin);
-                TypeVisit<T>.Visit(this, 0, "", flag | RequiredFlag, ref itemCopy);
-                if (TypeVisit<T>.IsCustomStruct)
+                TypeVisitT<T>.Visit(this, 0, "", flag | RequiredFlag, ref itemCopy);
+                if (TypeVisitT<T>.IsCustomStruct)
                     PackHeader(0, SevenBitDataType.StructEnd);
             }
         }
@@ -496,10 +497,10 @@ namespace DataVisit
             for (int i = 0; i < value.Count; i++)
             {
                 var item = value[i];
-                if (TypeVisit<T>.IsCustomStruct)
+                if (TypeVisitT<T>.IsCustomStruct)
                     PackHeader(0, SevenBitDataType.StructBegin);
-                TypeVisit<T>.Visit(this, 0, "", flag | RequiredFlag, ref item);
-                if (TypeVisit<T>.IsCustomStruct)
+                TypeVisitT<T>.Visit(this, 0, "", flag | RequiredFlag, ref item);
+                if (TypeVisitT<T>.IsCustomStruct)
                     PackHeader(0, SevenBitDataType.StructEnd);
             }
         }

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using DataVisit;
-using UnityEditor.Build.Content;
 using UnityEngine;
 
 namespace CodeGen.DataVisit
@@ -17,7 +16,12 @@ namespace CodeGen.DataVisit
             catalogInfo.TypeIDFieldIndex = instance.TypeIDFieldIndex;
             catalogInfo.NameSpace = instance.NameSpace;
             catalogInfo.GeneratePath = instance.GeneratePath;
-            catalogInfo.GenTypeName = catalogType.Name + "_Visit";
+            string name = catalogType.Name;
+            if(name.EndsWith("Attribute"))
+                name = name.Substring(0, name.Length - "Attribute".Length);
+            if(name.EndsWith("Catalog"))
+                name = name.Substring(0, name.Length - "Catalog".Length);
+            catalogInfo.GenTypeName =name + "Visit";
 
             return catalogInfo;
         }
@@ -28,7 +32,6 @@ namespace CodeGen.DataVisit
             {
                 Type = type,
                 IsStruct = type.IsValueType,
-                IsDynamicType = type.GetCustomAttribute<VisitDynamicTypeAttribute>(true) != null,
             };
             var fields = type.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
             foreach (var item in fields)
@@ -57,7 +60,7 @@ namespace CodeGen.DataVisit
         private static void ReCalcNextTypeID(CatalogData catalog)
         {
             int maxTypeID = 0;
-            foreach (var kv in catalog.ExistTypeIDs)
+            foreach (var kv in catalog.TypeIDs)
             {
                 int typeID = kv.Value >> 8;
                 if (typeID > maxTypeID)
@@ -90,16 +93,15 @@ namespace CodeGen.DataVisit
                                 var fieldAttr = field.GetCustomAttribute<VisitTypeTagAttribute>();
                                 if(fieldAttr == null || fieldAttr.TagType == null)
                                     continue;
-                                if(!catalog.ExistTypeIDs.TryGetValue(fieldAttr.TagType, out int exitID))
+                                if(!catalog.TypeIDs.TryGetValue(fieldAttr.TagType, out int exitID))
                                 {
-                                    catalog.ExistTypeIDs.Add(fieldAttr.TagType, exitID);
+                                    catalog.TypeIDs.Add(fieldAttr.TagType, exitID);
                                 }
                                 else
                                 {
                                     Debug.LogError($"Duplicate TypeID for type {fieldAttr.TagType.FullName} in enum {type.FullName}");
                                 }
                             }
-                            ReCalcNextTypeID(catalog);
                         }
                     }
                     else if (type.IsSubclassOf(typeof(VisitCatalogAttribute)))
@@ -130,6 +132,13 @@ namespace CodeGen.DataVisit
         {
             foreach (var catalog in catalogs)
             {
+                if(catalog.TypeIDFieldIndex == 0)
+                {
+                    Debug.LogError($"Catalog {catalog.AttributeType.FullName} has invalid TypeIDFieldIndex 0");
+                    return false;
+                }
+
+                ReCalcNextTypeID(catalog);
                 // 先处理基类关系
                 int index = 0;
                 while (index < catalog.Types.Count)
@@ -148,7 +157,7 @@ namespace CodeGen.DataVisit
                             typeInfo.Base = baseTypeInfo;
                         }
                     }
-
+                    index++;
                 }
                 //分配动态类型ID
                 foreach (var typeInfo in catalog.Types)
@@ -164,24 +173,21 @@ namespace CodeGen.DataVisit
                             return false;
                         }
                     }
-                    if (catalog.ExistTypeIDs.TryGetValue(typeInfo.Type, out int existID))
+                    if(!typeInfo.IsStruct)
                     {
-                        //如果已经存在ID，则继续使用已有ID，说明之前是动态类型
-                        typeInfo.TypeId = existID;
-                    }
-                    else if (typeInfo.IsDynamicType)
-                    {
-                        if(catalog.TypeIDFieldIndex == 0)
+                        if (catalog.TypeIDs.TryGetValue(typeInfo.Type, out int existID))
                         {
-                            //如果有动态类型，但没有指定TypeIDFieldIndex，则报错
-                            Debug.LogError($"Catalog {catalog.AttributeType.FullName} has invalid TypeIDFieldIndex 0 for dynamic type {typeInfo.Type.FullName}");
-                            return false;
+                            //如果已经存在ID，则继续使用已有ID
+                            typeInfo.TypeId = existID;
                         }
-                        int typeId = (catalog.NextTypeID << 8) | catalog.TypeIDFieldIndex;
-                        catalog.ExistTypeIDs[typeInfo.Type] = typeId;
-                        typeInfo.TypeId = typeId;
-                        catalog.NextTypeID++;
-                    }
+                        else
+                        {
+                            int typeId = (catalog.NextTypeID << 8) | catalog.TypeIDFieldIndex;
+                            typeInfo.TypeId = typeId;
+                            catalog.TypeIDs[typeInfo.Type] = typeId;
+                            catalog.NextTypeID++;
+                        }
+                    }    
                 }
             }
             //检查TypeIDFieldIndex冲突
@@ -229,74 +235,5 @@ namespace CodeGen.DataVisit
             return true;
         }
 
-
-        public static List<DynamicTypeInfo> CollectDynamicTypes(CatalogData catalog)
-        {
-            var dynamicTypes = new Dictionary<Type, DynamicTypeInfo>();
-            
-            foreach (var typeInfo in catalog.Types)
-            {
-                if (typeInfo.IsDynamicType && !dynamicTypes.ContainsKey(typeInfo.Type))
-                {
-                    dynamicTypes[typeInfo.Type] = new DynamicTypeInfo { BaseType = typeInfo.Type };
-                }
-            }
-            
-            int internalTypeId = 1;
-            foreach (var typeInfo in catalog.Types)
-            {
-                if (typeInfo.BaseType != null)
-                {
-                    var dynamicBase = FindDynamicBaseType(typeInfo.Type, dynamicTypes.Keys);
-                    if (dynamicBase != null && dynamicTypes.TryGetValue(dynamicBase, out var dynamicInfo))
-                    {
-                        int fieldValue = GetTypeIdFieldValue(typeInfo.Type, catalog.CatalogAttribute.TypeIDFieldIndex);
-                        int typeId = (internalTypeId << 8) | fieldValue;
-                        internalTypeId++;
-                        
-                        dynamicInfo.ChildTypes.Add(new DynamicChildType
-                        {
-                            Type = typeInfo.Type,
-                            TypeId = typeId
-                        });
-                    }
-                }
-            }
-            
-            return dynamicTypes.Values.Where(d => d.ChildTypes.Count > 0).ToList();
-        }
-
-        private static Type FindDynamicBaseType(Type type, IEnumerable<Type> dynamicBases)
-        {
-            var current = type.BaseType;
-            while (current != null && current != typeof(object))
-            {
-                if (dynamicBases.Contains(current)) return current;
-                current = current.BaseType;
-            }
-            return null;
-        }
-
-        private static int GetTypeIdFieldValue(Type type, byte fieldIndex)
-        {
-            var fields = type.GetFields(BindingFlags.Public | BindingFlags.Instance);
-            
-            foreach (var field in fields)
-            {
-                if (field.IsStatic || field.IsLiteral)
-                {
-                    var fieldType = field.FieldType;
-                    if (fieldType == typeof(int) || fieldType == typeof(uint) || 
-                        fieldType == typeof(byte) || fieldType == typeof(sbyte) ||
-                        fieldType == typeof(short) || fieldType == typeof(ushort))
-                    {
-                        var value = field.GetValue(null);
-                        if (value != null) return Convert.ToInt32(value);
-                    }
-                }
-            }
-            
-            return Math.Abs(type.Name.GetHashCode()) % 256;
-        }
     }
 }
