@@ -2,9 +2,9 @@ using System.Collections.Generic;
 using DataVisit;
 public class TestDataCatalogAttribute : VisitCatalogAttribute
 {
-    public TestDataCatalogAttribute() : base(1, "TestNamespace", "Assets/TestData/")
-    {
-    }
+    public override byte TypeIDFieldIndex => 1;
+    public override string NameSpace => "TestNamespace";
+    public override string GeneratePath => "Assets/TestData/";
 }
 [TestDataCatalog]
 public class PlayerData

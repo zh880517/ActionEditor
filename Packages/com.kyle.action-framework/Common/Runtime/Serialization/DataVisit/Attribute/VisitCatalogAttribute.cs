@@ -6,14 +6,8 @@ namespace DataVisit
     [AttributeUsage(AttributeTargets.Class| AttributeTargets.Struct, Inherited = true)]
     public abstract class VisitCatalogAttribute : Attribute
     {
-        public byte TypeIDFieldIndex { get; set; } //多态类型ID字段索引,最终生成的TypeId = (内部TypeID << 8) | TypeIDFieldValue
-        public string NameSpace { get; private set; }
-        public string GeneratePath { get; private set; }
-        public VisitCatalogAttribute(byte idFieldIndex, string nameSpace, string generatePath)
-        {
-            TypeIDFieldIndex = idFieldIndex;
-            NameSpace = nameSpace;
-            GeneratePath = generatePath;
-        }
+        public abstract byte TypeIDFieldIndex { get; } //多态类型ID字段索引,最终生成的TypeId = (内部TypeID << 8) | TypeIDFieldValue
+        public abstract string NameSpace { get; }
+        public abstract string GeneratePath { get;}
     }
 }
