@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace DataVisit
@@ -8,14 +8,52 @@ namespace DataVisit
         private ArraySegment<byte> _data;
         private int _pos;
 
-        private byte PeekByte() => _data[0];
-        private byte PeekByte(uint offset) =>_data[_pos + (int)offset];
-        private byte UnPackByte()=>_data[_pos++];
-        private void Skip(uint n) =>_pos += (int)n;
+        public SevenBitUnPackVisitier(ArraySegment<byte> data)
+        {
+            _data = data;
+            _pos = 0;
+        }
+
+        public SevenBitUnPackVisitier(byte[] data) : this(new ArraySegment<byte>(data)) { }
+
+        private void EnsureIndex(int index)
+        {
+            if (index < 0 || index >= _data.Count)
+            {
+                throw new Exception("SevenBitUnPack end of data");
+            }
+        }
+
+        private byte PeekByte()
+        {
+            EnsureIndex(_pos);
+            return _data[_pos];
+        }
+        private byte PeekByte(uint offset)
+        {
+            var index = _pos + (int)offset;
+            EnsureIndex(index);
+            return _data[index];
+        }
+        private byte UnPackByte()
+        {
+            var val = PeekByte();
+            _pos++;
+            return val;
+        }
+        private void Skip(uint n)
+        {
+            var newPos = _pos + (int)n;
+            if (newPos < 0 || newPos > _data.Count)
+            {
+                throw new Exception("SevenBitUnPack end of data");
+            }
+            _pos = newPos;
+        }
         private void MovePos(int offset)
         {
             var newPos = _pos + offset;
-            if (newPos < 0 || newPos > _data.Count)
+            if (newPos < 0 || newPos >= _data.Count)
             {
                 throw new Exception("SevenBitUnPack end of data");
             }
@@ -24,27 +62,39 @@ namespace DataVisit
 
         private uint PeekNumber(out uint val)
         {
-            uint n = 1;
-            val = (uint)(PeekByte() & 0x7f);
-            while (PeekByte(n - 1) > 0x7f)
+            uint n = 0;
+            byte b = PeekByte(n);
+            val = (uint)(b & 0x7f);
+            while ((b & 0x80) != 0)
             {
-                uint hi = (uint)(PeekByte(n) & 0x7f);
-                val |= (uint)((int)hi << (7 * (int)n));
-                ++n;
+                if (n >= 4)
+                {
+                    throw new Exception("SevenBitUnPack number is too large");
+                }
+                n++;
+                b = PeekByte(n);
+                uint hi = (uint)(b & 0x7f);
+                val |= (uint)(hi << (7 * (int)n));
             }
-            return n;
+            return n + 1;
         }
         public uint PeekNumber(out ulong val)
         {
-            uint n = 1;
-            val = (ulong)(PeekByte() & 0x7f);
-            while (PeekByte(n - 1) > 0x7f)
+            uint n = 0;
+            byte b = PeekByte(n);
+            val = (ulong)(b & 0x7f);
+            while ((b & 0x80) != 0)
             {
-                ulong hi = (ulong)(PeekByte(n) & 0x7f);
+                if (n >= 9)
+                {
+                    throw new Exception("SevenBitUnPack number is too large");
+                }
+                n++;
+                b = PeekByte(n);
+                ulong hi = (ulong)(b & 0x7f);
                 val |= (ulong)(hi << (7 * (int)n));
-                ++n;
             }
-            return n;
+            return n + 1;
         }
 
         private uint PeekHeader(out uint tag, out SevenBitDataType type)

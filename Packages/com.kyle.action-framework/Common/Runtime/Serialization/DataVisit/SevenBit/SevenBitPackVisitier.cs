@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 
@@ -130,7 +130,7 @@ namespace DataVisit
 
         public void Visit(uint tag, string name, uint flag, ref byte value)
         {
-            if(value == 0 || IsRequired(flag))
+            if(value == 0 && !IsRequired(flag))
                 return;
             PackHeader(tag, SevenBitDataType.Positive);
             PackNumber(value);
@@ -160,7 +160,7 @@ namespace DataVisit
 
         public void Visit(uint tag, string name, uint flag, ref sbyte value)
         {
-            if(value == 0 || IsRequired(flag))
+            if(value == 0 && !IsRequired(flag))
                 return;
             PackInt(tag, value);
         }
@@ -189,35 +189,35 @@ namespace DataVisit
 
         public void Visit(uint tag, string name, uint flag, ref short value)
         {
-            if (value == 0 || IsRequired(flag))
+            if (value == 0 && !IsRequired(flag))
                 return;
             PackInt(tag, value);
         }
 
         public void Visit(uint tag, string name, uint flag, ref ushort value)
         {
-            if (value == 0 || IsRequired(flag))
+            if (value == 0 && !IsRequired(flag))
                 return;
             PackUInt(tag, value);
         }
 
         public void Visit(uint tag, string name, uint flag, ref int value)
         {
-            if (value == 0 || IsRequired(flag))
+            if (value == 0 && !IsRequired(flag))
                 return;
             PackInt(tag, value);
         }
 
         public void Visit(uint tag, string name, uint flag, ref uint value)
         {
-            if (value == 0 || IsRequired(flag))
+            if (value == 0 && !IsRequired(flag))
                 return;
             PackUInt(tag, value);
         }
 
         public void Visit(uint tag, string name, uint flag, ref long value)
         {
-            if (value == 0 || IsRequired(flag))
+            if (value == 0 && !IsRequired(flag))
                 return;
             if (value >= 0)
             {
@@ -233,7 +233,7 @@ namespace DataVisit
 
         public void Visit(uint tag, string name, uint flag, ref ulong value)
         {
-            if (value == 0 || IsRequired(flag))
+            if (value == 0 && !IsRequired(flag))
                 return;
             PackHeader(tag, SevenBitDataType.Positive);
             PackNumber(value);
@@ -241,7 +241,7 @@ namespace DataVisit
 
         public void Visit(uint tag, string name, uint flag, ref float value)
         {
-            if (value == 0 || IsRequired(flag))
+            if (value == 0 && !IsRequired(flag))
                 return;
             PackHeader(tag, SevenBitDataType.Float);
             PackNumber(value);
@@ -249,7 +249,7 @@ namespace DataVisit
 
         public void Visit(uint tag, string name, uint flag, ref double value)
         {
-            if (value == 0 || IsRequired(flag))
+            if (value == 0 && !IsRequired(flag))
                 return;
             PackHeader(tag, SevenBitDataType.Double);
             PackNumber(value);
@@ -281,7 +281,7 @@ namespace DataVisit
         public void VisitEnum<T>(uint tag, string name, uint flag, ref T value) where T : Enum
         {
             int v = Convert.ToInt32(value);
-            if (v == 0 || IsRequired(flag))
+            if (v == 0 && !IsRequired(flag))
                 return;
             PackInt(tag, v);
         }
