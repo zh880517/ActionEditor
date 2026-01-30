@@ -40,13 +40,9 @@ namespace DataVisit
             if (value == null)
                 return;
             int id = TypeVisit.GetTypeId(value);
-            var visitFunc = TypeVisit.GetVisit(id);
-            if (id == -1 || visitFunc == null)
-            {
-                throw new System.Exception($"Dynamic type value is null for tag = {tag}, name = {name}.");
-            }
+            var visitier = TypeVisit.GetVisit(id);
             object obj = value;
-            visitFunc(this, 0, string.Empty, 0, ref obj);
+            visitier.Visit(this, 0, string.Empty, 0, ref obj);
             value = (T)obj;
         }
 

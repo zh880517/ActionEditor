@@ -477,8 +477,7 @@ namespace DataVisit
                 UnPackHeader(out uint _, out SevenBitDataType type);
                 if (type == SevenBitDataType.StructBegin)
                 {
-                    if(value == null || value.GetType() != typeof(T))
-                        value = new T();
+                    value ??= new T();
                     TypeVisitT<T>.Visit(this, 0, string.Empty, flag & UnRequiredFlag, ref value);
                     SkipToStructEnd();
                     return;
@@ -500,9 +499,9 @@ namespace DataVisit
                 {
                     int typeId = 0;
                     Visit(0, string.Empty, flag & (~RequiredFlag), ref typeId);
-                    var visit = TypeVisit.GetVisit(typeId);
+                    var visititer = TypeVisit.GetVisit(typeId);
                     UnPackHeader(out uint _, out SevenBitDataType structType);
-                    if(visit == null)
+                    if(visititer.Visit == null)
                     {
                         //如果对应的ID没有注册类型，就跳过这个结构体，说明改类型被删除。
                         value = null;
@@ -511,8 +510,8 @@ namespace DataVisit
                     }
                     if (structType != SevenBitDataType.StructBegin)
                         ThrowIncompatibleType(structType);
-                    object obj = value;
-                    visit(this, 1, string.Empty, flag & UnRequiredFlag, ref obj);
+                    object obj = value ?? visititer.New();
+                    visititer.Visit(this, 1, string.Empty, flag & UnRequiredFlag, ref obj);
                     value = (T)obj;
                     SkipToStructEnd();
 

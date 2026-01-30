@@ -1,10 +1,18 @@
 ﻿using System.Collections.Generic;
 using DataVisit;
 
+public struct TypeVisitInfo
+{
+    public delegate void Delegate(IVisitier visitier, uint tag, string name, uint flag, ref object value);
+    public delegate object Creator();
+    public Delegate Visit;
+    public Creator New;
+}
+
 public class TypeVisit
 {
     public delegate void Delegate(IVisitier visitier, uint tag, string name, uint flag, ref object value);
-    protected static readonly Dictionary<int, Delegate> idToVisits = new Dictionary<int, Delegate>();
+    protected static readonly Dictionary<int, TypeVisitInfo> idToVisits = new Dictionary<int, TypeVisitInfo>();
     protected static readonly Dictionary<System.Type, int> typeToIds = new Dictionary<System.Type, int>();
     public static int GetTypeId(object v)
     {
@@ -16,9 +24,9 @@ public class TypeVisit
         throw new System.Exception($"Type {type} not register in DynamicTypeVisit");
     }
 
-    public static Delegate GetVisit(int typeId)
+    public static TypeVisitInfo GetVisit(int typeId)
     {
-        if (idToVisits.TryGetValue(typeId, out Delegate visit))
+        if (idToVisits.TryGetValue(typeId, out TypeVisitInfo visit))
             return visit;
         throw new System.Exception($"TypeId {typeId} not register in DynamicTypeVisit");
     }
@@ -74,6 +82,12 @@ public class TypeVisitClassT<T> : TypeVisitT<T> where T : class, new()
             VisitFunc(visitier, tag, name, flag, ref v);
             value = v;
         }
-        idToVisits[id] = func;
+
+        TypeVisitInfo info = new TypeVisitInfo
+        {
+            Visit = func,
+            New = () => new T()
+        };
+        idToVisits[id] = info;
     }
 }

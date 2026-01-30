@@ -86,7 +86,7 @@ namespace CodeGen.DataVisit
                         if (attr != null)
                         {
                             var catalog = catalogs.FirstOrDefault(c => c.AttributeType == typeof(VisitTypeIDCatalogAttribute));
-                            catalog ??= CreateCatalog(typeof(VisitTypeIDCatalogAttribute));
+                            catalog ??= CreateCatalog(attr.CatalogType);
                             var fields = type.GetFields(BindingFlags.Public | BindingFlags.Static);
                             foreach (var field in fields)
                             {
@@ -114,7 +114,7 @@ namespace CodeGen.DataVisit
                         if (catalogAttr != null)
                         {
                             var catalog = catalogs.FirstOrDefault(c => c.AttributeType == catalogAttr.GetType());
-                            catalog ??= CreateCatalog(type);
+                            catalog ??= CreateCatalog(catalogAttr.GetType());
                             var typeInfo = CreateTypeInfo(type);
                             catalog.Types.Add(typeInfo);
                         }

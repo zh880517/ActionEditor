@@ -219,9 +219,9 @@ namespace DataVisit
             WriteByte((byte)RawBitDataType.Dynamic);
             int id = TypeVisit.GetTypeId(value);
             WriteInt32(id);
-            var visitFunc = TypeVisit.GetVisit(id);
+            var visitier = TypeVisit.GetVisit(id);
             object obj = value;
-            visitFunc(this, 0, string.Empty, 0, ref obj);
+            visitier.Visit(this, 0, string.Empty, 0, ref obj);
             value = (T)obj;
         }
 

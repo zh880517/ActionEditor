@@ -302,9 +302,9 @@ namespace DataVisit
             if (marker != RawBitDataType.Dynamic)
                 throw new Exception($"RawBitUnPack invalid dynamic marker: {marker}");
             int typeId = ReadInt32();
-            var visit = TypeVisit.GetVisit(typeId);
-            object obj = value;
-            visit(this, 0, string.Empty, 0, ref obj);
+            var visitier = TypeVisit.GetVisit(typeId);
+            object obj = value ?? visitier.New();
+            visitier.Visit(this, 0, string.Empty, 0, ref obj);
             value = (T)obj;
         }
 

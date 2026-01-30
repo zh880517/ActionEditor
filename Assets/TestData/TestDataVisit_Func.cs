@@ -30,15 +30,15 @@ namespace TestNamespace
         {
             var _base = (SkillBase)value;
             visitier.VisitClass(0, "", 0, ref _base);
-            visitier.Visit(3, nameof(value.damage), 3, ref value.damage);
+            visitier.Visit(1, nameof(value.damage), 0, ref value.damage);
         }
         
         private static void VisitBuffSkill(IVisitier visitier, uint tag, string name, uint flag, ref BuffSkill value)
         {
             var _base = (SkillBase)value;
             visitier.VisitClass(0, "", 0, ref _base);
-            visitier.Visit(3, nameof(value.duration), 3, ref value.duration);
-            visitier.Visit(4, nameof(value.buffType), 4, ref value.buffType);
+            visitier.Visit(1, nameof(value.duration), 0, ref value.duration);
+            visitier.Visit(2, nameof(value.buffType), 0, ref value.buffType);
         }
         
         private static void VisitCharacterData(IVisitier visitier, uint tag, string name, uint flag, ref CharacterData value)

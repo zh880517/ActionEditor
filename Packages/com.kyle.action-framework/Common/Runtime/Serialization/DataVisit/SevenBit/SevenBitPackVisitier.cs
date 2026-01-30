@@ -332,8 +332,8 @@ namespace DataVisit
                 return;
             }
             int id = TypeVisit.GetTypeId(value);
-            var visitFunc = TypeVisit.GetVisit(id);
-            if(id == -1 || visitFunc == null)
+            var visitier = TypeVisit.GetVisit(id);
+            if(id == -1 || visitier.Visit == null)
             {
                 throw new Exception($"Dynamic type value is null for tag = {tag}, name = {name}.");
             }
@@ -344,7 +344,7 @@ namespace DataVisit
             Visit(0, string.Empty, flag | RequiredFlag, ref id);//写入类型id
             PackHeader(1, SevenBitDataType.StructBegin);//写入实际类型
             object obj = value;
-            visitFunc(this, 0, "", flag & UnRequiredFlag, ref obj);
+            visitier.Visit(this, 0, "", flag & UnRequiredFlag, ref obj);
             if (!IsRequired(flag) && _memory.Position == posAfterHeader)
             {
                 //没有内容，回退
