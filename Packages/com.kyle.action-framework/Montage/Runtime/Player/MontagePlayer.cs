@@ -12,21 +12,47 @@ namespace Montage
         public float FadeTime;
         public float FadeDuration;
     }
-    public class MontagePlayer : MontageParam
+    public class MontagePlayer : IMontagePlayer
     {
         public MontageAsset Asset { get; protected set; }
+        [SerializeField]
+        protected MontageParam param = new MontageParam();
         protected MotionStateInfo stateInfo;
         protected PlayableGraph graph;
         protected readonly List<MontageMotionState> states = new List<MontageMotionState>();
         protected AnimationMixerPlayable mixerPlayable;
+        protected AnimationLayerMixerPlayable layerMixerPlayable;
+
+        public float GetParam(string name)
+        {
+            return param.GetParam(name);
+        }
+        public void SetParam(string name, float value)
+        {
+            param.SetParam(name, value);
+        }
 
         public void Create(string name, MontageAsset asset, Animator animator)
         {
             Asset = asset;
             graph = PlayableGraph.Create(name);
             var output = AnimationPlayableOutput.Create(graph, asset.name, animator);
-            mixerPlayable = AnimationMixerPlayable.Create(graph, 0);
+            int count = asset.Layers.Count > 0 ? 3 : 2;
+            mixerPlayable = AnimationMixerPlayable.Create(graph, count);
             output.SetSourcePlayable(mixerPlayable);
+            if (asset.Layers.Count > 0)
+            {
+                layerMixerPlayable = AnimationLayerMixerPlayable.Create(graph, asset.Layers.Count);
+                for (int i = 0; i < asset.Layers.Count; i++)
+                {
+                    var layer = asset.Layers[i];
+                    layerMixerPlayable.SetLayerAdditive((uint)i, layer.Additive);
+                    if (layer.Mask)
+                        layerMixerPlayable.SetLayerMaskFromAvatarMask((uint)i, layer.Mask);
+                }
+                mixerPlayable.ConnectInput(0, layerMixerPlayable, 0);
+                mixerPlayable.SetInputWeight(0, 0);
+            }
         }
 
         public void SetAsset(MontageAsset asset)

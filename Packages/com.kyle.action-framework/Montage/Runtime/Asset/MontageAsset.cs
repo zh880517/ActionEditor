@@ -7,5 +7,7 @@ namespace Montage
     {
         public float DefaultFadeDuration = 0.17f;
         public List<MontageMotion> Motions = new List<MontageMotion>();
+        public List<MontageLayer> Layers = new List<MontageLayer>();
+        public List<MontageAdditiveClip> AdditiveClips = new List<MontageAdditiveClip>();
     }
 }

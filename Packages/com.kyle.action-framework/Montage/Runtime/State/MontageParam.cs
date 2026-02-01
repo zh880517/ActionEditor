@@ -1,20 +1,18 @@
 ﻿using System.Collections.Generic;
+using UnityEngine;
 
 namespace Montage
 {
-    public interface IMontageParam
+    [System.Serializable]
+    public class MontageParam
     {
-        public float GetParam(string name);
-    }
-
-    public class MontageParam : IMontageParam
-    {
-
+        [System.Serializable]
         public struct ParamInfo
         {
             public string Name;
             public float Value;
         }
+        [SerializeField]
         protected List<ParamInfo> paramInfos = new List<ParamInfo>();
 
         public void SetParam(string name, float value)
