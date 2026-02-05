@@ -9,7 +9,6 @@ namespace Montage
         public float Length { get; private set; }// 动画时长，实时计算的，初始化时缓存
 
         public IMontagePlayer Player { get; set; }
-        public int DestinationInputPort { get; set; } = -1;// 连接的目标Playable的输入端口
         public double Time { get; set; }// 当前时间
         public float Weight { get; set; }// 混合权重
         private int version = -1;// 动画版本号，用于检测动画资源是否被修改
@@ -22,34 +21,9 @@ namespace Montage
         }
 
         public abstract void Init(PlayableGraph graph);
-        public abstract void Connect<V>(V destination) where V : struct, IPlayable;
-        public abstract void OnUpdate();
+        public abstract void Connect(IConnectable destination, int inputPort);
+        public abstract void Evaluate(double time);
         public abstract void Destroy();
 
-        protected double GetStateTime()
-        {
-            double time = Time;
-            if (time < 0)
-                return 0;
-            if (time > Length)
-            {
-                switch(Motion.WrapMode)
-                {
-                    case MotionWrapMode.Clamp:
-                        time = Length;
-                        break;
-                    case MotionWrapMode.Loop:
-                        time %= Length;
-                        break;
-                    case MotionWrapMode.PingPong:
-                        double length2 = Length * 2;
-                        time = time % length2;
-                        if (time > Length)
-                            time = length2 - time;
-                        break;
-                }
-            }
-            return time;
-        }
     }
 }

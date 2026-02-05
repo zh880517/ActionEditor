@@ -18,14 +18,13 @@ namespace Montage
             playable = AnimationClipPlayable.Create(graph, motion.Asset);
         }
 
-        public override void Connect<V>(V destination)
+        public override void Connect(IConnectable destination, int inputPort)
         {
-            destination.ConnectInput(DestinationInputPort, playable, 0);
+            destination.Connect(playable, inputPort);
         }
-        public override void OnUpdate()
+        public override void Evaluate(double time)
         {
             if (!playable.IsValid()) return;
-            double time = GetStateTime();
             time = time * motion.Speed + motion.StartOffset;
             playable.SetTime(time);
         }

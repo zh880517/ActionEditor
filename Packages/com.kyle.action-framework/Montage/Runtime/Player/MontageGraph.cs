@@ -7,7 +7,7 @@ using UnityEngine.Playables;
 namespace Montage
 {
     [System.Serializable]
-    public class MontageGraph
+    public class MontageGraph : IConnectable
     {
         private struct ConnectInfo
         {
@@ -20,7 +20,7 @@ namespace Montage
         private AnimationPlayableOutput output;
         private AnimationMixerPlayable rootMixer;
         private PlayableHandle[] connectInfos = new PlayableHandle[2];
-        private readonly Stack<AnimationMixerPlayable> mixerPlayables = new Stack<AnimationMixerPlayable>();//回收池
+        private Stack<AnimationMixerPlayable> mixerPlayables;//回收池
 
         public static MontageGraph Create(string name, Animator target)
         {
@@ -35,34 +35,55 @@ namespace Montage
             return montageGraph;
         }
 
-        public void ConnectToRoot<V>(V destination, float weight) where V : struct, IPlayable
+        public int ConnectToRoot<V>(V playable, float weight) where V : struct, IPlayable
         {
             for (int i = 0; i < connectInfos.Length; i++)
             {
-                if(connectInfos[i] == destination.GetHandle())
+                if(connectInfos[i] == playable.GetHandle())
                 {
                     //已经连接过了，更新权重
                     rootMixer.SetInputWeight(i, weight);
                     var info = connectInfos[i];
                     connectInfos[i] = info;
-                    return;
+                    return i;
                 }
                 else if(connectInfos[i] == PlayableHandle.Null)
                 {
                     //找到空位，复用
-                    destination.ConnectInput(i, rootMixer, 0);
+                    playable.ConnectInput(i, rootMixer, 0);
                     rootMixer.SetInputWeight(i, weight);
-                    connectInfos[i] = destination.GetHandle();
-                    return;
+                    connectInfos[i] = playable.GetHandle();
+                    return i;
                 }
             }
             //没有空位，扩容
             int nexIndex = connectInfos.Length;
             Array.Resize(ref connectInfos, connectInfos.Length + 1);
             rootMixer.SetInputCount(connectInfos.Length);
-            destination.ConnectInput(nexIndex, rootMixer, 0);
+            playable.ConnectInput(nexIndex, rootMixer, 0);
             rootMixer.SetInputWeight(nexIndex, weight);
-            connectInfos[nexIndex] = destination.GetHandle();
+            connectInfos[nexIndex] = playable.GetHandle();
+            return nexIndex;
+        }
+
+        public void SetRootWeight(int index, float weight)
+        {
+            if (index >= 0 && index < connectInfos.Length)
+            {
+                var info = connectInfos[index];
+                if (info == PlayableHandle.Null)
+                    return;
+                rootMixer.SetInputWeight(index, weight);
+            }
+        }
+
+        public void Connect<V>(V playable, int index) where V : struct, IPlayable
+        {
+            if (index >= 0 && index < connectInfos.Length)
+            {
+                playable.ConnectInput(index, rootMixer, 0);
+                connectInfos[index] = playable.GetHandle();
+            }
         }
 
         public void DisConnectFromRoot<V>(V playable) where V : struct, IPlayable
@@ -81,17 +102,35 @@ namespace Montage
 
         public AnimationMixerPlayable GetMixerPlayable()
         {
-            if(mixerPlayables.Count == 0)
+            mixerPlayables ??= new Stack<AnimationMixerPlayable>();
+            if (mixerPlayables.Count == 0)
                 return AnimationMixerPlayable.Create(Graph, 2);
             return mixerPlayables.Pop();
         }
         public void RecycleMixerPlayable(AnimationMixerPlayable mixer)
         {
+            if (mixerPlayables == null)
+                return;
             for (int i = 0; i < mixer.GetInputCount(); i++)
             {
                 mixer.DisconnectInput(i);
             }
             mixerPlayables.Push(mixer);
+        }
+
+        public void Destroy()
+        {
+            if(mixerPlayables != null)
+            {
+                foreach (var item in mixerPlayables)
+                {
+                    item.Destroy();
+                }
+                mixerPlayables.Clear();
+            }
+            rootMixer.Destroy();
+            Graph.Destroy();
+            Target = null;
         }
     }
 }

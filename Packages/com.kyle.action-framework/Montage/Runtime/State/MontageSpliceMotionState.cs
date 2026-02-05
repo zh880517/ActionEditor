@@ -62,14 +62,13 @@ namespace Montage
             }
         }
 
-        public override void Connect<V>(V destination)
+        public override void Connect(IConnectable destination, int inputPort)
         {
-            destination.ConnectInput(DestinationInputPort, mixerPlayable, 0);
+            destination.Connect(mixerPlayable, inputPort);
         }
-        public override void OnUpdate()
+        public override void Evaluate(double time)
         {
             if (!mixerPlayable.IsValid()) return;
-            double time = GetStateTime();
             float weight = -1;
             for (int i = 0; i < timeInfos.Length; i++)
             {
