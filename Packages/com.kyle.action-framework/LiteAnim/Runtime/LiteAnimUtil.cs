@@ -1,4 +1,5 @@
-﻿using UnityEngine.Playables;
+﻿using System.Linq;
+using UnityEngine.Playables;
 
 namespace LiteAnim
 {
@@ -25,11 +26,16 @@ namespace LiteAnim
 
         public static MotionState CreateState(LiteAnimMotion motion)
         {
+            if(!motion.IsValid())
+                return null;
             MotionState state = null;
             switch (motion.Type)
             {
                 case MotionType.Clip:
-                    state = new ClipMotionState();
+                    if(motion.Clips.Count(it=>it.Asset) > 1)
+                        state = new SpliceClipMotionState();
+                    else
+                        state = new ClipMotionState();
                     break;
                 case MotionType.BlendTree:
                     state = new BlendTreeMotionState();

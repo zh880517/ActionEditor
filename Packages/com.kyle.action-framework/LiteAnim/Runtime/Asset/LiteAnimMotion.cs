@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
-using static LiteAnim.LiteAnimSpliceMotion;
 
 namespace LiteAnim
 {
@@ -35,6 +34,8 @@ namespace LiteAnim
             if (!Asset) return 0;
             return Mathf.Max(0, Asset.length - StartOffset - EndOffset) / Speed;
         }
+
+        public static readonly MotionClip Default = new MotionClip { Asset = null, StartOffset = 0, EndOffset = 0, Speed = 1, Weight = 1, MixIn = 0 };
     }
 
     public class LiteAnimMotion : ScriptableObject
