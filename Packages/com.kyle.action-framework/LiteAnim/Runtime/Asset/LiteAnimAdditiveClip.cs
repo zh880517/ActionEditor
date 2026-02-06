@@ -1,9 +1,9 @@
 ﻿using UnityEngine;
 
-namespace Montage
+namespace LiteAnim
 {
     [System.Serializable]
-    public class MontageAdditiveClip
+    public class LiteAnimAdditiveClip
     {
         public string Name;
         public string Layer;//所属layer，同一个Layer同一时间只能有一个AdditiveClip生效

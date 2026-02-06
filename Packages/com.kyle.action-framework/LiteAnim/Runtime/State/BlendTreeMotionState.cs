@@ -2,31 +2,23 @@
 using UnityEngine.Animations;
 using UnityEngine.Playables;
 
-namespace Montage
+namespace LiteAnim
 {
-    public class MontageBlendMotionState : MontageMotionState
+    public class BlendTreeMotionState : MotionState
     {
-        public override MontageMotion Motion => motion;
-        private readonly MontageBlendMotion motion;
         private AnimationMixerPlayable mixerPlayable;
         private AnimationClipPlayable[] playables;
         private float[] thresholds;
 
-        public MontageBlendMotionState(MontageBlendMotion motion) : base(motion)
+        public override void Create(PlayableGraph graph)
         {
-            this.motion = motion;
-        }
-
-
-        public override void Init(PlayableGraph graph)
-        {
-            mixerPlayable = AnimationMixerPlayable.Create(graph, motion.Motions.Count);
-            playables = new AnimationClipPlayable[motion.Motions.Count];
-            thresholds = new float[motion.Motions.Count + 1];
+            mixerPlayable = AnimationMixerPlayable.Create(graph, Motion.Clips.Count);
+            playables = new AnimationClipPlayable[Motion.Clips.Count];
+            thresholds = new float[Motion.Clips.Count + 1];
             float weightValue = 0;
-            for (int i = 0; i < motion.Motions.Count; i++)
+            for (int i = 0; i < Motion.Clips.Count; i++)
             {
-                var clip = motion.Motions[i];
+                var clip = Motion.Clips[i];
                 if (clip.Asset)
                 {
                     var playable = AnimationClipPlayable.Create(graph, clip.Asset);
@@ -36,16 +28,16 @@ namespace Montage
                 }
             }
             float weight = 0;
-            for (int i = 0; i < motion.Motions.Count; i++)
+            for (int i = 0; i < Motion.Clips.Count; i++)
             {
-                var clip = motion.Motions[i];
+                var clip = Motion.Clips[i];
                 if (clip.Asset)
                 {
                     thresholds[i] = weight / weightValue;
                     weight += clip.Weight;
                 }
             }
-            thresholds[motion.Motions.Count] = 1;
+            thresholds[Motion.Clips.Count] = 1;
         }
 
         public override void Connect(IConnectable destination, int inputPort)
@@ -58,9 +50,9 @@ namespace Montage
             if (!mixerPlayable.IsValid())
                 return;
             float paramValue = 0;
-            if (Player != null && !string.IsNullOrEmpty(motion.Param))
+            if (Player != null && !string.IsNullOrEmpty(Motion.Param))
             {
-                paramValue = Player.GetParam(motion.Param);
+                paramValue = Player.GetParam(Motion.Param);
                 paramValue = Mathf.Clamp01(paramValue);
             }
             int preIndex = -1;

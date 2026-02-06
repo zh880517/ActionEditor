@@ -1,9 +1,9 @@
 ﻿using UnityEngine;
 
-namespace Montage
+namespace LiteAnim
 {
     [System.Serializable]
-    public class MontageLayer
+    public class LiteAnimLayer
     {
         public string LayerName;
         public bool Additive;

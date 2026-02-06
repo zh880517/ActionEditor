@@ -3,12 +3,12 @@ using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.Playables;
 
-namespace Montage
+namespace LiteAnim
 {
-    public struct MontageTransitionInfo
+    public struct TransitionInfo
     {
-        public MontageMotionState From;
-        public MontageMotionState To;
+        public MotionState From;
+        public MotionState To;
         public int TargetInputIndex;
         public int FromIndex;
         public int ToIndex;
@@ -17,30 +17,30 @@ namespace Montage
         public AnimationMixerPlayable Mixer;
     }
 
-    public struct MontageStatePlayInfo
+    public struct StatePlayInfo
     {
-        public MontageMotionState State;
+        public MotionState State;
         public int InputIndex;
         public float Time;
         public int Loop;
     }
 
     [System.Serializable]
-    public abstract class MontageController
+    public abstract class AnimController
     {
         [SerializeField]
-        protected MontageAsset asset;
-        protected MontageGraph graph;
-        protected IMontagePlayer player;
-        protected readonly List<MontageMotionState> states = new List<MontageMotionState>();
-        protected readonly List<MontageStatePlayInfo> playing = new List<MontageStatePlayInfo>();
-        protected readonly List<MontageTransitionInfo> transitions = new List<MontageTransitionInfo>();
+        protected LiteAnimAsset asset;
+        protected LiteAnimGraph graph;
+        protected ILiteAnimPlayer player;
+        protected readonly List<MotionState> states = new List<MotionState>();
+        protected readonly List<StatePlayInfo> playing = new List<StatePlayInfo>();
+        protected readonly List<TransitionInfo> transitions = new List<TransitionInfo>();
         public float Weight { get; private set; }
 
-        public IReadOnlyList<MontageStatePlayInfo> Playing => playing;
-        public IReadOnlyList<MontageTransitionInfo> Transitions => transitions;
+        public IReadOnlyList<StatePlayInfo> Playing => playing;
+        public IReadOnlyList<TransitionInfo> Transitions => transitions;
 
-        public void Init(MontageAsset asset, MontageGraph graph, IMontagePlayer player)
+        public void Init(LiteAnimAsset asset, LiteAnimGraph graph, ILiteAnimPlayer player)
         {
             this.asset = asset;
             this.graph = graph;
@@ -88,15 +88,15 @@ namespace Montage
             }
         }
 
-        private void OnTransitionEnd(MontageTransitionInfo transition)
+        private void OnTransitionEnd(TransitionInfo transition)
         {
         }
 
-        private void OnStatePlayEnd(MontageMotionState state)
+        private void OnStatePlayEnd(MotionState state)
         {
         }
 
-        protected MontageMotionState GetState(string name)
+        protected MotionState GetState(string name)
         {
             var state = states.Find(it => it.Name == name);
             if (state == null)
@@ -105,9 +105,9 @@ namespace Montage
                 if (!motion)
                     return null;
                 //mixerPlayable.SetInputCount(states.Count + 1);
-                state = MontageUtil.CreateState(motion);
+                state = LiteAnimUtil.CreateState(motion);
                 state.Player = player;
-                state.Init(graph.Graph);
+                state.Create(graph.Graph);
                 //state.Connect(mixerPlayable);
                 states.Add(state);
             }
@@ -115,7 +115,7 @@ namespace Montage
         }
 
 
-        public float GetStateTime(MontageMotionState state, float time, out int loop)
+        public float GetStateTime(MotionState state, float time, out int loop)
         {
             loop = 0;
             if (time < 0)

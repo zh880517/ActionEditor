@@ -2,9 +2,9 @@
 using UnityEngine.Animations;
 using UnityEngine.Playables;
 
-namespace Montage
+namespace LiteAnim
 {
-    public class MontageSpliceMotionState : MontageMotionState
+    public class ClipMotionState : MotionState
     {
         public struct ClipTimeInfo
         {
@@ -13,23 +13,17 @@ namespace Montage
             public double EndTime;
         }
 
-        public override MontageMotion Motion => motion;
-        private readonly MontageSpliceMotion motion;
         private AnimationMixerPlayable mixerPlayable;
         public AnimationClipPlayable[] playables;
         public ClipTimeInfo[] timeInfos;
-        public MontageSpliceMotionState(MontageSpliceMotion motion) : base(motion)
-        {
-            this.motion = motion;
-        }
 
-        public override void Init(PlayableGraph graph)
+        public override void Create(PlayableGraph graph)
         {
-            mixerPlayable = AnimationMixerPlayable.Create(graph, motion.Splices.Count);
-            playables = new AnimationClipPlayable[motion.Splices.Count];
-            for (int i = 0; i < motion.Splices.Count; i++)
+            mixerPlayable = AnimationMixerPlayable.Create(graph, Motion.Clips.Count);
+            playables = new AnimationClipPlayable[Motion.Clips.Count];
+            for (int i = 0; i < Motion.Clips.Count; i++)
             {
-                var splice = motion.Splices[i];
+                var splice = Motion.Clips[i];
                 if (splice.Asset)
                 {
                     var playable = AnimationClipPlayable.Create(graph, splice.Asset);
@@ -37,10 +31,10 @@ namespace Montage
                     playable.ConnectInput(0, mixerPlayable, i);
                 }
             }
-            timeInfos = new ClipTimeInfo[motion.Splices.Count];
-            for (int i = 0; i < motion.Splices.Count; i++)
+            timeInfos = new ClipTimeInfo[Motion.Clips.Count];
+            for (int i = 0; i < Motion.Clips.Count; i++)
             {
-                var splice = motion.Splices[i];
+                var splice = Motion.Clips[i];
                 var length = splice.GetLength();
                 if(i > 1)
                 {
@@ -75,7 +69,7 @@ namespace Montage
                 var playable = playables[i];
                 if (!playable.IsValid()) continue;
                 var info = timeInfos[i];
-                var splice = motion.Splices[i];
+                var splice = Motion.Clips[i];
                 if (time >= info.StartTime && time <= info.EndTime)
                 {
                     double localTime = time - info.StartTime;

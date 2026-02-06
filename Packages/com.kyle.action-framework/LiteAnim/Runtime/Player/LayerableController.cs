@@ -1,9 +1,9 @@
 ﻿using UnityEngine.Animations;
 
-namespace Montage
+namespace LiteAnim
 {
     [System.Serializable]
-    public class MontageLayerableController : MontageController
+    public class LayerableController : AnimController
     {
         private AnimationLayerMixerPlayable layerMixerPlayable;
         private int rootIndex = -1;

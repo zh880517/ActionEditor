@@ -1,6 +1,6 @@
 ﻿using UnityEngine.Playables;
 
-namespace Montage
+namespace LiteAnim
 {
     public interface IConnectable
     {

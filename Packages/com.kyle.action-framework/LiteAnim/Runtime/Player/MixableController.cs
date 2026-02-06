@@ -1,7 +1,7 @@
-﻿namespace Montage
+﻿namespace LiteAnim
 {
     [System.Serializable]
-    public class MontageMixableController : MontageController
+    public class MixableController : AnimController
     {
         protected override void OnInit()
         {

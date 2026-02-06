@@ -1,10 +1,10 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 
-namespace Montage
+namespace LiteAnim
 {
     [System.Serializable]
-    public class MontageParam
+    public class BlendParam
     {
         [System.Serializable]
         public struct ParamInfo

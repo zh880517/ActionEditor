@@ -4,10 +4,10 @@ using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.Playables;
 
-namespace Montage
+namespace LiteAnim
 {
     [System.Serializable]
-    public class MontageGraph : IConnectable
+    public class LiteAnimGraph : IConnectable
     {
         private struct ConnectInfo
         {
@@ -22,9 +22,9 @@ namespace Montage
         private PlayableHandle[] connectInfos = new PlayableHandle[2];
         private Stack<AnimationMixerPlayable> mixerPlayables;//回收池
 
-        public static MontageGraph Create(string name, Animator target)
+        public static LiteAnimGraph Create(string name, Animator target)
         {
-            var montageGraph = new MontageGraph();
+            var montageGraph = new LiteAnimGraph();
             montageGraph.Graph = PlayableGraph.Create(name);
             montageGraph.Target = target;
             montageGraph.output = AnimationPlayableOutput.Create(montageGraph.Graph, "MontageOutput", target);
