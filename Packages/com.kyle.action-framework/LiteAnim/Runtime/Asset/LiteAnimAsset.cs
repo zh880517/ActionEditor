@@ -8,6 +8,5 @@ namespace LiteAnim
         public float DefaultFadeDuration = 0.17f;
         public List<LiteAnimMotion> Motions = new List<LiteAnimMotion>();
         public List<LiteAnimLayer> Layers = new List<LiteAnimLayer>();
-        public List<LiteAnimAdditiveClip> AdditiveClips = new List<LiteAnimAdditiveClip>();
     }
 }

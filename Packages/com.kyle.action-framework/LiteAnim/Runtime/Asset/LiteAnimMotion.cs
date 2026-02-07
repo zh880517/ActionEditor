@@ -3,16 +3,6 @@ using UnityEngine;
 
 namespace LiteAnim
 {
-    public enum MotionWrapMode
-    {
-        [InspectorName("停留在最后一帧")]
-        Clamp = 0,
-        [InspectorName("循环播放")]
-        Loop = 1,
-        [InspectorName("往返播放")]
-        PingPong = 2,
-    }
-
     public enum MotionType
     {
         Clip,
@@ -45,8 +35,9 @@ namespace LiteAnim
         [SerializeField, HideInInspector]
         private int version = 0;
         public int Version => version;
+        public int LayerIndex;
+        public bool Loop;
         public MotionType Type = MotionType.Clip;
-        public MotionWrapMode WrapMode = MotionWrapMode.Clamp;
         public List<MotionClip> Clips = new List<MotionClip>();
         public string Param;//仅BlendTree使用，BlendTree使用时根据Param参数进行融合控制
 

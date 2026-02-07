@@ -66,6 +66,20 @@ namespace LiteAnim
             return nexIndex;
         }
 
+        public int GetEmptyRootIndex()
+        {
+            for (int i = 0; i < connectInfos.Length; i++)
+            {
+                if (connectInfos[i] == PlayableHandle.Null)
+                    return i;
+            }
+            int nexIndex = connectInfos.Length;
+            Array.Resize(ref connectInfos, connectInfos.Length + 1);
+            rootMixer.SetInputCount(connectInfos.Length);
+            rootMixer.SetInputWeight(nexIndex, 0);
+            return nexIndex;
+        }
+
         public void SetRootWeight(int index, float weight)
         {
             if (index >= 0 && index < connectInfos.Length)
@@ -83,6 +97,16 @@ namespace LiteAnim
             {
                 playable.ConnectInput(index, rootMixer, 0);
                 connectInfos[index] = playable.GetHandle();
+            }
+        }
+
+        public void DisConnect(int index)
+        {
+            if (index >= 0 && index < connectInfos.Length)
+            {
+                rootMixer.SetInputWeight(index, 0);
+                rootMixer.DisconnectInput(index);
+                connectInfos[index] = PlayableHandle.Null;
             }
         }
 

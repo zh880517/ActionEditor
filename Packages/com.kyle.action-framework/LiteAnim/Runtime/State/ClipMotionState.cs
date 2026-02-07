@@ -25,6 +25,10 @@ namespace LiteAnim
         {
             destination.Connect(playable, inputPort);
         }
+        public override void Connect<V>(V playable, int index)
+        {
+            playable.ConnectInput(index, playable, 0);
+        }
         public override void Evaluate(double time)
         {
             if (!playable.IsValid()) return;

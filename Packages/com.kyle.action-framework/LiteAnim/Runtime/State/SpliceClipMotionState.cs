@@ -60,6 +60,10 @@ namespace LiteAnim
         {
             destination.Connect(mixerPlayable, inputPort);
         }
+        public override void Connect<V>(V playable, int index)
+        {
+            playable.ConnectInput(index, mixerPlayable, 0);
+        }
         public override void Evaluate(double time)
         {
             if (!mixerPlayable.IsValid()) return;

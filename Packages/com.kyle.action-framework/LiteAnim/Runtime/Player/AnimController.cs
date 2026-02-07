@@ -9,7 +9,7 @@ namespace LiteAnim
     {
         public MotionState From;
         public MotionState To;
-        public int TargetInputIndex;
+        public int LayerIndex;
         public int FromIndex;
         public int ToIndex;
         public float FadeDuration;
@@ -23,6 +23,8 @@ namespace LiteAnim
         public int InputIndex;
         public float Time;
         public int Loop;
+        public int MaxLoop;
+        public bool Looped;
     }
 
     [System.Serializable]
@@ -33,11 +35,11 @@ namespace LiteAnim
         protected LiteAnimGraph graph;
         protected ILiteAnimPlayer player;
         protected readonly List<MotionState> states = new List<MotionState>();
-        protected readonly List<StatePlayInfo> playing = new List<StatePlayInfo>();
+        protected readonly List<StatePlayInfo> playingStates = new List<StatePlayInfo>();
         protected readonly List<TransitionInfo> transitions = new List<TransitionInfo>();
         public float Weight { get; private set; }
 
-        public IReadOnlyList<StatePlayInfo> Playing => playing;
+        public IReadOnlyList<StatePlayInfo> Playing => playingStates;
         public IReadOnlyList<TransitionInfo> Transitions => transitions;
 
         public void Init(LiteAnimAsset asset, LiteAnimGraph graph, ILiteAnimPlayer player)
@@ -54,14 +56,17 @@ namespace LiteAnim
             OnWeightChanged();
         }
 
+        public abstract void Play(string name);
+        public virtual void StopLayer(int layer) { }
         protected abstract void OnWeightChanged();
 
         protected abstract void OnInit();
 
         public void Update(float dt)
         {
-            if (playing.Count == 0)
+            if (playingStates.Count == 0)
                 return;
+            //对于计时删除的内容，满足删除条件后在下一帧删除，不然会看不到对应动画的最后一帧
             for (int i = 0; i < transitions.Count; i++)
             {
                 var transition = transitions[i];
@@ -70,31 +75,43 @@ namespace LiteAnim
                     transitions.RemoveAt(i);
                     i--;
                     OnTransitionEnd(transition);
+                    playingStates.RemoveAll(it => it.State == transition.From);
                     continue;
                 }
                 transition.FadeTime += dt;
-                float weight = Mathf.Clamp01(transition.FadeTime / transition.FadeDuration);
-                transition.Mixer.SetInputWeight(transition.FromIndex, 1 - weight);
-                transition.Mixer.SetInputWeight(transition.ToIndex, weight);
                 transitions[i] = transition;
+                float weight = Mathf.Clamp01(transition.FadeTime / transition.FadeDuration);
+                UpdateTransitionWeight(transition, weight);
             }
-            for (int i = 0; i < playing.Count; i++)
+            for (int i = 0; i < playingStates.Count; i++)
             {
-                var state = playing[i];
-                state.Time += dt;
-                double time = GetStateTime(state.State, state.Time, out state.Loop);
-                state.State.Evaluate(time);
-                playing[i] = state;
+                var play = playingStates[i];
+                if (play.Looped && OnStateLoop(play))
+                {
+                    playingStates.RemoveAt(i);
+                    --i;
+                    continue;
+                }
+                play.Time += dt;
+                int loop = play.Loop;
+                if (play.Time > play.State.Length)
+                {
+                    play.Loop++;
+                    play.Looped = true;
+                    if (play.MaxLoop > 0 && play.Loop >= play.MaxLoop)
+                        play.Time = play.State.Length;
+                    else
+                        play.Time %= play.State.Length;
+                }
+                play.State.Evaluate(play.Time);
+                playingStates[i] = play;
             }
+            OnUpdate(dt);
         }
+        protected virtual void OnUpdate(float dt) { }
+        protected abstract void UpdateTransitionWeight(TransitionInfo info, float percent);
 
-        private void OnTransitionEnd(TransitionInfo transition)
-        {
-        }
-
-        private void OnStatePlayEnd(MotionState state)
-        {
-        }
+        protected abstract void OnTransitionEnd(TransitionInfo transition);
 
         protected MotionState GetState(string name)
         {
@@ -104,45 +121,70 @@ namespace LiteAnim
                 var motion = asset.Motions.Find(it => it.name == name);
                 if (!motion)
                     return null;
-                //mixerPlayable.SetInputCount(states.Count + 1);
                 state = LiteAnimUtil.CreateState(motion);
                 state.Player = player;
                 state.Create(graph.Graph);
-                //state.Connect(mixerPlayable);
                 states.Add(state);
             }
             return state;
         }
+        protected void SetStateContinue(MotionState state)
+        {
+            if (!state.Motion.Loop)
+            {
+                int playIndex = playingStates.FindIndex(it => it.State == state);
+                if (playIndex >= 0)
+                {
+                    var exist = playingStates[playIndex];
+                    if((exist.MaxLoop - exist.Loop) <= 1 && exist.Time / state.Length > 0.5f)
+                    {
+                        exist.MaxLoop++;
+                        playingStates[playIndex] = exist;
+                    }
+                }
+            }
+        }
+        protected virtual bool OnStateLoop(StatePlayInfo state)
+        {
+            return false;
+        }
 
+        public virtual void Destroy()
+        {
+            foreach (var state in states)
+            {
+                state.Destroy();
+            }
+            foreach (var item in transitions)
+            {
+                if(item.Mixer.IsValid())
+                    graph.RecycleMixerPlayable(item.Mixer);
+            }
+            states.Clear();
+            playingStates.Clear();
+            transitions.Clear();
+        }
 
-        public float GetStateTime(MotionState state, float time, out int loop)
+        public static float GetStateTime(MotionState state, float time, out int loop)
         {
             loop = 0;
             if (time < 0)
                 return 0;
-            if (time > state.Length)
+            if (time >= state.Length)
             {
-                switch (state.Motion.WrapMode)
+                if(state.Motion.Loop)
                 {
-                    case MotionWrapMode.Clamp:
-                        loop = 1;
-                        time = state.Length;
-                        break;
-                    case MotionWrapMode.Loop:
-                        loop = (int)(time/state.Length);
-                        time %= state.Length;
-                        break;
-                    case MotionWrapMode.PingPong:
-                        loop = (int)(time / state.Length);
-                        float length2 = state.Length * 2;
-                        time = time % length2;
-                        if (time > state.Length)
-                            time = length2 - time;
-
-                        break;
+                    loop = (int)(time / state.Length);
+                    return time % state.Length;
+                }
+                else
+                {
+                    loop = 1;
+                    return state.Length;
                 }
             }
             return time;
         }
+
     }
 }

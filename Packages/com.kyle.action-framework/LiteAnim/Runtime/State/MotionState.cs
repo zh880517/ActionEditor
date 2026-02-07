@@ -13,6 +13,7 @@ namespace LiteAnim
         public float Weight { get; set; }// 混合权重
         private int version = -1;// 动画版本号，用于检测动画资源是否被修改
         public bool IsChanged => version != Motion.Version;// 动画资源是否被修改
+        public int LayerIndex => Motion.LayerIndex;
         public virtual void Init(LiteAnimMotion motion)
         {
             Name = motion.name;
@@ -22,8 +23,8 @@ namespace LiteAnim
 
         public abstract void Create(PlayableGraph graph);
         public abstract void Connect(IConnectable destination, int inputPort);
+        public abstract void Connect<V>(V playable, int index) where V : struct, IPlayable;
         public abstract void Evaluate(double time);
         public abstract void Destroy();
-
     }
 }
