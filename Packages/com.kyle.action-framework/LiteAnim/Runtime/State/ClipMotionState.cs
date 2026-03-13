@@ -27,7 +27,7 @@ namespace LiteAnim
         }
         public override void Connect<V>(V playable, int index)
         {
-            playable.ConnectInput(index, playable, 0);
+            playable.ConnectInput(index, this.playable, 0);
         }
         public override void Evaluate(double time)
         {

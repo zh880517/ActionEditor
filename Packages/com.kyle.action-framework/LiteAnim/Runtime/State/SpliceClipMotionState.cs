@@ -14,8 +14,8 @@ namespace LiteAnim
         }
 
         private AnimationMixerPlayable mixerPlayable;
-        public AnimationClipPlayable[] playables;
-        public ClipTimeInfo[] timeInfos;
+        private AnimationClipPlayable[] playables;
+        private ClipTimeInfo[] timeInfos;
 
         public override void Create(PlayableGraph graph)
         {
@@ -36,7 +36,7 @@ namespace LiteAnim
             {
                 var splice = Motion.Clips[i];
                 var length = splice.GetLength();
-                if(i > 1)
+                if(i > 0)
                 {
                     var pre = timeInfos[i - 1];
                     var mixTime = splice.MixIn * length;

@@ -60,16 +60,18 @@ namespace LiteAnim
                 paramValue = Player.GetParam(Motion.Param);
                 paramValue = Mathf.Clamp01(paramValue);
             }
-            int preIndex = -1;
-            int nextIndex = -1;
+            int preIndex = 0;
+            int nextIndex = 0;
             float preWeight = 0;
             for (int i = 0; i < thresholds.Length; i++)
             {
                 if(paramValue < thresholds[i])
                 {
-                    preIndex = i - 1;
-                    nextIndex = i % playables.Length;
-                    preWeight = (paramValue - thresholds[preIndex]) / (thresholds[nextIndex] - thresholds[preIndex]);
+                    preIndex = Mathf.Max(0, i - 1);
+                    nextIndex = Mathf.Min(i, playables.Length - 1);
+                    float range = thresholds[nextIndex] - thresholds[preIndex];
+                    preWeight = range > 0 ? (paramValue - thresholds[preIndex]) / range : 0;
+                    break;
                 }
             }
             for (int i = 0; i < playables.Length; i++)

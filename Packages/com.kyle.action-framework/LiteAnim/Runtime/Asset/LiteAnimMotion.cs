@@ -65,11 +65,11 @@ namespace LiteAnim
         {
             if(Type == MotionType.Clip)
             {
-                return Clips.Exists(it => it.GetLength() <= 0);
+                return !Clips.Exists(it => it.GetLength() <= 0);
             }
             else
             {
-                return !Clips.Exists(it => it.Asset);
+                return !Clips.Exists(it => !it.Asset);
             }
         }
 
