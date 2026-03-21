@@ -1,6 +1,4 @@
-using UnityEditor;
-using UnityEditor.UIElements;
-using UnityEngine;
+using PropertyEditor;
 using UnityEngine.UIElements;
 
 namespace LiteAnim.EditorView
@@ -8,7 +6,8 @@ namespace LiteAnim.EditorView
     public class AssetPropertiesView : VisualElement
     {
         private readonly ScrollView scrollView = new ScrollView(ScrollViewMode.Vertical);
-        private SerializedObject serializedObject;
+        private StructedPropertyElement propertyEditor;
+        private LiteAnimAsset currentAsset;
 
         public AssetPropertiesView()
         {
@@ -19,29 +18,28 @@ namespace LiteAnim.EditorView
             Add(scrollView);
         }
 
-        public void Bind(ScriptableObject asset)
+        public void Bind(LiteAnimAsset asset)
         {
-            if (serializedObject.targetObject == asset)
+            if (currentAsset == asset)
                 return;
-            scrollView.Unbind();
+
             scrollView.Clear();
-            serializedObject = null;
+            currentAsset = asset;
 
-            if (!asset)
+            if (asset == null)
+            {
+                if (propertyEditor != null)
+                {
+                    propertyEditor.style.display = DisplayStyle.None;
+                }
                 return;
-
-            serializedObject = new SerializedObject(asset);
-            var fadeProperty = serializedObject.FindProperty("DefaultFadeDuration");
-            var layersProperty = serializedObject.FindProperty("Layers");
-
-            var fadeField = new PropertyField(fadeProperty);
-            fadeField.name = "default-fade-duration";
-            var layersField = new PropertyField(layersProperty);
-            layersField.name = "layers";
-
-            scrollView.Add(fadeField);
-            scrollView.Add(layersField);
-            scrollView.Bind(serializedObject);
+            }
+            if(propertyEditor == null)
+            {
+                propertyEditor = PropertyElementFactory.CreateByUnityObject(asset) as StructedPropertyElement;
+                scrollView.Add(propertyEditor);
+            }
+            propertyEditor.SetValue(asset);
         }
     }
 }

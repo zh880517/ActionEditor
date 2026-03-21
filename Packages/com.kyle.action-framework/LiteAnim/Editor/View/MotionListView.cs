@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -9,8 +10,7 @@ namespace LiteAnim.EditorView
         private readonly ScrollView scrollView = new ScrollView();
         private readonly Button createButton = new Button();
         private LiteAnimAsset target;
-        private readonly List<LiteAnimMotion> motions = new List<LiteAnimMotion>();
-        private readonly List<Toggle> toggles = new List<Toggle>();
+        private readonly List<ToolbarToggle> toggles = new List<ToolbarToggle>();
         public MotionListView()
         {
             style.flexGrow = 1;
@@ -45,47 +45,50 @@ namespace LiteAnim.EditorView
         public void Refresh(LiteAnimAsset asset, int selectedIndex)
         {
             target = asset;
-            motions.Clear();
-            toggles.Clear();
-            scrollView.Clear();
 
-            if (target != null && target.Motions != null)
-            {
-                foreach (var m in target.Motions)
-                {
-                    motions.Add(m);
-                }
-            }
+            var newMotions = (target != null && target.Motions != null)
+                ? (IList<LiteAnimMotion>)target.Motions
+                : System.Array.Empty<LiteAnimMotion>();
 
-            for (int i = 0; i < motions.Count; i++)
+            // Grow: create new toggles as needed
+            for (int i = toggles.Count; i < newMotions.Count; i++)
             {
                 int idx = i;
-                var motion = motions[i];
-                var toggle = new Toggle();
-                if (!motion)
+                var tt = new ToolbarToggle();
+                tt.RegisterValueChangedCallback(evt =>
                 {
-                    toggle.text = "<Missing Motion>";
+                    if (evt.newValue)
+                        Select(idx);
+                    else
+                        tt.SetValueWithoutNotify(true);
+                });
+                toggles.Add(tt);
+                scrollView.Add(tt);
+            }
+
+            // Update visible toggles, hide extras
+            for (int i = 0; i < toggles.Count; i++)
+            {
+                if (i < newMotions.Count)
+                {
+                    var motion = newMotions[i];
+                    toggles[i].text = motion == null
+                        ? "<Missing Motion>"
+                        : $"{motion.name} ({motion.Type})";
+                    toggles[i].SetValueWithoutNotify(i == selectedIndex);
+                    toggles[i].style.display = DisplayStyle.Flex;
                 }
                 else
                 {
-                    string typeText = motion.Type.ToString();
-                    toggle.text = $"{motion.name} ({typeText})";
+                    toggles[i].style.display = DisplayStyle.None;
                 }
-                toggle.RegisterValueChangedCallback(evt =>
-                {
-                    if (evt.newValue)
-                    {
-                        Select(idx);
-                    }
-                    else
-                    {
-                        toggle.SetValueWithoutNotify(true);
-                    }
-                });
-                toggles.Add(toggle);
-                scrollView.Add(toggle);
             }
+
             createButton.style.display = target ? DisplayStyle.Flex : DisplayStyle.None;
+
+            // Scroll selected item into view
+            if (selectedIndex >= 0 && selectedIndex < newMotions.Count)
+                scrollView.ScrollTo(toggles[selectedIndex]);
         }
 
         private void Select(int index)
