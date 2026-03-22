@@ -14,6 +14,10 @@ namespace Timeline
         // Clip 拖拽结束时触发：(clipKey, 帧偏移量)
         public System.Action<string, int> OnClipMoved;
 
+        // Track 拖拽时的幽灵插入位置索引（-1 = 无）
+        private int trackDragInsertIndex = -1;
+        private string trackDragKey;
+
         private readonly TickMarkView tickMarkView = new TickMarkView();
         private readonly CursorView cursorView = new CursorView();
         private readonly VisualElement trackClipArea = new VisualElement();
@@ -32,8 +36,12 @@ namespace Timeline
 
         public int CurrentFrame => cursorView.CurrentFrame;
 
-        public TimelineView()
+        // 是否允许拖拽调整 Track 顺序
+        private readonly bool trackDragable;
+
+        public TimelineView(bool trackDragable = false)
         {
+            this.trackDragable = trackDragable;
             style.overflow = Overflow.Hidden;
             style.flexGrow = 1;
 
@@ -103,13 +111,18 @@ namespace Timeline
             center.Add(cursorView);
 
             // 监听从轨道冒泡上来的事件
-            RegisterCallback<ClipMoveEvent>(OnClipMove);
             RegisterCallback<ClipSelectEvent>(OnClipSelect);
+            RegisterCallback<TrackDragEvent>(OnTrackDrag);
         }
 
-        public TrackView AddTrack(TrackFlag flags)
+        public TrackView AddTrack(string key, TrackFlag flags)
         {
-            var track = new TrackView(flags);
+            if (trackDragable)
+                flags |= TrackFlag.TrackDragable;
+            else
+                flags &= ~TrackFlag.TrackDragable;
+            var track = new TrackView(key, flags);
+            track.Index = tracks.Count;
             track.style.left = 0;
             track.style.right = 0;
             tracks.Add(track);
@@ -119,9 +132,10 @@ namespace Timeline
             return track;
         }
 
-        public void RemoveTrack(int index)
+        public void RemoveTrack(string key)
         {
-            if (index < 0 || index >= tracks.Count)
+            int index = tracks.FindIndex(t => t.Key == key);
+            if (index < 0)
                 return;
             tracks[index].RemoveFromHierarchy();
             tracks.RemoveAt(index);
@@ -181,12 +195,6 @@ namespace Timeline
             currentSelected?.SetSelected(false);
             currentSelected = clip;
             clip.SetSelected(true);
-            evt.StopPropagation();
-        }
-
-        private void OnClipMove(ClipMoveEvent evt)
-        {
-            OnClipMoved?.Invoke(evt.ClipKey, evt.OffsetFrame);
             evt.StopPropagation();
         }
 
@@ -278,6 +286,121 @@ namespace Timeline
         private float GetUnscaledTrackWidth()
         {
             return frameCount * FrameWidth + HeaderInterval + TrackTailInterval;
+        }
+
+        private void OnTrackDrag(TrackDragEvent evt)
+        {
+            evt.StopPropagation();
+
+            if (evt.Phase == TrackDragPhase.Start)
+            {
+                trackDragKey = evt.TrackKey;
+                trackDragInsertIndex = -1;
+                return;
+            }
+
+            if (evt.Phase == TrackDragPhase.Drag)
+            {
+                // localY 是鼠标在 trackContainer 坐标系中的 y 值
+                // 根据 y 计算插入位置（在哪个 Track 之前插入）
+                int insertIdx = ComputeTrackInsertIndex(evt.LocalY);
+                if (insertIdx == trackDragInsertIndex)
+                    return;
+
+                trackDragInsertIndex = insertIdx;
+
+                // 实时调整 Track 在 trackContainer 中的顺序（视觉预览）
+                ApplyTrackReorder(trackDragKey, trackDragInsertIndex, preview: true);
+                return;
+            }
+
+            // End
+            if (evt.Phase == TrackDragPhase.End)
+            {
+                int insertIdx = ComputeTrackInsertIndex(evt.LocalY);
+
+                // 取消被拖拽 Track 的高亮（已在 TrackView.OnMouseUp 中还原，此处保险起见）
+                var dragTrack = tracks.Find(t => t.Key == trackDragKey);
+                dragTrack?.SetDragHighlight(false);
+
+                // 确认重排并更新 Index
+                ApplyTrackReorder(trackDragKey, insertIdx, preview: false);
+
+                // 检查顺序是否真的变化了
+                bool changed = false;
+                for (int i = 0; i < tracks.Count; i++)
+                {
+                    if (tracks[i].Index != i)
+                    {
+                        changed = true;
+                        break;
+                    }
+                }
+
+                if (changed)
+                {
+                    // 刷新所有 Index
+                    for (int i = 0; i < tracks.Count; i++)
+                        tracks[i].Index = i;
+
+                    var orderedKeys = new List<string>(tracks.Count);
+                    foreach (var t in tracks)
+                        orderedKeys.Add(t.Key);
+
+                    using var changeEvt = TrackIndexChangedEvent.GetPooled(this, orderedKeys);
+                    SendEvent(changeEvt);
+                }
+
+                trackDragKey = null;
+                trackDragInsertIndex = -1;
+            }
+        }
+
+        // 根据 trackContainer 坐标系中的 y 值，计算插入位置（0 = 最前，tracks.Count = 最后）
+        private int ComputeTrackInsertIndex(float containerY)
+        {
+            float y = containerY + verticalOffset;
+            float accumulated = 0f;
+            for (int i = 0; i < tracks.Count; i++)
+            {
+                float h = tracks[i].layout.height + 2f; // 2f = marginBottom
+                // 若 y 落在 Track 上半段，则插入该 Track 之前
+                if (y < accumulated + h * 0.5f)
+                    return i;
+                accumulated += h;
+            }
+            return tracks.Count;
+        }
+
+        // 将 trackDragKey 对应的 Track 移动到 insertIndex 处
+        // preview = true 时只移动 VisualElement，不更新 tracks 列表
+        // preview = false 时同时更新 tracks 列表
+        private void ApplyTrackReorder(string key, int insertIndex, bool preview)
+        {
+            int srcIdx = tracks.FindIndex(t => t.Key == key);
+            if (srcIdx < 0) return;
+
+            // 计算目标在移除源之后的实际插入位置
+            int destIdx = insertIndex;
+            if (destIdx > srcIdx) destIdx--;
+            destIdx = Mathf.Clamp(destIdx, 0, tracks.Count - 1);
+
+            if (srcIdx == destIdx) return;
+
+            var track = tracks[srcIdx];
+
+            // 更新 VisualElement 顺序
+            track.RemoveFromHierarchy();
+            if (destIdx >= trackContainer.childCount)
+                trackContainer.Add(track);
+            else
+                trackContainer.Insert(destIdx, track);
+
+            if (!preview)
+            {
+                tracks.RemoveAt(srcIdx);
+                tracks.Insert(destIdx, track);
+            }
         }
     }
 }

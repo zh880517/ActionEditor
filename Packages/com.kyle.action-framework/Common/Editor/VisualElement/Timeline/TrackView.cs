@@ -11,15 +11,20 @@ namespace Timeline
         None = 0,
         ClipMixable = 1 << 0,
         ClipMovable = 1 << 1,
-        DisableClipPool = 1 << 2
+        DisableClipPool = 1 << 2,
+        TrackDragable = 1 << 3
     }
 
     public class TrackView : VisualElement
     {
+        public string Key { get; private set; }
+        public int Index { get; set; }
+
         public TrackFlag Flags { get; private set; }
         public bool ClipMixable => (Flags & TrackFlag.ClipMixable) != 0;
         public bool ClipMovable => (Flags & TrackFlag.ClipMovable) != 0;
         public bool DisableClipPool => (Flags & TrackFlag.DisableClipPool) != 0;
+        public bool TrackDragable => (Flags & TrackFlag.TrackDragable) != 0;
 
         // 始终按 StartFrame 升序维护
         private readonly List<ClipView> clips = new List<ClipView>();
@@ -34,25 +39,36 @@ namespace Timeline
         // 选中状态
         private string selectedClipKey;
 
-        // 拖拽状态
+        // Clip 拖拽状态
         private bool isDragging;
         private string dragClipKey;
         private float dragStartMouseX;
         private int dragAccumulatedDelta;
 
+        // Track 拖拽状态
+        private bool isTrackDragging;
+        private bool trackDragStarted;
+        private float trackDragStartMouseY;
+
         private const float DragThreshold = 3f;
+        // 垂直方向超出当前 Track 高度后才触发 Track 拖拽
+        private const float TrackDragVerticalThreshold = 5f;
+
+        private static readonly Color NormalBgColor = new Color(65 / 255f, 65 / 255f, 65 / 255f, 0.5f);
+        private static readonly Color SelectedBgColor = new Color(80 / 255f, 120 / 255f, 180 / 255f, 0.6f);
 
         // 重叠可视化覆盖层（单一元素，绘制所有重叠区域）
         private readonly OverlapDrawElement overlapOverlay;
 
-        public TrackView(TrackFlag flags)
+        public TrackView(string key, TrackFlag flags)
         {
+            Key = key;
             Flags = flags;
             style.height = 40f;
             style.flexShrink = 0;
             style.paddingTop = 5f;
             style.paddingBottom = 5f;
-            style.backgroundColor = new Color(65 / 255f, 65 / 255f, 65 / 255f, 0.5f);
+            style.backgroundColor = NormalBgColor;
             style.overflow = Overflow.Hidden;
             style.marginBottom = 2f;
 
@@ -64,6 +80,11 @@ namespace Timeline
             RegisterCallback<MouseDownEvent>(OnMouseDown);
             RegisterCallback<MouseMoveEvent>(OnMouseMove);
             RegisterCallback<MouseUpEvent>(OnMouseUp);
+        }
+
+        public void SetDragHighlight(bool highlighted)
+        {
+            style.backgroundColor = highlighted ? SelectedBgColor : NormalBgColor;
         }
 
         public void AddClip(string key, int startFrame, int length, Color color, string name)
@@ -294,7 +315,18 @@ namespace Timeline
 
             string key = HitTest(evt.localMousePosition.x, evt.localMousePosition.y);
             if (key == null)
+            {
+                // 点击空白区域：若 Track 可拖动则准备 Track 拖拽
+                if (TrackDragable)
+                {
+                    isTrackDragging = true;
+                    trackDragStarted = false;
+                    trackDragStartMouseY = evt.mousePosition.y;
+                    this.CaptureMouse();
+                    evt.StopPropagation();
+                }
                 return;
+            }
 
             // 无论是否可移动都触发选中
             if (selectedClipKey != key)
@@ -323,6 +355,32 @@ namespace Timeline
 
         private void OnMouseMove(MouseMoveEvent evt)
         {
+            // Track 拖拽
+            if (isTrackDragging)
+            {
+                float dy = evt.mousePosition.y - trackDragStartMouseY;
+                float trackHeight = localBound.height;
+
+                if (!trackDragStarted && Mathf.Abs(dy) > trackHeight + TrackDragVerticalThreshold)
+                {
+                    // 垂直方向已超出当前 Track 区域，触发 Track 拖拽开始
+                    trackDragStarted = true;
+                    SetDragHighlight(true);
+                    using var startEvt = TrackDragEvent.GetPooled(this, Key, TrackDragPhase.Start);
+                    SendEvent(startEvt);
+                }
+
+                if (trackDragStarted)
+                {
+                    // 将鼠标转换到父容器坐标系（trackContainer），加上自身的 layout.y
+                    float localY = this.WorldToLocal(evt.mousePosition).y + layout.y;
+                    using var dragEvt = TrackDragEvent.GetPooled(this, Key, TrackDragPhase.Drag, localY);
+                    SendEvent(dragEvt);
+                }
+                return;
+            }
+
+            // Clip 拖拽
             if (dragClipKey == null || (evt.pressedButtons & 1) == 0)
                 return;
 
@@ -349,6 +407,22 @@ namespace Timeline
 
             this.ReleaseMouse();
 
+            // Track 拖拽结束
+            if (isTrackDragging)
+            {
+                if (trackDragStarted)
+                {
+                    SetDragHighlight(false);
+                    float localY = this.WorldToLocal(evt.mousePosition).y + layout.y;
+                    using var endEvt = TrackDragEvent.GetPooled(this, Key, TrackDragPhase.End, localY);
+                    SendEvent(endEvt);
+                }
+                isTrackDragging = false;
+                trackDragStarted = false;
+                return;
+            }
+
+            // Clip 拖拽结束
             if (isDragging && dragClipKey != null && dragAccumulatedDelta != 0)
             {
                 // 拖拽结束时发送一次 ClipMoveEvent，携带累计帧偏移
