@@ -148,12 +148,12 @@ namespace PropertyEditor
             return null;
         }
 
-        public static PropertyElement CreateByUnityObject(UnityEngine.Object obj)
+        public static PropertyElement CreateByUnityObject(UnityEngine.Object obj, bool handleUndo = true)
         {
             var type = obj?.GetType();
             if (type == null)
                 return null;
-            var editor = new StructedPropertyElement(type);
+            var editor = new StructedPropertyElement(type, handleUndo:handleUndo);
             return editor;
         }
 

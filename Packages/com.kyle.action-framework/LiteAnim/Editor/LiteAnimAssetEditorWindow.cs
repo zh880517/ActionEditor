@@ -25,11 +25,7 @@ namespace LiteAnim.EditorView
             }
         }
 
-        private event System.Action OnChanged;
-
         private ObjectField assetField;
-        private ObjectField motionField;
-
         private MotionListView motionListView;
         private AssetPropertiesView assetPropertiesView;
         private MotionDetailView motionDetailView;
@@ -61,15 +57,13 @@ namespace LiteAnim.EditorView
 
         private void OnEnable()
         {
-            Undo.undoRedoPerformed += OnUndoRedoPerformed;
-            OnChanged += RefreshUI;
-            Refresh();
+            Undo.undoRedoPerformed += RefreshUI;
+            RefreshUI();
         }
 
         private void OnDisable()
         {
-            Undo.undoRedoPerformed -= OnUndoRedoPerformed;
-            OnChanged -= RefreshUI;
+            Undo.undoRedoPerformed -= RefreshUI;
         }
 
         private void CreateGUI()
@@ -82,49 +76,20 @@ namespace LiteAnim.EditorView
             RefreshUI();
         }
 
-        private void Refresh()
-        {
-            ClampSelection();
-            OnChanged?.Invoke();
-        }
-
         private void SetTarget(LiteAnimAsset asset)
         {
             if (target == asset)
             {
-                ClampSelection();
-                OnChanged?.Invoke();
                 return;
             }
-
+            Undo.RegisterCompleteObjectUndo(this, "open litanim asset");
             target = asset;
-            selectedMotionIndex = -1;
-            ClampSelection();
-            OnChanged?.Invoke();
-        }
-
-
-        private void ClampSelection()
-        {
-            int count = GetMotionCount();
-            if (count == 0)
-            {
-                selectedMotionIndex = -1;
-                return;
-            }
-            selectedMotionIndex = Mathf.Clamp(selectedMotionIndex, 0, count - 1);
-        }
-
-        private int GetMotionCount()
-        {
-            if (!target)
-                return 0;
-            return target.Motions.Count;
-        }
-
-        private void OnUndoRedoPerformed()
-        {
-            Refresh();
+            selectedMotionIndex = 0;
+            RefreshUI();
+            if (Target)
+                titleContent = new GUIContent($"LiteAnim Editor - {AssetDatabase.GetAssetPath(Target)}");
+            else
+                titleContent = new GUIContent("LiteAnim Editor");
         }
 
         private void CreateToolbar()
@@ -152,15 +117,6 @@ namespace LiteAnim.EditorView
                 text = "Select"
             };
             toolbar.Add(pingButton);
-
-            motionField = new ObjectField("Motion")
-            {
-                objectType = typeof(LiteAnimMotion),
-                allowSceneObjects = false
-            };
-            motionField.style.minWidth = 260;
-            toolbar.Add(motionField);
-
 
             rootVisualElement.Add(toolbar);
         }
@@ -236,7 +192,7 @@ namespace LiteAnim.EditorView
         }
         private void OnViewRefeshEvent(ViewRefeshEvent evt)
         {
-            Refresh();
+            RefreshUI();
         }
 
         private void OnMotionSelectChange(MotionSelectEvent evt)
@@ -244,7 +200,7 @@ namespace LiteAnim.EditorView
             if(selectedMotionIndex == evt.SelectedIndex)
                 return;
             selectedMotionIndex = evt.SelectedIndex;
-            Refresh();
+            RefreshUI();
         }
 
         private void RefreshUI()
@@ -252,17 +208,7 @@ namespace LiteAnim.EditorView
             assetField?.SetValueWithoutNotify(Target);
             assetPropertiesView?.Bind(Target);
             motionListView?.Refresh(Target, SelectedMotionIndex);
-            motionDetailView?.RefrshView(SelectedMotion);
-
-            if (Target)
-            {
-                titleContent = new GUIContent($"LiteAnim Editor - {AssetDatabase.GetAssetPath(Target)}");
-            }
-            else
-            {
-                titleContent = new GUIContent("LiteAnim Editor");
-            }
+            motionDetailView?.RefrshView(Target, SelectedMotion);
         }
-
     }
 }

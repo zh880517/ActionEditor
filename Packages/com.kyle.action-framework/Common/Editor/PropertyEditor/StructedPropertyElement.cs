@@ -66,7 +66,7 @@ namespace PropertyEditor
         }
         public bool ExpandedInParent => foldout != null;
 
-        public StructedPropertyElement(Type type, bool expandedInParent = false)
+        public StructedPropertyElement(Type type, bool expandedInParent = false, bool handleUndo = true)
         {
             SetExpandedInParent(expandedInParent);
             List<FieldInfo> fields = new List<FieldInfo>();
@@ -114,7 +114,7 @@ namespace PropertyEditor
             }
 
             RegisterCallback<PropertyValueChangedEvent>(OnPropertyValueChangedEvent);
-            if(type.IsSubclassOf(typeof(UnityEngine.Object)))
+            if(handleUndo && type.IsSubclassOf(typeof(UnityEngine.Object)))
             {
                 RegisterCallback<RegisterUndoEvent>(OnRegisterUndoEvent);
             }
@@ -126,9 +126,11 @@ namespace PropertyEditor
                 return;
             if(!expanded)
             {
-                foldout = new Foldout();
-                foldout.text = lable;
-                foldout.tooltip = toolTip;
+                foldout = new Foldout
+                {
+                    text = lable,
+                    tooltip = toolTip
+                };
                 Add(foldout);
 
                 foreach (var item in children)
@@ -234,7 +236,7 @@ namespace PropertyEditor
             evt.StopPropagation();
             if(value is UnityEngine.Object obj)
             {
-                UnityEditor.Undo.RegisterCompleteObjectUndo(obj, "Modify Property");
+                Undo.RegisterCompleteObjectUndo(obj, "Modify Property");
             }
             else
             {
@@ -258,7 +260,7 @@ namespace PropertyEditor
                 return;
             if (value is UnityEngine.Object obj)
             {
-                UnityEditor.Undo.RegisterCompleteObjectUndo(obj, evt.ActionName);
+                Undo.RegisterCompleteObjectUndo(obj, evt.ActionName);
                 evt.StopPropagation();
             }
         }

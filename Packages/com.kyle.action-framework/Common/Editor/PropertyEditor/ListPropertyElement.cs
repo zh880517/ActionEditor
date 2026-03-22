@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine.UIElements;
 
 namespace PropertyEditor
@@ -12,7 +13,7 @@ namespace PropertyEditor
         private readonly IList rawValue;
         private IList sourceList;
         private float labelWidth = LabelMinWidth;
-        public override bool ReadOnly { get => listView.enabledSelf; set => listView.SetEnabled(!value); }
+        public override bool ReadOnly { get => !listView.enabledSelf; set => listView.SetEnabled(!value); }
 
         public ListPropertyElement(System.Type elementType)
         {
@@ -74,6 +75,7 @@ namespace PropertyEditor
             rawValue.Clear();
             if (sourceList != null)
             {
+                children.Clear();
                 foreach (var item in sourceList)
                 {
                     rawValue.Add(item);
@@ -118,7 +120,14 @@ namespace PropertyEditor
         }
         private void OnRemoved(IEnumerable<int> indices)
         {
-            SyncFromListView();
+            indices = indices.OrderByDescending(i => i);
+            foreach (var item in indices)
+            {
+                sourceList.RemoveAt(item);
+            }
+            using var e = RegisterUndoEvent.GetPooled(this, "Modify Property");
+            SendEvent(e);
+            listView.RefreshItems();
         }
         private void IndexChanged(int oldIndex, int newIndex)
         {
@@ -130,6 +139,7 @@ namespace PropertyEditor
             using var e = RegisterUndoEvent.GetPooled(this, "Modify Property");
             SendEvent(e);
             CopyRawValueToList();
+            listView.RefreshItems();
         }
 
         private void CopyRawValueToList()
@@ -144,8 +154,15 @@ namespace PropertyEditor
                 }
             }
             sourceList.Clear();
-            foreach (var item in rawValue)
+            for (int i = 0; i < rawValue.Count; i++)
             {
+                var item = rawValue[i];
+
+                if (item == null && elementType.IsClass)
+                {
+                    item = System.Activator.CreateInstance(elementType);
+                    rawValue[i] = item;
+                }
                 sourceList.Add(item);
             }
             children.Sort((a, b) => a.Index.CompareTo(b.Index));

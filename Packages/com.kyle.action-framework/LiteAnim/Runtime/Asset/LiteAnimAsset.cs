@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 namespace LiteAnim
 {
-    [CreateAssetMenu(fileName = "NewMontageAsset", menuName = "Montage/MontageAsset")]
+    [CreateAssetMenu(fileName = "NewLiteAnimAsset", menuName = "LitAnim/LiteAnimAsset")]
     public class LiteAnimAsset : CollectableScriptableObject
     {
         public float DefaultFadeDuration = 0.17f;

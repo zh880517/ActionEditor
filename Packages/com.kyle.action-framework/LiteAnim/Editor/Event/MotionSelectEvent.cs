@@ -10,6 +10,7 @@ namespace LiteAnim.EditorView
         {
             var evt = EventBase<MotionSelectEvent>.GetPooled();
             evt.SelectedIndex = selectedIndex;
+            evt.bubbles = true;
             return evt;
         }
     }

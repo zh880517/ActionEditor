@@ -34,12 +34,22 @@ namespace LiteAnim.EditorView
                 }
                 return;
             }
-            if(propertyEditor == null)
+            if (propertyEditor == null)
             {
-                propertyEditor = PropertyElementFactory.CreateByUnityObject(asset) as StructedPropertyElement;
+                propertyEditor = PropertyElementFactory.CreateByUnityObject(asset, false) as StructedPropertyElement;
+                propertyEditor.RegisterCallback<RegisterUndoEvent>(OnRegisterUndoEvent);
                 scrollView.Add(propertyEditor);
             }
             propertyEditor.SetValue(asset);
+        }
+
+        private void OnRegisterUndoEvent(RegisterUndoEvent evt)
+        {
+            if (currentAsset != null)
+            {
+                LitAnimEditorUtil.RegisterUndo(currentAsset, evt.ActionName);
+                ViewRefeshEvent.Dispatch(this);
+            }
         }
     }
 }

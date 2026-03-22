@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine.UIElements;
 
 namespace PropertyEditor
@@ -12,7 +13,7 @@ namespace PropertyEditor
         private readonly IList rawValue;
         private System.Array sourceArray;
         private float labelWidth = LabelMinWidth;
-        public override bool ReadOnly { get => listView.enabledSelf; set => listView.SetEnabled(!value); }
+        public override bool ReadOnly { get => !listView.enabledSelf; set => listView.SetEnabled(!value); }
         public ArrayPropertyElement(System.Type elementType)
         {
             this.elementType = elementType;
@@ -114,7 +115,26 @@ namespace PropertyEditor
         }
         private void OnRemoved(IEnumerable<int> indices)
         {
-            SyncFromListView();
+            var removeSet = new HashSet<int>(indices);
+            var newArray = System.Array.CreateInstance(elementType, sourceArray.Length - removeSet.Count);
+            int dst = 0;
+            for (int src = 0; src < sourceArray.Length; src++)
+            {
+                if (!removeSet.Contains(src))
+                {
+                    newArray.SetValue(sourceArray.GetValue(src), dst);
+                    dst++;
+                }
+            }
+            sourceArray = newArray;
+            if (Field != null)
+            {
+                using var evt = PropertyValueChangedEvent.GetPooled(this, sourceArray, Field, Index);
+                SendEvent(evt);
+            }
+            using var e = RegisterUndoEvent.GetPooled(this, "Modify Property");
+            SendEvent(e);
+            listView.RefreshItems();
         }
         private void IndexChanged(int oldIndex, int newIndex)
         {
@@ -125,6 +145,7 @@ namespace PropertyEditor
             using var e = RegisterUndoEvent.GetPooled(this, "Modify Property");
             SendEvent(e);
             CopyRawValueToList();
+            listView.RefreshItems();
         }
         private void CopyRawValueToList()
         {

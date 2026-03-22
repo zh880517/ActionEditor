@@ -16,12 +16,11 @@ namespace LiteAnim.EditorView
             style.flexGrow = 1;
             style.flexShrink = 1;
 
-            var toolRow = new VisualElement();
-            toolRow.style.flexDirection = FlexDirection.Row;
-            toolRow.style.paddingLeft = 4;
-            toolRow.style.paddingRight = 4;
-            toolRow.style.paddingTop = 4;
-            toolRow.style.paddingBottom = 4;
+            scrollView.style.flexGrow = 1;
+            scrollView.style.flexShrink = 1;
+            scrollView.verticalScrollerVisibility = ScrollerVisibility.Auto;
+            scrollView.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
+            Add(scrollView);
 
             createButton.text = "创建Motion";
             createButton.clicked += () =>
@@ -32,14 +31,7 @@ namespace LiteAnim.EditorView
                     Select(target.Motions.Count - 1);
                 }
             };
-            toolRow.Add(createButton);
-            Add(toolRow);
-
-            scrollView.style.flexGrow = 1;
-            scrollView.style.flexShrink = 1;
-            scrollView.verticalScrollerVisibility = ScrollerVisibility.Auto;
-            scrollView.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
-            Add(scrollView);
+            Add(createButton);
         }
 
         public void Refresh(LiteAnimAsset asset, int selectedIndex)

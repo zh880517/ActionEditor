@@ -8,6 +8,7 @@ namespace LiteAnim.EditorView
         {
             var evt = EventBase<ViewRefeshEvent>.GetPooled();
             evt.target = target;
+            evt.bubbles = true;
             return evt;
         }
 
