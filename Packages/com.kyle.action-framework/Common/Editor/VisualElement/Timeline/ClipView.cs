@@ -5,26 +5,21 @@ namespace Timeline
 {
     public class ClipView : VisualElement
     {
-        public string Key { get; private set;}
+        public string Key { get; set;}
         public int StartFrame { get; set; }
         public int Length { get; set; }
 
         private readonly VisualElement colorBar;
         private readonly Label nameLabel;
 
-        public ClipView(string key, int startFrame, int length, Color color, string name)
+        public ClipView()
         {
-            Key = key;
-            StartFrame = startFrame;
-            Length = length;
-
             pickingMode = PickingMode.Ignore;
 
             style.position = Position.Absolute;
             style.top = 0;
             style.bottom = 0;
             style.overflow = Overflow.Hidden;
-            style.backgroundColor = color;
 
             // 底部色彩装饰条
             colorBar = new VisualElement();
@@ -34,11 +29,20 @@ namespace Timeline
             Add(colorBar);
 
             // 居中名称标签
-            nameLabel = new Label(name);
+            nameLabel = new Label();
             nameLabel.StretchToParentSize();
             nameLabel.pickingMode = PickingMode.Ignore;
             nameLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
             Add(nameLabel);
+        }
+
+        public void Init(string key, int startFrame, int length, Color color, string name)
+        {
+            Key = key;
+            StartFrame = startFrame;
+            Length = length;
+            style.backgroundColor = color;
+            nameLabel.text = name;
         }
 
         public void UpdateLayout(float left, float width)

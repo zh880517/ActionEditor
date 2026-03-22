@@ -10,7 +10,8 @@ namespace Timeline
     {
         None = 0,
         ClipMixable = 1 << 0,
-        ClipMovable = 1 << 1
+        ClipMovable = 1 << 1,
+        DisableClipPool = 1 << 2
     }
 
     public class TrackView : VisualElement
@@ -18,9 +19,13 @@ namespace Timeline
         public TrackFlag Flags { get; private set; }
         public bool ClipMixable => (Flags & TrackFlag.ClipMixable) != 0;
         public bool ClipMovable => (Flags & TrackFlag.ClipMovable) != 0;
+        public bool DisableClipPool => (Flags & TrackFlag.DisableClipPool) != 0;
 
         // 始终按 StartFrame 升序维护
         private readonly List<ClipView> clips = new List<ClipView>();
+
+        // ClipView 回收池
+        private readonly Stack<ClipView> clipPool = new Stack<ClipView>();
         private float scale = 1f;
         private float horizontalOffset;
         private float frameWidth = 10f;
@@ -73,7 +78,9 @@ namespace Timeline
                 ResortClip(existing);
                 return;
             }
-            var clip = new ClipView(key, startFrame, length, color, name);
+            var clip = (!DisableClipPool && clipPool.Count > 0) ? clipPool.Pop() : new ClipView();
+            clip.Init(key, startFrame, length, color, name);
+            clip.style.display = DisplayStyle.Flex;
             InsertClipSorted(clip);
             UpdateClipPositions(scale, horizontalOffset, frameWidth, headerInterval);
         }
@@ -82,13 +89,40 @@ namespace Timeline
         {
             int idx = FindClipIndex(key);
             if (idx < 0) return;
-            clips[idx].RemoveFromHierarchy();
+            var clip = clips[idx];
+            if (DisableClipPool)
+            {
+                clip.RemoveFromHierarchy();
+            }
+            else
+            {
+                clip.style.display = DisplayStyle.None;
+                clipPool.Push(clip);
+            }
             clips.RemoveAt(idx);
             if (ClipMixable)
                 UpdateOverlaps();
         }
 
-        public void DeselectAll()
+        public void RemoveAll()
+        {
+            foreach (var clip in clips)
+            {
+                if (DisableClipPool)
+                    clip.RemoveFromHierarchy();
+                else
+                {
+                    clip.style.display = DisplayStyle.None;
+                    clipPool.Push(clip);
+                }
+            }
+            clips.Clear();
+            selectedClipKey = null;
+            if (ClipMixable)
+                UpdateOverlaps();
+        }
+
+        public void UnSelectAll()
         {
             foreach (var clip in clips)
                 clip.SetSelected(false);
