@@ -172,7 +172,7 @@ public class PlayButtonsView : VisualElement
             frameField.SetValueWithoutNotify(frameIndex);
             if (notify)
             {
-                using (var evt = FrameIndexChangeEvent.GetPooled(frameIndex))
+                using (var evt = Timeline.FrameIndexChangeEvent.GetPooled(frameIndex))
                 {
                     evt.target = this;
                     SendEvent(evt);
@@ -189,7 +189,7 @@ public class PlayButtonsView : VisualElement
             frame = MaxFrame;
             frameField.SetValueWithoutNotify(frame);
         }
-        using (var newEvt = FrameIndexChangeEvent.GetPooled(frame))
+        using (var newEvt = Timeline.FrameIndexChangeEvent.GetPooled(frame))
         {
             newEvt.target = this;
             SendEvent(newEvt);

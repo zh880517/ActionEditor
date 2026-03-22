@@ -5,15 +5,15 @@ namespace ActionLine.EditorView
 {
     public class TrackScrollView : VisualElement
     {
-        private readonly TimelineTickMarkView timelineTickMarkView = new TimelineTickMarkView();
-        private readonly TimelineCursorView cursorView = new TimelineCursorView();
+        private readonly Timeline.TickMarkView timelineTickMarkView = new Timeline.TickMarkView();
+        private readonly Timeline.CursorView cursorView = new Timeline.CursorView();
         private readonly MinMaxSlider horizontalSlider = new MinMaxSlider();
         private readonly Scroller verticalSlider = new Scroller(0, 100, null, SliderDirection.Vertical);
         private readonly VisualElement trackClipArea = new VisualElement();
         private readonly TrackGroupView trackGroup = new TrackGroupView();
         private bool hasGeometryChange;
 
-        public TimelineTickMarkView TickMarkView => timelineTickMarkView;
+        public Timeline.TickMarkView TickMarkView => timelineTickMarkView;
         public TrackGroupView Group => trackGroup;
         private float viewScale = 1.0f;
         private float horizontalOffset = 0;

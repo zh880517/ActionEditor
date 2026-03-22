@@ -14,6 +14,7 @@ namespace LiteAnim.EditorView
         private readonly Toggle loopToggle = new Toggle("Loop");
         private readonly EnumField typeField = new EnumField("Type", MotionType.Clip);
         private readonly TextField paramField = new TextField("Param");
+        private MotionEditorView motionEditor;
 
         public MotionDetailView()
         {
@@ -48,6 +49,10 @@ namespace LiteAnim.EditorView
             loopToggle.style.display = hasTarget ? DisplayStyle.Flex : DisplayStyle.None;
             typeField.style.display = hasTarget ? DisplayStyle.Flex : DisplayStyle.None;
             paramField.style.display = DisplayStyle.None;
+            if(motionEditor != null)
+            {
+                motionEditor.style.display = hasTarget ? DisplayStyle.Flex : DisplayStyle.None;
+            }
 
             if (!hasTarget)
                 return;
@@ -59,6 +64,25 @@ namespace LiteAnim.EditorView
             paramField.SetValueWithoutNotify(motion.Param ?? string.Empty);
 
             paramField.style.display = motion.Type == MotionType.BlendTree ? DisplayStyle.Flex : DisplayStyle.None;
+            RefreshMotionEditorView();
+        }
+
+        private void RefreshMotionEditorView()
+        {
+            if(motionEditor == null || motionEditor.Type != target.Type)
+            {
+                motionEditor?.RemoveFromHierarchy();
+                switch(target.Type)
+                {
+                    case MotionType.Clip:
+                        motionEditor = new ClipMotionEditorView();
+                            break;
+                    case MotionType.BlendTree:
+                        motionEditor = new BlendTreeMotionEditorView();
+                        break;
+                }
+                Add(motionEditor);
+            }
         }
 
         private string FormatLayerIndex(int i)

@@ -49,7 +49,7 @@ namespace ActionLine.EditorView
                 view.AddManipulator(new ClipManipulator(this));
                 view.AddManipulator(new TrackTitleManipulator(this));
                 view.RegisterCallback<KeyDownEvent>(OnKeyDown);
-                view.RegisterCallback<FrameIndexChangeEvent>(FrameIndexChange);
+                view.RegisterCallback<Timeline.FrameIndexChangeEvent>(FrameIndexChange);
             }
             return view;
         }
@@ -262,7 +262,7 @@ namespace ActionLine.EditorView
             }
         }
 
-        private void FrameIndexChange(FrameIndexChangeEvent evt)
+        private void FrameIndexChange(Timeline.FrameIndexChangeEvent evt)
         {
             view.SetFrameIndex(evt.Frame);
             preview?.SetFrame(evt.Frame);

@@ -1,8 +1,9 @@
 ﻿using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
-
-public class TimelineTickMarkView : ImmediateModeElement
+namespace Timeline
+{
+public class TickMarkView : ImmediateModeElement
 {
     private float headerInterval = 0;
     private float horizontalOffset = 0;
@@ -12,7 +13,7 @@ public class TimelineTickMarkView : ImmediateModeElement
     private bool frameMode = true;
     private int frameCount = 0;
     private float titleHeight = 20;
-    private TimelineCursorView cursorView;
+    private CursorView cursorView;
     private bool isDragging = false;
 
     public float HeaderInterval
@@ -135,14 +136,14 @@ public class TimelineTickMarkView : ImmediateModeElement
         }
     }
 
-    public TimelineTickMarkView()
+    public TickMarkView()
     {
         RegisterCallback<MouseDownEvent>(OnMouseDown);
         RegisterCallback<MouseMoveEvent>(OnMouseMove);
         RegisterCallback<MouseUpEvent>(OnMouseUp);
     }
 
-    public void SetCursorView(TimelineCursorView cursor)
+    public void SetCursorView(CursorView cursor)
     {
         if (cursorView == cursor)
             return;
@@ -275,5 +276,8 @@ public class TimelineTickMarkView : ImmediateModeElement
             }
         }
     }
+
+}
+
 
 }

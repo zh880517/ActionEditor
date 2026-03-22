@@ -11,7 +11,7 @@ namespace Flow.EditorView
         [UnityEditor.Callbacks.OnOpenAsset(0)]
         internal static bool OnGraphOpened(int instanceID, int line)
         {
-            if (EditorUtility.InstanceIDToObject(instanceID) is FlowGraph asset)
+            if (EditorUtility.EntityIdToObject(instanceID) is FlowGraph asset)
             {
                 System.Type windowType = null;
                 var editorContext = FlowGraphEditorContext.GetContext(asset.GetType());
