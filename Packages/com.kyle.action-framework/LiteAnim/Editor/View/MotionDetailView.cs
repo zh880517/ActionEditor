@@ -83,6 +83,7 @@ namespace LiteAnim.EditorView
                 }
                 Add(motionEditor);
             }
+            motionEditor.Refresh(target);
         }
 
         private string FormatLayerIndex(int i)

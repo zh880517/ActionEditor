@@ -64,6 +64,7 @@ namespace PropertyEditor
                 }
             } 
         }
+        public object Value => value;
         public bool ExpandedInParent => foldout != null;
 
         public StructedPropertyElement(Type type, bool expandedInParent = false, bool handleUndo = true)
@@ -188,6 +189,13 @@ namespace PropertyEditor
                 }
             }
             return null;
+        }
+
+        public void SetFieldVisible(string name, bool visible)
+        {
+            var child = FindChild(name);
+            if(child != null)
+                child.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
         }
 
         public StrctedFieldElement FindChild(string name)

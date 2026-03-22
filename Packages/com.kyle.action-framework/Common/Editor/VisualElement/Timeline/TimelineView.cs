@@ -117,10 +117,15 @@ namespace Timeline
 
         public TrackView AddTrack(string key, TrackFlag flags)
         {
+            var existing = tracks.Find(t => t.Key == key);
+            if(existing != null)
+                return existing;
+
             if (trackDragable)
                 flags |= TrackFlag.TrackDragable;
             else
                 flags &= ~TrackFlag.TrackDragable;
+
             var track = new TrackView(key, flags);
             track.Index = tracks.Count;
             track.style.left = 0;
@@ -178,24 +183,29 @@ namespace Timeline
             horizontalSlider.value = new Vector2(x, x + (prev.y - prev.x));
         }
 
-        private void OnClipSelect(ClipSelectEvent evt)
+        public bool SelectClip(string clipKey)
         {
             // 遍历所有轨道按 key 查找 ClipView
             ClipView clip = null;
             foreach (var track in tracks)
             {
-                clip = track.FindClip(evt.ClipKey);
+                clip = track.FindClip(clipKey);
                 if (clip != null) break;
             }
             if (clip == null || currentSelected == clip)
             {
-                evt.StopPropagation();
-                return;
+                return false;
             }
             currentSelected?.SetSelected(false);
             currentSelected = clip;
             clip.SetSelected(true);
-            evt.StopPropagation();
+            return true;
+        }
+
+        private void OnClipSelect(ClipSelectEvent evt)
+        {
+            if(!SelectClip(evt.ClipKey))
+                evt.StopPropagation();
         }
 
         private void OnWheel(WheelEvent evt)
