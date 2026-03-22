@@ -35,6 +35,17 @@ Used by all other subsystems:
 - **DataVisit** (`Common/Editor/DataVisit/`): Type visitor pattern for serialization.
 - **Serialization** (`Common/Runtime/Serialization/`): Binary packing with 7-bit and raw-bit encoding. Unsafe code is enabled here.
 - **Attributes** (`Common/Runtime/Attribute/`): `[DisplayName]`, `[ReadOnly]`, `[ArraySize]`, etc. Drive both UI generation and runtime behavior.
+- **Timeline** (`Common/Editor/VisualElement/Timeline/`): Reusable UIToolkit timeline widget. Key files:
+  - `TimelineView` — 顶层容器，管理轨道、水平/垂直滚动、缩放
+  - `TrackView` — 单条轨道，持有有序 `List<ClipView>`（按 StartFrame 升序），统一处理鼠标事件（命中测试、拖拽、选中）
+  - `ClipView` — 纯显示元素，`PickingMode.Ignore`，不处理任何输入
+  - `OverlapDrawElement` — `ImmediateModeElement`，在 TrackView 坐标系内绘制重叠区域（对角线 + 半透明填充）
+  - `TickMarkView` / `CursorView` — 刻度栏与帧指针
+  - `Event/ClipMoveEvent` — Clip 拖拽结束时向上冒泡一次，携带 `ClipKey` 和累计帧偏移
+  - `Event/ClipSelectEvent` — Clip 被点击时向上冒泡，携带 `ClipKey`
+  - `Event/FrameIndexChangeEvent` — 点击刻度栏时向上冒泡，携带目标帧号
+  - `TrackFlag` 枚举控制轨道行为：`ClipMixable`（允许重叠）、`ClipMovable`（允许拖拽）
+  - 所有注释使用中文
 
 ## Key Patterns
 

@@ -1,4 +1,4 @@
-﻿using UnityEditor;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 namespace Timeline
@@ -181,7 +181,7 @@ public class TickMarkView : ImmediateModeElement
             return;
         if ((evt.pressedButtons & 1) == 0 && isDragging)
         {
-            //如果此时鼠标没有按下，则说明在区域外松开了鼠标
+            // 鼠标在区域外松开，结束拖拽
             isDragging = false;
             return;
         }
@@ -239,6 +239,7 @@ public class TickMarkView : ImmediateModeElement
         {
             if (frameCount > 0)
             {
+                // 绘制总帧范围背景色块和末尾边界线
                 var rect = new Rect(-finalHeaderOffset, titleHeight * 0.5f, frameCount * finalFrameWidth, titleHeight * 0.5f);
                 Color color = new Color32(65, 105, 255, 150);
                 Handles.DrawSolidRectangleWithOutline(rect, color, Color.clear);
@@ -258,6 +259,7 @@ public class TickMarkView : ImmediateModeElement
                 float x = frame * finalFrameWidth - finalHeaderOffset;
                 if (frame % step == 0)
                 {
+                    // 主刻度：白色全高线 + 帧号标签
                     using (new Handles.DrawingScope(Color.white))
                     {
                         Handles.DrawLine(new Vector2(x, 0), new Vector2(x, titleHeight));
@@ -268,6 +270,7 @@ public class TickMarkView : ImmediateModeElement
                 }
                 else if(frame % minStep == 0)
                 {
+                    // 次刻度：半步为中刻度，其余为小刻度
                     if (frame % halfStep == 0)
                         Handles.DrawLine(new Vector2(x, titleHeight), new Vector2(x, titleHeight * 0.5f));
                     else

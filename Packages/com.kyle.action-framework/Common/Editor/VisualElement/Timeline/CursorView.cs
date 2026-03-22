@@ -1,4 +1,4 @@
-﻿using UnityEditor;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 namespace Timeline
@@ -149,11 +149,12 @@ namespace Timeline
             float finalWidth = frameWidth * scale;
             float x = currentFrame * finalWidth + headerInterval - (horizontalOffset * scale);
             Vector2 size = contentRect.size;
-        
+
             Handles.DrawLine(new Vector2(x, 0), new Vector2(x, size.y));
             HandlesUtil.DrawTimelineHandle(new Vector2(x, 0), handlerWidth, titleHeight);
             if (showFrameRange)
             {
+                // 绘制帧范围的虚线边界和帧号标签
                 using (new Handles.DrawingScope(new Color(0, 0, 0, 0.5f)))
                 {
                     float startX = startFrame * finalWidth + headerInterval - (horizontalOffset * scale); ;
