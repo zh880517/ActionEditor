@@ -87,6 +87,15 @@ namespace Timeline
             style.backgroundColor = highlighted ? SelectedBgColor : NormalBgColor;
         }
 
+        private ClipView CrateClipView()
+        {
+            if (!DisableClipPool && clipPool.Count > 0)
+                return clipPool.Pop();
+            var clip = new ClipView();
+            Add(clip);
+            return clip;
+        }
+
         public void AddClip(string key, int startFrame, int length, Color color, string name)
         {
             var existing = FindClip(key);
@@ -99,7 +108,7 @@ namespace Timeline
                 ResortClip(existing);
                 return;
             }
-            var clip = (!DisableClipPool && clipPool.Count > 0) ? clipPool.Pop() : new ClipView();
+            var clip = CrateClipView();
             clip.Init(key, startFrame, length, color, name);
             clip.style.display = DisplayStyle.Flex;
             InsertClipSorted(clip);

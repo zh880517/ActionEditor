@@ -199,7 +199,7 @@ namespace LiteAnim.EditorView
                 clipPropertyEditor.style.display = DisplayStyle.None;
                 return;
             }
-
+            clipPropertyEditor.style.display = DisplayStyle.Flex;
             clipPropertyEditor.SetValue(motion.Clips[selectedIndex]);
             var mixIn = clipPropertyEditor.Find("MixIn");
             if(mixIn != null)
