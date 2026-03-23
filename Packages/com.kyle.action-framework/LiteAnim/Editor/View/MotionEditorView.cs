@@ -24,9 +24,9 @@ namespace LiteAnim.EditorView
             Add(scrollView);
 
             timelineView = new TimelineView(trackDragable: trackDragable);
-            timelineView.style.height = 80;
             timelineView.style.flexShrink = 0;
             timelineView.style.marginBottom = 4;
+            timelineView.AutoHeight = true;
             scrollView.Add(timelineView);
         }
 

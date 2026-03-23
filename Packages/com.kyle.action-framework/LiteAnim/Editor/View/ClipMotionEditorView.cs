@@ -21,6 +21,9 @@ namespace LiteAnim.EditorView
         // ---- Clip 属性面板 ----
         private readonly StructedPropertyElement clipPropertyEditor = new StructedPropertyElement(typeof(MotionClip), handleUndo: false);
 
+        // ---- ListView 使用的快照列表（与 motion.Clips 相互独立，用于安全 Undo） ----
+        private List<MotionClip> clipsSnapshot = new List<MotionClip>();
+
         public ClipMotionEditorView()
         {
             track = timelineView.AddTrack(TrackKey, TrackFlag.ClipMixable);// 允许融合，禁止拖动
@@ -80,7 +83,8 @@ namespace LiteAnim.EditorView
             if (motion == null)
             {
                 selectedIndex = -1;
-                clipListView.itemsSource = null;
+                clipsSnapshot = new List<MotionClip>();
+                clipListView.itemsSource = clipsSnapshot;
                 clipListView.Rebuild();
                 RefreshTimeline();
                 RefreshPropertyPanel();
@@ -111,7 +115,9 @@ namespace LiteAnim.EditorView
 
         private void RefreshListView()
         {
-            clipListView.itemsSource = motion?.Clips;
+            // itemsSource 始终指向快照，避免 ListView 直接修改 motion.Clips
+            clipsSnapshot = motion != null ? new List<MotionClip>(motion.Clips) : new List<MotionClip>();
+            clipListView.itemsSource = clipsSnapshot;
             clipListView.Rebuild();
 
             // 同步选中态（不触发回调）
@@ -262,12 +268,21 @@ namespace LiteAnim.EditorView
             RefreshPropertyPanel();
         }
 
+        private void CaptureClipsSnapshot()
+        {
+            if (motion != null)
+                clipsSnapshot = new List<MotionClip>(motion.Clips);
+        }
+
         private void OnListItemReordered(int from, int to)
         {
             if (motion == null) return;
 
-            // ListView 已经修改了 itemsSource（即 motion.Clips），在这里登记 Undo 并刷新
+            // 此时 clipsSnapshot 已被 ListView 排好序，而 motion.Clips 尚未改变。
+            // 先记录 Undo（记录的是操作前状态），再将快照结果 copy 回源数据。
             LitAnimEditorUtil.RegisterUndo(motion, "Reorder Motion Clips");
+            motion.Clips.Clear();
+            motion.Clips.AddRange(clipsSnapshot);
             motion.OnModify();
 
             // 修正选中索引

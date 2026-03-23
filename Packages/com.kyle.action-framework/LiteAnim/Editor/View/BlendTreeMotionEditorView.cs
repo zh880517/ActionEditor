@@ -104,6 +104,9 @@ namespace LiteAnim.EditorView
                 if(!trackKeys.Contains(key))
                     trackKeys.Add(key);
 
+                // 同步显示顺序与 motion.Clips 顺序一致
+                timelineView.SetTrackIndex(key, i);
+
                 int len = clip.Asset != null ? ClipLengthInFrames(clip) : defaultLen;
                 if (len <= 0) len = defaultLen;
 

@@ -54,6 +54,9 @@ namespace Timeline
         // 垂直方向超出当前 Track 高度后才触发 Track 拖拽
         private const float TrackDragVerticalThreshold = 5f;
 
+        // 轨道选中状态
+        private bool isTrackSelected;
+
         private static readonly Color NormalBgColor = new Color(65 / 255f, 65 / 255f, 65 / 255f, 0.5f);
         private static readonly Color SelectedBgColor = new Color(80 / 255f, 120 / 255f, 180 / 255f, 0.6f);
 
@@ -82,9 +85,14 @@ namespace Timeline
             RegisterCallback<MouseUpEvent>(OnMouseUp);
         }
 
-        public void SetDragHighlight(bool highlighted)
+        /// <summary>
+        /// 由 TimelineView 调用，设置轨道的选中（高亮）状态
+        /// </summary>
+        public void SetTrackSelected(bool selected)
         {
-            style.backgroundColor = highlighted ? SelectedBgColor : NormalBgColor;
+            isTrackSelected = selected;
+            if (!trackDragStarted)
+                style.backgroundColor = selected ? SelectedBgColor : NormalBgColor;
         }
 
         private ClipView CrateClipView()
@@ -325,13 +333,18 @@ namespace Timeline
             string key = HitTest(evt.localMousePosition.x, evt.localMousePosition.y);
             if (key == null)
             {
-                // 点击空白区域：若 Track 可拖动则准备 Track 拖拽
+                // 点击空白区域：若 Track 可拖动则准备 Track 拖拽，并立即选中该轨道
                 if (TrackDragable)
                 {
                     isTrackDragging = true;
                     trackDragStarted = false;
                     trackDragStartMouseY = evt.mousePosition.y;
                     this.CaptureMouse();
+
+                    // 发送轨道选中事件，由 TimelineView 统一管理选中态
+                    using var selEvt = TrackSelectEvent.GetPooled(this, Key);
+                    SendEvent(selEvt);
+
                     evt.StopPropagation();
                 }
                 return;
@@ -368,13 +381,11 @@ namespace Timeline
             if (isTrackDragging)
             {
                 float dy = evt.mousePosition.y - trackDragStartMouseY;
-                float trackHeight = localBound.height;
 
-                if (!trackDragStarted && Mathf.Abs(dy) > trackHeight + TrackDragVerticalThreshold)
+                if (!trackDragStarted && Mathf.Abs(dy) > TrackDragVerticalThreshold)
                 {
-                    // 垂直方向已超出当前 Track 区域，触发 Track 拖拽开始
+                    // 垂直方向移动超过阈值，触发 Track 拖拽开始
                     trackDragStarted = true;
-                    SetDragHighlight(true);
                     using var startEvt = TrackDragEvent.GetPooled(this, Key, TrackDragPhase.Start);
                     SendEvent(startEvt);
                 }
@@ -421,7 +432,6 @@ namespace Timeline
             {
                 if (trackDragStarted)
                 {
-                    SetDragHighlight(false);
                     float localY = this.WorldToLocal(evt.mousePosition).y + layout.y;
                     using var endEvt = TrackDragEvent.GetPooled(this, Key, TrackDragPhase.End, localY);
                     SendEvent(endEvt);

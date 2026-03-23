@@ -22,11 +22,14 @@ namespace Timeline
         private readonly CursorView cursorView = new CursorView();
         private readonly VisualElement trackClipArea = new VisualElement();
         private readonly VisualElement trackContainer = new VisualElement();
+        private readonly InsertIndicatorElement insertIndicator = new InsertIndicatorElement();
         private readonly MinMaxSlider horizontalSlider = new MinMaxSlider();
         private readonly Scroller verticalSlider;
+        private readonly VisualElement center;
 
         private readonly List<TrackView> tracks = new List<TrackView>();
         private ClipView currentSelected;
+        private TrackView selectedTrack;
 
         private float scale = 1f;
         private float horizontalOffset;
@@ -34,7 +37,29 @@ namespace Timeline
         private int frameCount;
         private bool hasGeometry;
 
+        // 高度自适应：开启后根据轨道数自动调整自身高度，并隐藏垂直滚动条
+        private bool autoHeight;
+        public bool AutoHeight
+        {
+            get => autoHeight;
+            set
+            {
+                if (autoHeight == value) return;
+                autoHeight = value;
+                ApplyAutoHeightLayout();
+                if (autoHeight)
+                    RefreshAutoHeight();
+            }
+        }
+
         public int CurrentFrame => cursorView.CurrentFrame;
+
+        // 根据轨道数量计算 TimelineView 的推荐高度（至少保留 1 条轨道）
+        public float CalcPreferredHeight(int trackCount)
+        {
+            int count = Mathf.Max(1, trackCount);
+            return TitleBarHeight + 20f + count * (40f + 2f);
+        }
 
         // 是否允许拖拽调整 Track 顺序
         private readonly bool trackDragable;
@@ -68,7 +93,7 @@ namespace Timeline
             Add(horizontalSlider);
 
             // 中央区域 — 占满除滚动条槽以外的空间
-            var center = new VisualElement();
+            center = new VisualElement();
             center.style.position = Position.Absolute;
             center.style.left = 0;
             center.style.right = 20;
@@ -105,6 +130,9 @@ namespace Timeline
             trackContainer.pickingMode = PickingMode.Ignore;
             trackClipArea.Add(trackContainer);
 
+            // 插入提示线 — 渲染在轨道上方
+            trackClipArea.Add(insertIndicator);
+
             // CursorView — 最后添加，渲染在所有 Clip 上方
             cursorView.StretchToParentSize();
             cursorView.TitleHeight = TitleBarHeight;
@@ -113,6 +141,7 @@ namespace Timeline
             // 监听从轨道冒泡上来的事件
             RegisterCallback<ClipSelectEvent>(OnClipSelect);
             RegisterCallback<TrackDragEvent>(OnTrackDrag);
+            RegisterCallback<TrackSelectEvent>(OnTrackSelect);
         }
 
         public TrackView AddTrack(string key, TrackFlag flags)
@@ -132,9 +161,38 @@ namespace Timeline
             track.style.right = 0;
             tracks.Add(track);
             trackContainer.Add(track);
-            if (hasGeometry)
+            if (autoHeight)
+                RefreshAutoHeight();
+            else if (hasGeometry)
                 UpdateVerticalSliderRange();
             return track;
+        }
+
+        /// <summary>
+        /// 设置指定 Track 在显示列表中的位置索引，同步更新 VisualElement 层级
+        /// </summary>
+        public void SetTrackIndex(string key, int newIndex)
+        {
+            int srcIdx = tracks.FindIndex(t => t.Key == key);
+            if (srcIdx < 0) return;
+
+            newIndex = Mathf.Clamp(newIndex, 0, tracks.Count - 1);
+            if (srcIdx == newIndex) return;
+
+            var track = tracks[srcIdx];
+            tracks.RemoveAt(srcIdx);
+            tracks.Insert(newIndex, track);
+
+            // 同步 VisualElement 层级
+            track.RemoveFromHierarchy();
+            if (newIndex >= trackContainer.childCount)
+                trackContainer.Add(track);
+            else
+                trackContainer.Insert(newIndex, track);
+
+            // 刷新所有 Index
+            for (int i = 0; i < tracks.Count; i++)
+                tracks[i].Index = i;
         }
 
         public void RemoveTrack(string key)
@@ -144,7 +202,9 @@ namespace Timeline
                 return;
             tracks[index].RemoveFromHierarchy();
             tracks.RemoveAt(index);
-            if (hasGeometry)
+            if (autoHeight)
+                RefreshAutoHeight();
+            else if (hasGeometry)
                 UpdateVerticalSliderRange();
         }
 
@@ -206,6 +266,33 @@ namespace Timeline
         {
             if(!SelectClip(evt.ClipKey))
                 evt.StopPropagation();
+
+            // 选中 Clip 时取消 Track 选中（互斥）
+            if (selectedTrack != null)
+            {
+                selectedTrack.SetTrackSelected(false);
+                selectedTrack = null;
+            }
+        }
+
+        private void OnTrackSelect(TrackSelectEvent evt)
+        {
+            evt.StopPropagation();
+            var newTrack = tracks.Find(t => t.Key == evt.TrackKey);
+            if (newTrack == null || newTrack == selectedTrack)
+                return;
+
+            // 选中 Track 时取消 Clip 选中（互斥）
+            if (currentSelected != null)
+            {
+                currentSelected.SetSelected(false);
+                currentSelected = null;
+            }
+
+            // 取消旧 Track 选中
+            selectedTrack?.SetTrackSelected(false);
+            selectedTrack = newTrack;
+            selectedTrack.SetTrackSelected(true);
         }
 
         private void OnWheel(WheelEvent evt)
@@ -311,54 +398,47 @@ namespace Timeline
 
             if (evt.Phase == TrackDragPhase.Drag)
             {
-                // localY 是鼠标在 trackContainer 坐标系中的 y 值
-                // 根据 y 计算插入位置（在哪个 Track 之前插入）
                 int insertIdx = ComputeTrackInsertIndex(evt.LocalY);
                 if (insertIdx == trackDragInsertIndex)
                     return;
 
                 trackDragInsertIndex = insertIdx;
 
-                // 实时调整 Track 在 trackContainer 中的顺序（视觉预览）
-                ApplyTrackReorder(trackDragKey, trackDragInsertIndex, preview: true);
+                // 只显示提示线，不实际移动 Track
+                float lineY = ComputeInsertLineY(insertIdx);
+                insertIndicator.Show(lineY - verticalOffset);
                 return;
             }
 
             // End
             if (evt.Phase == TrackDragPhase.End)
             {
+                insertIndicator.Hide();
+
                 int insertIdx = ComputeTrackInsertIndex(evt.LocalY);
 
-                // 取消被拖拽 Track 的高亮（已在 TrackView.OnMouseUp 中还原，此处保险起见）
-                var dragTrack = tracks.Find(t => t.Key == trackDragKey);
-                dragTrack?.SetDragHighlight(false);
-
-                // 确认重排并更新 Index
-                ApplyTrackReorder(trackDragKey, insertIdx, preview: false);
-
-                // 检查顺序是否真的变化了
-                bool changed = false;
-                for (int i = 0; i < tracks.Count; i++)
+                // 计算假设重排后的 key 顺序，发送事件由使用方决定是否刷新
+                int srcIdx = tracks.FindIndex(t => t.Key == trackDragKey);
+                if (srcIdx >= 0)
                 {
-                    if (tracks[i].Index != i)
+                    int destIdx = insertIdx;
+                    if (destIdx > srcIdx) destIdx--;
+                    destIdx = Mathf.Clamp(destIdx, 0, tracks.Count - 1);
+
+                    if (srcIdx != destIdx)
                     {
-                        changed = true;
-                        break;
+                        var orderedKeys = new List<string>(tracks.Count);
+                        foreach (var t in tracks)
+                            orderedKeys.Add(t.Key);
+
+                        // 模拟重排
+                        var key = orderedKeys[srcIdx];
+                        orderedKeys.RemoveAt(srcIdx);
+                        orderedKeys.Insert(destIdx, key);
+
+                        using var changeEvt = TrackIndexChangedEvent.GetPooled(this, orderedKeys);
+                        SendEvent(changeEvt);
                     }
-                }
-
-                if (changed)
-                {
-                    // 刷新所有 Index
-                    for (int i = 0; i < tracks.Count; i++)
-                        tracks[i].Index = i;
-
-                    var orderedKeys = new List<string>(tracks.Count);
-                    foreach (var t in tracks)
-                        orderedKeys.Add(t.Key);
-
-                    using var changeEvt = TrackIndexChangedEvent.GetPooled(this, orderedKeys);
-                    SendEvent(changeEvt);
                 }
 
                 trackDragKey = null;
@@ -382,35 +462,37 @@ namespace Timeline
             return tracks.Count;
         }
 
-        // 将 trackDragKey 对应的 Track 移动到 insertIndex 处
-        // preview = true 时只移动 VisualElement，不更新 tracks 列表
-        // preview = false 时同时更新 tracks 列表
-        private void ApplyTrackReorder(string key, int insertIndex, bool preview)
+        // 根据 autoHeight 切换垂直滚动条可见性和 center/horizontalSlider 的右侧边距
+        private void ApplyAutoHeightLayout()
         {
-            int srcIdx = tracks.FindIndex(t => t.Key == key);
-            if (srcIdx < 0) return;
+            float rightMargin = autoHeight ? 0f : 20f;
+            verticalSlider.style.display = autoHeight ? DisplayStyle.None : DisplayStyle.Flex;
+            center.style.right = rightMargin;
+            horizontalSlider.style.right = rightMargin;
+        }
 
-            // 计算目标在移除源之后的实际插入位置
-            int destIdx = insertIndex;
-            if (destIdx > srcIdx) destIdx--;
-            destIdx = Mathf.Clamp(destIdx, 0, tracks.Count - 1);
+        // 根据当前轨道数自动设置自身高度，并重置垂直偏移
+        private void RefreshAutoHeight()
+        {
+            style.height = CalcPreferredHeight(tracks.Count);
+            // 自适应模式下不需要垂直滚动
+            verticalOffset = 0;
+            trackContainer.style.top = 0;
+        }
 
-            if (srcIdx == destIdx) return;
+        // 根据插入索引计算提示线在 trackContainer 坐标系中的 Y 位置
+        private float ComputeInsertLineY(int insertIndex)
+        {
+            if (tracks.Count == 0 || insertIndex <= 0)
+                return 0f;
 
-            var track = tracks[srcIdx];
-
-            // 更新 VisualElement 顺序
-            track.RemoveFromHierarchy();
-            if (destIdx >= trackContainer.childCount)
-                trackContainer.Add(track);
-            else
-                trackContainer.Insert(destIdx, track);
-
-            if (!preview)
+            if (insertIndex >= tracks.Count)
             {
-                tracks.RemoveAt(srcIdx);
-                tracks.Insert(destIdx, track);
+                var last = tracks[tracks.Count - 1];
+                return last.layout.y + last.layout.height + 2f; // 2f = marginBottom
             }
+
+            return tracks[insertIndex].layout.y;
         }
     }
 }

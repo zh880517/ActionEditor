@@ -19,7 +19,7 @@ namespace LiteAnim
         public float EndOffset;//ClipMotion使用，Asset的结束偏移时间，单位秒
         public float Speed;//ClipMotion使用，播放速度
         public float Weight;// BlendTree使用，权重值
-        [Range(0, 1)]
+        [FloatRange(0, 1)]
         public float MixIn;// ClipMotion使用, 与上一个片段的混合时间百分比 混合时间 = MixIn * Length
         public readonly float GetLength()
         {

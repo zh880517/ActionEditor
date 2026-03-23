@@ -34,6 +34,7 @@ namespace Timeline
             nameLabel.pickingMode = PickingMode.Ignore;
             nameLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
             Add(nameLabel);
+            style.backgroundColor = new Color(0.5f, 0.5f, 0.5f, 0.4f);
         }
 
         public void Init(string key, int startFrame, int length, Color color, string name)
@@ -41,7 +42,7 @@ namespace Timeline
             Key = key;
             StartFrame = startFrame;
             Length = length;
-            style.backgroundColor = color;
+            colorBar.style.backgroundColor = color;
             nameLabel.text = name;
         }
 
