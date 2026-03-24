@@ -26,6 +26,8 @@ namespace LiteAnim.EditorView
         }
 
         private ObjectField assetField;
+        private ObjectField previewModelField;
+        private ToolbarToggle previewToggle;
         private MotionListView motionListView;
         private AssetPropertiesView assetPropertiesView;
         private MotionDetailView motionDetailView;
@@ -118,6 +120,23 @@ namespace LiteAnim.EditorView
             };
             toolbar.Add(pingButton);
 
+            previewModelField = new ObjectField("预览模型")
+            {
+                objectType = typeof(GameObject),
+            };
+            previewModelField.RegisterValueChangedCallback(evt =>
+            {
+                LiteAnimPreviewSetting.instance.AddBind(Target, evt.newValue as GameObject);
+            });
+            toolbar.Add(previewModelField);
+
+            previewToggle = new ToolbarToggle { text = "在场景中预览" };
+            previewToggle.RegisterValueChangedCallback(evt =>
+            {
+                LiteAnimPreviewSetting.instance.SetEnablePreview(evt.newValue);
+            });
+            toolbar.Add(previewToggle);
+
             rootVisualElement.Add(toolbar);
         }
 
@@ -206,6 +225,12 @@ namespace LiteAnim.EditorView
         private void RefreshUI()
         {
             assetField?.SetValueWithoutNotify(Target);
+            if (previewModelField != null)
+            {
+                previewModelField.SetValueWithoutNotify(Target ? LiteAnimPreviewSetting.instance.GetBindTarget(Target) : null);
+                previewModelField.SetEnabled(target != null);
+            }
+            previewToggle?.SetValueWithoutNotify(LiteAnimPreviewSetting.instance.EnablePreview);
             assetPropertiesView?.Bind(Target);
             motionListView?.Refresh(Target, SelectedMotionIndex);
             motionDetailView?.RefrshView(Target, SelectedMotion);
