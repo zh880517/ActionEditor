@@ -14,6 +14,7 @@ namespace LiteAnim.EditorView
         private int selectedMotionIndex = -1;
         [SerializeField]
         private LiteAnimPreview preview;
+
         public LiteAnimAsset Target => target;
         public int SelectedMotionIndex => selectedMotionIndex;
         public LiteAnimMotion SelectedMotion
@@ -139,7 +140,9 @@ namespace LiteAnim.EditorView
             };
             previewModelField.RegisterValueChangedCallback(evt =>
             {
-                LiteAnimPreviewSetting.instance.AddBind(Target, evt.newValue as GameObject);
+                var prefab = evt.newValue as GameObject;
+                LiteAnimPreviewSetting.instance.AddBind(Target, prefab);
+                preview?.OnPreviewChange(prefab, LiteAnimPreviewSetting.instance.EnablePreview);
             });
             toolbar.Add(previewModelField);
 
@@ -147,6 +150,8 @@ namespace LiteAnim.EditorView
             previewToggle.RegisterValueChangedCallback(evt =>
             {
                 LiteAnimPreviewSetting.instance.SetEnablePreview(evt.newValue);
+                var prefab = Target ? LiteAnimPreviewSetting.instance.GetBindTarget(Target) : null;
+                preview?.OnPreviewChange(prefab, evt.newValue);
             });
             toolbar.Add(previewToggle);
 
@@ -238,12 +243,19 @@ namespace LiteAnim.EditorView
         private void RefreshUI()
         {
             assetField?.SetValueWithoutNotify(Target);
+            var prefab = Target ? LiteAnimPreviewSetting.instance.GetBindTarget(Target) : null;
             if (previewModelField != null)
             {
-                previewModelField.SetValueWithoutNotify(Target ? LiteAnimPreviewSetting.instance.GetBindTarget(Target) : null);
+
+                previewModelField.SetValueWithoutNotify(prefab);
                 previewModelField.SetEnabled(target != null);
             }
-            previewToggle?.SetValueWithoutNotify(LiteAnimPreviewSetting.instance.EnablePreview);
+            if(previewToggle != null)
+            {
+                previewToggle.SetValueWithoutNotify(LiteAnimPreviewSetting.instance.EnablePreview);
+                previewToggle.style.display = prefab ? DisplayStyle.Flex : DisplayStyle.None;
+            }
+            preview.OnPreviewChange(prefab, LiteAnimPreviewSetting.instance.EnablePreview);
             assetPropertiesView?.Bind(Target);
             motionListView?.Refresh(Target, SelectedMotionIndex);
             motionDetailView?.RefrshView(Target, SelectedMotion);
