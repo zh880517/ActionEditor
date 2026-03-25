@@ -157,14 +157,14 @@ namespace LiteAnim.EditorView
                     continue;
 
                 // MixIn：第一个有效 Clip 的 MixIn 不生效
-                int mixFrames = cursor == 0 ? 0 : Mathf.RoundToInt(clip.MixIn * len);
+                int mixFrames = cursor == 0 ? 0 : Mathf.RoundToInt(clip.MixIn * clip.GetLength() * FrameRate);
                 int startFrame = Mathf.Max(0, cursor - mixFrames);
 
                 track.AddClip(clip.GUID, startFrame, len, GetClipColor(i), clip.Asset.name);
-                cursor += len;
+                cursor += (len - mixFrames);
             }
 
-            timelineView.SetFrameCount(Mathf.Max(60, cursor + 10));
+            SetValidFrameCount(cursor);
 
             // 同步 Timeline 选中态
             SyncTimelineSelection();
@@ -222,7 +222,17 @@ namespace LiteAnim.EditorView
             LitAnimEditorUtil.RegisterUndo(motion, "clip property change");
             motion.Clips[selectedIndex] = (MotionClip)clipPropertyEditor.Value;
             motion.OnModify();
-
+            if(selectedIndex > 0)
+            {
+                var pre = motion.Clips[selectedIndex - 1];
+                var select = motion.Clips[selectedIndex];
+                if(select.MixIn * select.GetLength() > pre.GetLength())
+                {
+                    select.MixIn = pre.GetLength() / select.GetLength();
+                    motion.Clips[selectedIndex] = select;
+                    RefreshPropertyPanel();
+                }
+            }
             // 刷新 Timeline 和列表（Clip Asset 或时长可能变化）
             RefreshListView();
             RefreshTimeline();
@@ -266,12 +276,6 @@ namespace LiteAnim.EditorView
             selectedIndex = newIndex;
             SyncTimelineSelection();
             RefreshPropertyPanel();
-        }
-
-        private void CaptureClipsSnapshot()
-        {
-            if (motion != null)
-                clipsSnapshot = new List<MotionClip>(motion.Clips);
         }
 
         private void OnListItemReordered(int from, int to)

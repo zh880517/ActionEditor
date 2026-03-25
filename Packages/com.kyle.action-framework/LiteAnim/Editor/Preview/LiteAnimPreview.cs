@@ -3,8 +3,7 @@ using UnityEngine.Playables;
 
 namespace LiteAnim.EditorView
 {
-    [System.Serializable]
-    public class LiteAnimPreview
+    public class LiteAnimPreview : ScriptableObject
     {
         public GameObject ModelInScen;
         public Animator Animator;

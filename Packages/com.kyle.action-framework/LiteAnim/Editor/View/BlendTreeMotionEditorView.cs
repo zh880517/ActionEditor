@@ -88,7 +88,7 @@ namespace LiteAnim.EditorView
             }
             if (motion == null || motion.Clips.Count == 0)
             {
-                timelineView.SetFrameCount(60);
+                SetValidFrameCount(60);
                 timelineView.SetCurrentFrame(0);
                 return;
             }
@@ -115,7 +115,7 @@ namespace LiteAnim.EditorView
                 track.AddClip(clip.GUID, 0, len, GetClipColor(i), label);
             }
 
-            timelineView.SetFrameCount(Mathf.Max(60, ComputeMaxFrameLength() + 10));
+            SetValidFrameCount(ComputeMaxFrameLength());
             SyncTimelineSelection();
         }
 
@@ -135,12 +135,14 @@ namespace LiteAnim.EditorView
 
         private int ComputeMaxFrameLength()
         {
-            int defaultLen = ComputeDefaultClipFrameLength();
             int max = 0;
             foreach (var clip in motion.Clips)
             {
-                int len = clip.Asset != null ? ClipLengthInFrames(clip) : defaultLen;
-                if (len > max) max = len;
+                if (!clip.Asset)
+                    continue;
+
+                int len = ClipLengthInFrames(clip);
+                if (len < max || max == 0) max = len;
             }
             return max;
         }

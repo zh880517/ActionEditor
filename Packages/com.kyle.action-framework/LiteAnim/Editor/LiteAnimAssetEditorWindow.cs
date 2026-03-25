@@ -12,7 +12,8 @@ namespace LiteAnim.EditorView
         private LiteAnimAsset target;
         [SerializeField]
         private int selectedMotionIndex = -1;
-
+        [SerializeField]
+        private LiteAnimPreview preview;
         public LiteAnimAsset Target => target;
         public int SelectedMotionIndex => selectedMotionIndex;
         public LiteAnimMotion SelectedMotion
@@ -55,6 +56,18 @@ namespace LiteAnim.EditorView
                 return true;
             }
             return false;
+        }
+
+        private void Awake()
+        {
+            preview = CreateInstance<LiteAnimPreview>();
+            preview.hideFlags = HideFlags.HideAndDontSave;
+        }
+
+        private void OnDestroy()
+        {
+            if (preview)
+                DestroyImmediate(preview);
         }
 
         private void OnEnable()
