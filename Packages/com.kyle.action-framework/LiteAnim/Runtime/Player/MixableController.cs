@@ -70,7 +70,7 @@ namespace LiteAnim
                     To = state,
                     FromIndex = last.InputIndex,
                     ToIndex = index,
-                    FadeDuration = asset.DefaultFadeDuration,
+                    FadeDuration = asset.GetFadeDuration(last.State.Motion, state.Motion),
                 };
                 transitions.Add(tran);
             }

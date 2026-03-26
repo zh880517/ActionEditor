@@ -18,6 +18,13 @@ namespace LiteAnim.EditorView
         private AnimationMixerPlayable rootMixer;
         private Dictionary<string, float> animParams = new Dictionary<string, float>();
 
+        // ---- 融合预览 ----
+        private MotionState transFromState;
+        private MotionState transToState;
+        private LiteAnimMotion transFromMotion;
+        private LiteAnimMotion transToMotion;
+        private float transFadeDuration;
+
         public void OnPreviewChange(GameObject prefab, bool enable)
         {
             if((currentPrefab != prefab || !enable) && ModelInScen)
@@ -94,8 +101,105 @@ namespace LiteAnim.EditorView
             currentState?.Destroy();
             currentState = null;
             currentMotion = null;
+            transFromState?.Destroy();
+            transFromState = null;
+            transToState?.Destroy();
+            transToState = null;
+            transFromMotion = null;
+            transToMotion = null;
             if (playableGraph.IsValid())
                 playableGraph.Destroy();
+        }
+
+        /// <summary>
+        /// 预览两个 Motion 之间的融合过渡
+        /// time 从 0 开始，当 time 超过 fromMotion 长度 - fadeDuration 时开始融合
+        /// </summary>
+        public void EvaluateTransition(LiteAnimMotion from, LiteAnimMotion to, float fadeDuration, float time)
+        {
+            if (!ModelInScen || !Animator)
+                return;
+            if (!from || !from.IsValid() || !to || !to.IsValid())
+            {
+                DestroyPreviewState();
+                return;
+            }
+
+            // 重建: Motion 变更或资源被修改
+            if (transFromMotion != from || transToMotion != to
+                || transFromState == null || transToState == null
+                || transFromState.IsChanged || transToState.IsChanged
+                || !Mathf.Approximately(transFadeDuration, fadeDuration))
+            {
+                RebuildTransitionGraph(from, to, fadeDuration);
+            }
+
+            if (transFromState == null || transToState == null)
+                return;
+
+            float fromLen = from.GetLength();
+            float fadeStart = Mathf.Max(0, fromLen - fadeDuration);
+
+            // From 动画时间
+            float fromTime = Mathf.Clamp(time, 0, fromLen);
+            transFromState.Evaluate(fromTime);
+
+            // To 动画时间（从融合开始计算）
+            float toTime = Mathf.Max(0, time - fadeStart);
+            transToState.Evaluate(toTime);
+
+            // 计算融合权重
+            float weight;
+            if (time <= fadeStart)
+                weight = 0;
+            else if (fadeDuration > 0)
+                weight = Mathf.Clamp01((time - fadeStart) / fadeDuration);
+            else
+                weight = time >= fadeStart ? 1f : 0f;
+
+            rootMixer.SetInputWeight(0, 1f - weight);
+            rootMixer.SetInputWeight(1, weight);
+
+            playableGraph.Evaluate();
+            SceneView.RepaintAll();
+        }
+
+        private void RebuildTransitionGraph(LiteAnimMotion from, LiteAnimMotion to, float fadeDuration)
+        {
+            DestroyPreviewState();
+            transFromMotion = from;
+            transToMotion = to;
+            transFadeDuration = fadeDuration;
+
+            transFromState = LiteAnimUtil.CreateState(from);
+            transToState = LiteAnimUtil.CreateState(to);
+            if (transFromState == null || transToState == null)
+            {
+                transFromState?.Destroy();
+                transToState?.Destroy();
+                transFromState = null;
+                transToState = null;
+                return;
+            }
+
+            transFromState.Player = this;
+            transFromState.Motion = from;
+            transToState.Player = this;
+            transToState.Motion = to;
+
+            playableGraph = PlayableGraph.Create("LiteAnimTransitionPreview");
+            playableGraph.SetTimeUpdateMode(DirectorUpdateMode.Manual);
+
+            var output = AnimationPlayableOutput.Create(playableGraph, "TransitionPreview", Animator);
+            rootMixer = AnimationMixerPlayable.Create(playableGraph, 2);
+            output.SetSourcePlayable(rootMixer);
+
+            transFromState.Create(playableGraph);
+            transToState.Create(playableGraph);
+            transFromState.Connect(rootMixer, 0);
+            transToState.Connect(rootMixer, 1);
+            rootMixer.SetInputWeight(0, 1f);
+            rootMixer.SetInputWeight(1, 0f);
         }
 
         private void OnDisable()

@@ -101,7 +101,7 @@ namespace LiteAnim
                     FromIndex = 0,
                     ToIndex = 1,
                     FadeTime = 0,
-                    FadeDuration = asset.DefaultFadeDuration
+                    FadeDuration = asset.GetFadeDuration(pre.State.Motion, state.Motion)
                 };
                 transitions.Add(transition);
                 pre.State.Connect(mixer, 0);

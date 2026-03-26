@@ -34,11 +34,19 @@ namespace LiteAnim.EditorView
         private MotionListView motionListView;
         private AssetPropertiesView assetPropertiesView;
         private MotionDetailView motionDetailView;
+        private FadeOverrideListView fadeOverrideListView;
+        private FadeOverrideDetailView fadeOverrideDetailView;
 
         private VisualElement motionTabContainer;
         private VisualElement assetTabContainer;
+        private VisualElement fadeTabContainer;
         private ToolbarToggle motionTabToggle;
         private ToolbarToggle assetTabToggle;
+        private ToolbarToggle fadeTabToggle;
+
+        private enum TabType { Motions, Properties, FadeOverrides }
+        private TabType currentTab = TabType.Motions;
+        private int selectedFadeIndex = -1;
 
         [MenuItem("Tools/LiteAnim/LiteAnim Editor")]
         public static void OpenWindow()
@@ -173,10 +181,13 @@ namespace LiteAnim.EditorView
             var tabToolbar = new Toolbar();
             motionTabToggle = new ToolbarToggle { text = "Motions" };
             assetTabToggle = new ToolbarToggle { text = "Properties" };
-            motionTabToggle.RegisterValueChangedCallback(_ => SetTab(true));
-            assetTabToggle.RegisterValueChangedCallback(_ => SetTab(false));
+            fadeTabToggle = new ToolbarToggle { text = "Fade" };
+            motionTabToggle.RegisterValueChangedCallback(_ => SetTab(TabType.Motions));
+            assetTabToggle.RegisterValueChangedCallback(_ => SetTab(TabType.Properties));
+            fadeTabToggle.RegisterValueChangedCallback(_ => SetTab(TabType.FadeOverrides));
             tabToolbar.Add(motionTabToggle);
             tabToolbar.Add(assetTabToggle);
+            tabToolbar.Add(fadeTabToggle);
             leftPane.Add(tabToolbar);
 
             motionTabContainer = new VisualElement();
@@ -191,34 +202,62 @@ namespace LiteAnim.EditorView
             assetPropertiesView = new AssetPropertiesView();
             assetTabContainer.Add(assetPropertiesView);
 
+            fadeTabContainer = new VisualElement();
+            fadeTabContainer.style.flexGrow = 1;
+            fadeTabContainer.style.flexShrink = 1;
+            fadeOverrideListView = new FadeOverrideListView();
+            fadeTabContainer.Add(fadeOverrideListView);
+
             leftPane.Add(motionTabContainer);
             leftPane.Add(assetTabContainer);
+            leftPane.Add(fadeTabContainer);
+
+            // ---- 右侧面板 ----
+            var rightPane = new VisualElement();
+            rightPane.style.flexGrow = 1;
+            rightPane.style.flexShrink = 1;
 
             motionDetailView = new MotionDetailView();
+            rightPane.Add(motionDetailView);
+
+            fadeOverrideDetailView = new FadeOverrideDetailView();
+            rightPane.Add(fadeOverrideDetailView);
 
             bodySplit.Add(leftPane);
-            bodySplit.Add(motionDetailView);
+            bodySplit.Add(rightPane);
             rootVisualElement.Add(bodySplit);
 
-            SetTab(true);
+            SetTab(TabType.Motions);
 
             rootVisualElement.RegisterCallback<ViewRefeshEvent>(OnViewRefeshEvent);
             rootVisualElement.RegisterCallback<MotionSelectEvent>(OnMotionSelectChange);
+            rootVisualElement.RegisterCallback<FadeOverrideSelectEvent>(OnFadeOverrideSelectChange);
             rootVisualElement.RegisterCallback<FrameIndexChangeEvent>(OnFrameIndexChange);
             rootVisualElement.RegisterCallback<AnimParamValueChangedEvent>(OnAnimParamValueChanged);
         }
 
-        private void SetTab(bool showMotion)
+        private void SetTab(TabType tab)
         {
+            currentTab = tab;
             if (motionTabToggle != null)
-                motionTabToggle.SetValueWithoutNotify(showMotion);
+                motionTabToggle.SetValueWithoutNotify(tab == TabType.Motions);
             if (assetTabToggle != null)
-                assetTabToggle.SetValueWithoutNotify(!showMotion);
+                assetTabToggle.SetValueWithoutNotify(tab == TabType.Properties);
+            if (fadeTabToggle != null)
+                fadeTabToggle.SetValueWithoutNotify(tab == TabType.FadeOverrides);
 
             if (motionTabContainer != null)
-                motionTabContainer.style.display = showMotion ? DisplayStyle.Flex : DisplayStyle.None;
+                motionTabContainer.style.display = tab == TabType.Motions ? DisplayStyle.Flex : DisplayStyle.None;
             if (assetTabContainer != null)
-                assetTabContainer.style.display = showMotion ? DisplayStyle.None : DisplayStyle.Flex;
+                assetTabContainer.style.display = tab == TabType.Properties ? DisplayStyle.Flex : DisplayStyle.None;
+            if (fadeTabContainer != null)
+                fadeTabContainer.style.display = tab == TabType.FadeOverrides ? DisplayStyle.Flex : DisplayStyle.None;
+
+            // 右侧面板切换
+            if (motionDetailView != null)
+                motionDetailView.style.display = tab != TabType.FadeOverrides ? DisplayStyle.Flex : DisplayStyle.None;
+            if (fadeOverrideDetailView != null)
+                fadeOverrideDetailView.style.display = tab == TabType.FadeOverrides ? DisplayStyle.Flex : DisplayStyle.None;
         }
 
         private void Open(LiteAnimAsset asset)
@@ -244,6 +283,14 @@ namespace LiteAnim.EditorView
             preview.Evaluate(SelectedMotion, 0);
         }
 
+        private void OnFadeOverrideSelectChange(FadeOverrideSelectEvent evt)
+        {
+            if (selectedFadeIndex == evt.SelectedIndex)
+                return;
+            selectedFadeIndex = evt.SelectedIndex;
+            RefreshUI();
+        }
+
         private void OnAnimParamValueChanged(AnimParamValueChangedEvent evt)
         {
             if (preview && SelectedMotion != null && !string.IsNullOrEmpty(SelectedMotion.Param))
@@ -256,9 +303,21 @@ namespace LiteAnim.EditorView
 
         private void OnFrameIndexChange(FrameIndexChangeEvent evt)
         {
-            if (!preview || SelectedMotion == null)
+            if (!preview)
                 return;
             float time = evt.Frame / (float)FrameRate;
+
+            // 融合预览模式
+            if (currentTab == TabType.FadeOverrides && fadeOverrideDetailView != null
+                && fadeOverrideDetailView.TryGetSelected(out var fadeOverride)
+                && fadeOverride.From != null && fadeOverride.To != null)
+            {
+                preview.EvaluateTransition(fadeOverride.From, fadeOverride.To, fadeOverride.FadeDuration, time);
+                return;
+            }
+
+            if (SelectedMotion == null)
+                return;
             preview.Evaluate(SelectedMotion, time);
         }
 
@@ -281,6 +340,8 @@ namespace LiteAnim.EditorView
             assetPropertiesView?.Bind(Target);
             motionListView?.Refresh(Target, SelectedMotionIndex);
             motionDetailView?.RefrshView(Target, SelectedMotion);
+            fadeOverrideListView?.Refresh(Target, selectedFadeIndex);
+            fadeOverrideDetailView?.RefreshView(Target, selectedFadeIndex);
         }
     }
 }
