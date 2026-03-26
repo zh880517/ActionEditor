@@ -16,6 +16,9 @@ namespace LiteAnim.EditorView
         // ---- Clip 属性面板 ----
         private readonly StructedPropertyElement clipPropertyEditor = new StructedPropertyElement(typeof(MotionClip), expandedInParent: true, handleUndo: false);
 
+        // ---- 权重预览 ----
+        private readonly BlendWeightPreviewElement weightPreview = new BlendWeightPreviewElement();
+
         // Track key → Clip index（每次 Refresh 重建）
         private readonly List<string> trackKeys = new List<string>();
 
@@ -37,7 +40,6 @@ namespace LiteAnim.EditorView
             listToolbar.Add(addBtn);
             listToolbar.Add(removeBtn);
             scrollView.Add(listToolbar);
-
             // ---- Clip 属性面板 ----
             clipPropertyEditor.RegisterCallback<RegisterUndoEvent>(OnClipPropertyChanged);
             clipPropertyEditor.RegisterCallback<PropertyValueChangedEvent>(OnClipPropertyValueChanged);
@@ -46,6 +48,8 @@ namespace LiteAnim.EditorView
             clipPropertyEditor.SetFieldVisible("Speed", false);
             clipPropertyEditor.SetFieldVisible("MixIn", false);
             scrollView.Add(clipPropertyEditor);
+            // ---- 权重预览 ----
+            scrollView.Add(weightPreview);
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -60,6 +64,7 @@ namespace LiteAnim.EditorView
                 selectedIndex = -1;
                 RefreshTimeline();
                 RefreshPropertyPanel();
+                weightPreview.SetMotion(null);
                 return;
             }
 
@@ -68,6 +73,7 @@ namespace LiteAnim.EditorView
 
             RefreshTimeline();
             RefreshPropertyPanel();
+            weightPreview.SetMotion(motion);
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -197,6 +203,7 @@ namespace LiteAnim.EditorView
             motion.OnModify();
 
             RefreshTimeline();
+            weightPreview.Refresh();
         }
 
         private void OnClipPropertyValueChanged(PropertyValueChangedEvent evt) => OnClipPropertyChange();
@@ -247,6 +254,7 @@ namespace LiteAnim.EditorView
             // trackKeys 已在 RefreshTimeline 中重建，此处直接刷新
             RefreshTimeline();
             RefreshPropertyPanel();
+            weightPreview.Refresh();
         }
 
         private void OnAddClip()
@@ -262,6 +270,7 @@ namespace LiteAnim.EditorView
             selectedIndex = motion.Clips.Count - 1;
             RefreshTimeline();
             RefreshPropertyPanel();
+            weightPreview.Refresh();
         }
 
         private void OnRemoveClip()
@@ -278,6 +287,7 @@ namespace LiteAnim.EditorView
 
             RefreshTimeline();
             RefreshPropertyPanel();
+            weightPreview.Refresh();
         }
     }
 }

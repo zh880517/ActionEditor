@@ -8,15 +8,16 @@ namespace LiteAnim
     {
         private AnimationMixerPlayable mixerPlayable;
         private AnimationClipPlayable[] playables;
-        private float[] thresholds;
+        private float[] centers; // 各 Clip 在圆上的中心位置 [0, 1)
 
         public override void Create(PlayableGraph graph)
         {
-            mixerPlayable = AnimationMixerPlayable.Create(graph, Motion.Clips.Count);
-            playables = new AnimationClipPlayable[Motion.Clips.Count];
-            thresholds = new float[Motion.Clips.Count + 1];
-            float weightValue = 0;
-            for (int i = 0; i < Motion.Clips.Count; i++)
+            int count = Motion.Clips.Count;
+            mixerPlayable = AnimationMixerPlayable.Create(graph, count);
+            playables = new AnimationClipPlayable[count];
+            centers = new float[count];
+            float totalWeight = 0;
+            for (int i = 0; i < count; i++)
             {
                 var clip = Motion.Clips[i];
                 if (clip.Asset)
@@ -24,20 +25,19 @@ namespace LiteAnim
                     var playable = AnimationClipPlayable.Create(graph, clip.Asset);
                     playables[i] = playable;
                     playable.ConnectInput(0, mixerPlayable, i);
-                    weightValue += clip.Weight;
+                    totalWeight += clip.Weight;
                 }
             }
-            float weight = 0;
-            for (int i = 0; i < Motion.Clips.Count; i++)
+            if (totalWeight <= 0) totalWeight = 1;
+
+            // 圆形布局：Clip 0 中心位于 0，其余按权重比例顺次排列
+            float halfFirst = Motion.Clips[0].Weight * 0.5f;
+            float cumWeight = 0;
+            for (int i = 0; i < count; i++)
             {
-                var clip = Motion.Clips[i];
-                if (clip.Asset)
-                {
-                    thresholds[i] = weight / weightValue;
-                    weight += clip.Weight;
-                }
+                centers[i] = (cumWeight + Motion.Clips[i].Weight * 0.5f - halfFirst) / totalWeight;
+                cumWeight += Motion.Clips[i].Weight;
             }
-            thresholds[Motion.Clips.Count] = 1;
         }
 
         public override void Connect(IConnectable destination, int inputPort)
@@ -60,37 +60,45 @@ namespace LiteAnim
                 paramValue = Player.GetParam(Motion.Param);
                 paramValue = Mathf.Clamp01(paramValue);
             }
-            int preIndex = 0;
-            int nextIndex = 0;
-            float preWeight = 0;
-            for (int i = 0; i < thresholds.Length; i++)
+
+            int count = playables.Length;
+
+            // 在圆上找 paramValue 落在哪两个相邻 center 之间
+            int prevIdx = count - 1;
+            int nextIdx = 0;
+            float prevCenter = centers[count - 1];
+            float nextCenter = centers[0] + 1f; // 环绕：第一个 Clip 在圆的另一端
+
+            for (int i = 0; i < count; i++)
             {
-                if(paramValue < thresholds[i])
+                if (paramValue < centers[i])
                 {
-                    preIndex = Mathf.Max(0, i - 1);
-                    nextIndex = Mathf.Min(i, playables.Length - 1);
-                    float range = thresholds[nextIndex] - thresholds[preIndex];
-                    preWeight = range > 0 ? (paramValue - thresholds[preIndex]) / range : 0;
+                    nextIdx = i;
+                    nextCenter = centers[i];
+                    prevIdx = (i - 1 + count) % count;
+                    prevCenter = i > 0 ? centers[i - 1] : centers[count - 1] - 1f;
                     break;
                 }
             }
-            for (int i = 0; i < playables.Length; i++)
+
+            float range = nextCenter - prevCenter;
+            float blend = range > 0 ? (paramValue - prevCenter) / range : 0;
+            blend = Mathf.Clamp01(blend);
+
+            for (int i = 0; i < count; i++)
             {
                 var playable = playables[i];
                 if (!playable.IsValid()) continue;
                 playable.SetTime(time);
-                if (i == preIndex)
-                {
-                    mixerPlayable.SetInputWeight(i, preWeight);
-                }
-                else if (i == nextIndex)
-                {
-                    mixerPlayable.SetInputWeight(i, 1 - preWeight);
-                }
-                else
-                {
-                    mixerPlayable.SetInputWeight(i, 0);
-                }
+
+                float w = 0;
+                if (prevIdx == nextIdx)
+                    w = 1f;
+                else if (i == prevIdx)
+                    w = 1f - blend;
+                else if (i == nextIdx)
+                    w = blend;
+                mixerPlayable.SetInputWeight(i, w);
             }
         }
         public override void Destroy()

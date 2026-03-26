@@ -2,6 +2,7 @@ using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
+using Timeline;
 
 namespace LiteAnim.EditorView
 {
@@ -203,6 +204,8 @@ namespace LiteAnim.EditorView
 
             rootVisualElement.RegisterCallback<ViewRefeshEvent>(OnViewRefeshEvent);
             rootVisualElement.RegisterCallback<MotionSelectEvent>(OnMotionSelectChange);
+            rootVisualElement.RegisterCallback<FrameIndexChangeEvent>(OnFrameIndexChange);
+            rootVisualElement.RegisterCallback<AnimParamValueChangedEvent>(OnAnimParamValueChanged);
         }
 
         private void SetTab(bool showMotion)
@@ -238,6 +241,25 @@ namespace LiteAnim.EditorView
                 return;
             selectedMotionIndex = evt.SelectedIndex;
             RefreshUI();
+            preview.Evaluate(SelectedMotion, 0);
+        }
+
+        private void OnAnimParamValueChanged(AnimParamValueChangedEvent evt)
+        {
+            if (preview && SelectedMotion != null && !string.IsNullOrEmpty(SelectedMotion.Param))
+            {
+                preview.SetParam(SelectedMotion.Param, evt.Value);
+            }
+        }
+
+        private const int FrameRate = 30;
+
+        private void OnFrameIndexChange(FrameIndexChangeEvent evt)
+        {
+            if (!preview || SelectedMotion == null)
+                return;
+            float time = evt.Frame / (float)FrameRate;
+            preview.Evaluate(SelectedMotion, time);
         }
 
         private void RefreshUI()

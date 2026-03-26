@@ -9,8 +9,6 @@ namespace LiteAnim
         public float Length { get; private set; }// 动画时长，实时计算的，初始化时缓存
 
         public ILiteAnimPlayer Player { get; set; }
-        public double Time { get; set; }// 当前时间
-        public float Weight { get; set; }// 混合权重
         private int version = -1;// 动画版本号，用于检测动画资源是否被修改
         public bool IsChanged => version != Motion.Version;// 动画资源是否被修改
         public int LayerIndex => Motion.LayerIndex;
