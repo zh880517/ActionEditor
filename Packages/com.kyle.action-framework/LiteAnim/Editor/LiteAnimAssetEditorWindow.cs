@@ -45,6 +45,7 @@ namespace LiteAnim.EditorView
         private ToolbarToggle fadeTabToggle;
 
         private enum TabType { Motions, Properties, FadeOverrides }
+        [SerializeField]
         private TabType currentTab = TabType.Motions;
         private int selectedFadeIndex = -1;
 
@@ -130,19 +131,6 @@ namespace LiteAnim.EditorView
             assetField.RegisterValueChangedCallback(OnAssetFieldChanged);
             toolbar.Add(assetField);
 
-            var pingButton = new Button(() =>
-            {
-                if (Target)
-                {
-                    EditorGUIUtility.PingObject(Target);
-                    Selection.activeObject = Target;
-                }
-            })
-            {
-                text = "Select"
-            };
-            toolbar.Add(pingButton);
-
             previewModelField = new ObjectField("预览模型")
             {
                 objectType = typeof(GameObject),
@@ -227,7 +215,7 @@ namespace LiteAnim.EditorView
             bodySplit.Add(rightPane);
             rootVisualElement.Add(bodySplit);
 
-            SetTab(TabType.Motions);
+            SetTab(currentTab);
 
             rootVisualElement.RegisterCallback<ViewRefeshEvent>(OnViewRefeshEvent);
             rootVisualElement.RegisterCallback<MotionSelectEvent>(OnMotionSelectChange);

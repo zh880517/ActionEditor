@@ -17,6 +17,7 @@ namespace LiteAnim
         [HiddenInPropertyEditor]
         public List<LiteAnimMotion> Motions = new List<LiteAnimMotion>();
         public List<LiteAnimLayer> Layers = new List<LiteAnimLayer>();
+        [HiddenInPropertyEditor]
         public List<MotionFadeOverride> FadeOverrides = new List<MotionFadeOverride>();
 
         public float GetFadeDuration(LiteAnimMotion from, LiteAnimMotion to)
