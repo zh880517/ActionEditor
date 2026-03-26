@@ -258,6 +258,8 @@ namespace LiteAnim.EditorView
                 motionDetailView.style.display = tab != TabType.FadeOverrides ? DisplayStyle.Flex : DisplayStyle.None;
             if (fadeOverrideDetailView != null)
                 fadeOverrideDetailView.style.display = tab == TabType.FadeOverrides ? DisplayStyle.Flex : DisplayStyle.None;
+
+            EvaluatePreviewAtFrame0();
         }
 
         private void Open(LiteAnimAsset asset)
@@ -280,7 +282,7 @@ namespace LiteAnim.EditorView
                 return;
             selectedMotionIndex = evt.SelectedIndex;
             RefreshUI();
-            preview.Evaluate(SelectedMotion, 0);
+            EvaluatePreviewAtFrame0();
         }
 
         private void OnFadeOverrideSelectChange(FadeOverrideSelectEvent evt)
@@ -289,6 +291,7 @@ namespace LiteAnim.EditorView
                 return;
             selectedFadeIndex = evt.SelectedIndex;
             RefreshUI();
+            EvaluatePreviewAtFrame0();
         }
 
         private void OnAnimParamValueChanged(AnimParamValueChangedEvent evt)
@@ -300,6 +303,22 @@ namespace LiteAnim.EditorView
         }
 
         private const int FrameRate = 30;
+
+        private void EvaluatePreviewAtFrame0()
+        {
+            if (!preview)
+                return;
+            if (currentTab == TabType.FadeOverrides && fadeOverrideDetailView != null
+                && fadeOverrideDetailView.TryGetSelected(out var fadeOverride)
+                && fadeOverride.From != null && fadeOverride.To != null)
+            {
+                preview.EvaluateTransition(fadeOverride.From, fadeOverride.To, fadeOverride.FadeDuration, 0);
+            }
+            else if (SelectedMotion != null)
+            {
+                preview.Evaluate(SelectedMotion, 0);
+            }
+        }
 
         private void OnFrameIndexChange(FrameIndexChangeEvent evt)
         {
