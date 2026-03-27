@@ -1,0 +1,12 @@
+{
+  "name": "com.kyle.easyconfig",
+  "hideInEditor": false,
+  "version": "1.0.0",
+  "unity": "2019.3",
+  "unityRelease": "2f1",
+  "displayName": "Easy Config",
+  "description": "easy config",
+  "dependencies": {
+    "com.unity.nuget.newtonsoft-json": "3.2.1"
+  }
+}
