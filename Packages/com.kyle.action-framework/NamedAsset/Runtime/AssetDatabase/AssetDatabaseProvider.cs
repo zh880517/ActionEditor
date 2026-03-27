@@ -1,80 +1,61 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 namespace NamedAsset
 {
-    internal class AssetDatabaseProvider : IAssetProvider, ITickable
+    internal class AssetDatabaseProvider : IAssetProvider
     {
         public static int MaxLoadAssetCount = 10;
         private readonly Dictionary<string, string> assetPaths;
-        private readonly Dictionary<string, NamedAssetRequest> assetRequests = new Dictionary<string, NamedAssetRequest>();
-        private readonly Queue<string> assetLoadQueue = new Queue<string>();
+        private readonly Dictionary<string, Object> assetCache;
 
         public AssetDatabaseProvider()
         {
+            assetCache = new Dictionary<string, Object>();
 #if UNITY_EDITOR
             assetPaths = AssetManager.PackageInfo.GetAllAssets();
 #endif
         }
 
-        public IEnumerable Initialize()
+        public async Awaitable Initialize()
         {
-            yield return new WaitForEndOfFrame();
+            await Awaitable.EndOfFrameAsync();
         }
 
-        public NamedAssetRequest LoadAsset(string name)
+        public async Awaitable<AssetRequest<T>> LoadAsset<T>(string name) where T : Object
         {
 #if UNITY_EDITOR
-            if (!assetRequests.TryGetValue(name, out var request))
+            if (assetCache.TryGetValue(name, out var cached))
             {
-                if (assetPaths.ContainsKey(name))
+                if (cached is T cachedAsset)
                 {
-                    request = new NamedAssetRequest();
-                    assetRequests.Add(name, request);
-                    assetLoadQueue.Enqueue(name);
-                }
-                else
-                {
-                    Debug.LogError($"load asset fail : {name}");
-                    request = NamedAssetRequest.NoneExist;
+                    return new AssetRequest<T> { Name = name, Value = cachedAsset, Result = AssetRequestResult.Succee };
                 }
             }
-            return request;
+
+            if (!assetPaths.TryGetValue(name, out string path))
+            {
+                return new AssetRequest<T> { Name = name, Result = AssetRequestResult.AssetUnExist };
+            }
+
+            T asset = UnityEditor.AssetDatabase.LoadAssetAtPath<T>(path);
+            if (asset == null)
+            {
+                return new AssetRequest<T> { Name = name, Result = AssetRequestResult.AssetLoadFailed };
+            }
+
+            assetCache[name] = asset;
+            await Awaitable.EndOfFrameAsync();
+            return new AssetRequest<T> { Name = name, Value = asset, Result = AssetRequestResult.Succee };
 #else
-            return NamedAssetRequest.NoneExist;
+            throw new System.NotImplementedException();
 #endif
         }
+
         public void Destroy()
         {
 #if UNITY_EDITOR
-            foreach (var kv in assetRequests)
-            {
-                kv.Value.asset = null;
-                kv.Value.State = AssetLoadState.None;
-            }
-            assetRequests.Clear();
-#endif
-        }
-
-        public bool OnTick()
-        {
-#if UNITY_EDITOR
-            int count = 0;
-            while (count < MaxLoadAssetCount && assetLoadQueue.Count > 0)
-            {
-                var name = assetLoadQueue.Dequeue();
-                if (assetRequests.TryGetValue(name, out var request))
-                {
-                    var asset = UnityEditor.AssetDatabase.LoadMainAssetAtPath(assetPaths[name]);
-                    request.isPrefab = asset is GameObject;
-                    request.SetAsset(asset);
-                    ++count;
-                }
-            }
-            return false;
-#else
-            return true;
+            assetCache.Clear();
 #endif
         }
     }

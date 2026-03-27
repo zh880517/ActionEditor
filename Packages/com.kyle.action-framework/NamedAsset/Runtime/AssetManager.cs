@@ -1,5 +1,5 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using UnityEngine;
 
 namespace NamedAsset
 {
@@ -29,7 +29,7 @@ namespace NamedAsset
             AssetDatabaseProvider.MaxLoadAssetCount = count;
         }
 
-        public static IEnumerable Initialize(IPathProvider pathProvider)
+        public static async Awaitable Initialize(IPathProvider pathProvider)
         {
 
 #if UNITY_EDITOR
@@ -43,33 +43,14 @@ namespace NamedAsset
             }
 #endif
             assetProvider ??= new AssetBundleProvider(pathProvider);
-            yield return assetProvider.Initialize();
+            await assetProvider.Initialize();
         }
 
-        public static AssetRequestRef Load(string name)
+        public static async Awaitable<AssetRequest<T>> LoadAsset<T>(string name) where T : Object
         {
-            var request = assetProvider?.LoadAsset(name);
-            if (request != null)
-            {
-                int key = ++keyIndex;
-                while (key == 0 || unReleaseKey.Contains(key))
-                {
-                    key = ++keyIndex;
-                }
-                unReleaseKey.Add(key);
-                return new AssetRequestRef
-                {
-                    Name = name,
-                    KeyIndex = ++keyIndex,
-                    request = request,
-                    Version = request != null ? request.Version : 0,
-                };
-            }
-            return new AssetRequestRef
-            {
-                Name = name
-            };
+            throw new System.NotImplementedException();
         }
+
 
         public static void Destroy()
         {

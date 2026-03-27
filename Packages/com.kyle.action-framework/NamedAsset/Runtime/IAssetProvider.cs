@@ -1,11 +1,11 @@
-﻿using System.Collections;
+﻿using UnityEngine;
 
 namespace NamedAsset
 {
     internal interface IAssetProvider
     {
-        IEnumerable Initialize();
-        NamedAssetRequest LoadAsset(string name);
+        Awaitable Initialize();
+        Awaitable<AssetRequest<T>> LoadAsset<T>(string name) where T : Object;
 
         void Destroy();
     }

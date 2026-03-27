@@ -1,12 +1,15 @@
-﻿using System.IO;
-using System.Collections;
+﻿using System;
+using System.IO;
+using System.Net;
+using UnityEngine;
 using UnityEngine.Networking;
+using static UnityEngine.AdaptivePerformance.Provider.AdaptivePerformanceSubsystemDescriptor;
 
 namespace NamedAsset
 {
     internal class AsyncFileUtil
     {
-        public static IEnumerable ReadAssetManifest(FileLocaltion file, System.Action<AssetManifest> onResult)
+        public static async Awaitable<AssetManifest> ReadAssetManifest(FileLocaltion file)
         {
             string json = null;
             if (file.Type == FilePathType.File)
@@ -26,7 +29,7 @@ namespace NamedAsset
             {
                 UnityWebRequest webRequest = UnityWebRequest.Get(file.Path);
                 webRequest.useHttpContinue = false;
-                yield return webRequest.SendWebRequest();
+                await webRequest.SendWebRequest();
                 if (webRequest.result == UnityWebRequest.Result.Success)
                 {
                     json = webRequest.downloadHandler.text;
@@ -43,28 +46,43 @@ namespace NamedAsset
             if (string.IsNullOrEmpty(json))
             {
                 AssetManifest manifest = new AssetManifest();
-                UnityEngine.JsonUtility.FromJsonOverwrite(json, manifest);
-                onResult(manifest);
+                JsonUtility.FromJsonOverwrite(json, manifest);
+                return manifest;
             }
-            else
-            {
-                onResult(null);
-            }
+            return null;
         }
 
-        internal static BundleLoadTask LoadAssetBundle(FileLocaltion file, AssetBundleInfo info)
+        internal static async Awaitable LoadAssetBundleAsync(FileLocaltion file, AssetBundleInfo info)
         {
+            info.State = BundleLoadState.Loading;
             switch (file.Type)
             {
                 case FilePathType.File:
                 case FilePathType.CombinFile:
-            	    return new FileBundleLoadTask(info, file.Path, file.Offset);
+                    {
+                        var req = AssetBundle.LoadFromFileAsync(file.Path, info.Crc, file.Offset);
+                        await req;
+                        info.Bundle = req.assetBundle;
+                        info.State = info.Bundle ? BundleLoadState.Loaded : BundleLoadState.LoadFailed;
+                    }
+                    break;
                 case FilePathType.URL:
-                    return new HttpBundleLoadTask(file.Path, info);
+                    {
+                        var webRequest = UnityWebRequestAssetBundle.GetAssetBundle(file.Path, info.Hash, 0);
+                        await webRequest.SendWebRequest();
+                        info.Bundle = webRequest.result == UnityWebRequest.Result.Success ? DownloadHandlerAssetBundle.GetContent(webRequest) : null;
+                        info.State = info.Bundle ? BundleLoadState.Loaded : BundleLoadState.LoadFailed;
+                    }
+                    break;
                 case FilePathType.Bytes:
-                    return new MemoryBundleLoadTask(info, file.Data);
+                    {
+                        var req = AssetBundle.LoadFromMemoryAsync(file.Data, info.Crc);
+                        info.Bundle = req.assetBundle;
+                        info.State = info.Bundle ? BundleLoadState.Loaded : BundleLoadState.LoadFailed;
+                    }
+                    break;
             }
-            return null;
+            return;
         }
     }
 }
