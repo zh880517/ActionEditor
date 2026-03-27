@@ -6,14 +6,15 @@ namespace NamedAsset
     internal class AssetDatabaseProvider : IAssetProvider
     {
         public static int MaxLoadAssetCount = 10;
-        private readonly Dictionary<string, string> assetPaths;
-        private readonly Dictionary<string, Object> assetCache;
+        private Dictionary<string, string> assetPaths;
+        private readonly Dictionary<string, int> nameToLocation = new Dictionary<string, int>();
+        private readonly Dictionary<int, Object> locationToAsset = new Dictionary<int, Object>();
+        private int nextLocation;
 
         public AssetDatabaseProvider()
         {
-            assetCache = new Dictionary<string, Object>();
 #if UNITY_EDITOR
-            assetPaths = AssetManager.PackageInfo.GetAllAssets();
+            assetPaths = AssetManager.PackageInfo?.GetAllAssets() ?? new Dictionary<string, string>();
 #endif
         }
 
@@ -22,40 +23,55 @@ namespace NamedAsset
             await Awaitable.EndOfFrameAsync();
         }
 
-        public async Awaitable<AssetRequest<T>> LoadAsset<T>(string name) where T : Object
+        public async Awaitable<AssetLoadResult> LoadAsset<T>(string name) where T : Object
         {
 #if UNITY_EDITOR
-            if (assetCache.TryGetValue(name, out var cached))
+            // 已加载过：返回相同location（AssetManager会创建新Handle用于独立Release）
+            if (nameToLocation.TryGetValue(name, out int existingLoc))
             {
-                if (cached is T cachedAsset)
+                if (locationToAsset.TryGetValue(existingLoc, out var cached) && cached is T)
                 {
-                    return new AssetRequest<T> { Name = name, Value = cachedAsset, Result = AssetRequestResult.Succee };
+                    return new AssetLoadResult { Asset = cached, Location = existingLoc, Result = AssetRequestResult.Success };
                 }
             }
 
-            if (!assetPaths.TryGetValue(name, out string path))
+            if (assetPaths == null || !assetPaths.TryGetValue(name, out string path))
             {
-                return new AssetRequest<T> { Name = name, Result = AssetRequestResult.AssetUnExist };
+                return new AssetLoadResult { Result = AssetRequestResult.AssetNotFound };
             }
 
             T asset = UnityEditor.AssetDatabase.LoadAssetAtPath<T>(path);
             if (asset == null)
             {
-                return new AssetRequest<T> { Name = name, Result = AssetRequestResult.AssetLoadFailed };
+                return new AssetLoadResult { Result = AssetRequestResult.AssetLoadFailed };
             }
 
-            assetCache[name] = asset;
+            int location = nextLocation++;
+            nameToLocation[name] = location;
+            locationToAsset[location] = asset;
             await Awaitable.EndOfFrameAsync();
-            return new AssetRequest<T> { Name = name, Value = asset, Result = AssetRequestResult.Succee };
+            return new AssetLoadResult { Asset = asset, Location = location, Result = AssetRequestResult.Success };
 #else
             throw new System.NotImplementedException();
 #endif
         }
 
+        public void Release(int location)
+        {
+            // Editor模式下AssetDatabase管理资源生命周期，无需手动卸载
+        }
+
+        public void ClearUnusedAssets()
+        {
+            // Editor模式下无需卸载
+        }
+
         public void Destroy()
         {
 #if UNITY_EDITOR
-            assetCache.Clear();
+            nameToLocation.Clear();
+            locationToAsset.Clear();
+            assetPaths = null;
 #endif
         }
     }

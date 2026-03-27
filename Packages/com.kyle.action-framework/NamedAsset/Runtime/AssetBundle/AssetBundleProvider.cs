@@ -1,25 +1,32 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 namespace NamedAsset
 {
-    internal class AssetBundleProvider : IAssetProvider, IBundleOwner
+    internal class AssetBundleProvider : IAssetProvider
     {
         public static int MaxLoadBundleCount = 10;
 
+        /// <summary>
+        /// 资源缓存条目（struct避免GC，通过字典重新赋值更新）
+        /// </summary>
+        private struct AssetCacheEntry
+        {
+            public Object Asset;
+            public int RefCount;
+            public int BundleIndex;
+        }
+
         private readonly List<AssetBundleInfo> bundleInfos = new List<AssetBundleInfo>();
-        private readonly Dictionary<string, int> assetLoaction = new Dictionary<string, int>();
+        private readonly Dictionary<string, int> assetLocation = new Dictionary<string, int>();
         private readonly Queue<AssetBundleInfo> bundleQueue = new Queue<AssetBundleInfo>();
         private readonly Dictionary<int, AssetCacheEntry> assetCache = new Dictionary<int, AssetCacheEntry>();
         private readonly IPathProvider pathProvider;
         private int loadingCount;
 
-        private class AssetCacheEntry
-        {
-            public Object Asset;
-            public int RefCount;
-        }
+        // 复用集合，ClearUnusedAssets时使用避免每次分配
+        private byte[] bundleFlags;
+        private readonly List<int> tempRemoveKeys = new List<int>();
 
         public AssetBundleProvider(IPathProvider pathProvider)
         {
@@ -36,39 +43,37 @@ namespace NamedAsset
             }
             foreach (var item in manifest.Assets)
             {
-                assetLoaction.Add(item.Name, item.Location);
+                assetLocation.Add(item.Name, item.Location);
             }
 
             BuildBundleInfo(manifest);
+            bundleFlags = new byte[bundleInfos.Count];
         }
 
-        public async Awaitable<AssetRequest<T>> LoadAsset<T>(string name) where T : Object
+        public async Awaitable<AssetLoadResult> LoadAsset<T>(string name) where T : Object
         {
-            if (!assetLoaction.TryGetValue(name, out int location))
+            if (!assetLocation.TryGetValue(name, out int location))
             {
-                return new AssetRequest<T> { Name = name, Result = AssetRequestResult.AssetUnExist };
+                return new AssetLoadResult { Result = AssetRequestResult.AssetNotFound };
             }
 
-            // Check cache first
+            // 缓存命中：直接增加引用计数并返回
             if (assetCache.TryGetValue(location, out var cached))
             {
-                T cachedAsset = cached.Asset as T;
-                if (cachedAsset != null)
+                if (cached.Asset is T)
                 {
                     cached.RefCount++;
-                    return new AssetRequest<T> { Name = name, Value = cachedAsset, Result = AssetRequestResult.Succee };
+                    assetCache[location] = cached; // struct写回
+                    return new AssetLoadResult { Asset = cached.Asset, Location = location, Result = AssetRequestResult.Success };
                 }
-                else
-                {
-                    return new AssetRequest<T> { Name = name, Result = AssetRequestResult.AssetLoadFailed };
-                }
+                return new AssetLoadResult { Result = AssetRequestResult.AssetLoadFailed };
             }
 
             int bundleIdx = location >> 16;
             int assetIdx = location & 0xFFFF;
             var info = bundleInfos[bundleIdx];
 
-            // Load dependency bundles first
+            // 优先加载依赖Bundle
             for (int i = 0; i < info.DependenceIdx.Length; i++)
             {
                 int depIdx = info.DependenceIdx[i];
@@ -78,95 +83,111 @@ namespace NamedAsset
                 }
             }
 
-            // Load the main bundle
+            // 加载目标Bundle
             await EnsureBundleLoaded(info);
 
-            if (info.State == BundleLoadState.LoadFailed || info.Bundle == null)
+            if (info.State != BundleLoadState.Loaded || info.Bundle == null)
             {
-                return new AssetRequest<T> { Name = name, Result = AssetRequestResult.BundleLoadFailed };
+                return new AssetLoadResult { Result = AssetRequestResult.BundleLoadFailed };
             }
 
-            // Load the asset from the bundle
+            // 并发加载同一资源时，等待结束后可能已被缓存
+            if (assetCache.TryGetValue(location, out var existingEntry))
+            {
+                if (existingEntry.Asset is T)
+                {
+                    existingEntry.RefCount++;
+                    assetCache[location] = existingEntry;
+                    return new AssetLoadResult { Asset = existingEntry.Asset, Location = location, Result = AssetRequestResult.Success };
+                }
+                return new AssetLoadResult { Result = AssetRequestResult.AssetLoadFailed };
+            }
+
+            // 从Bundle加载资源
             string assetName = info.AssetNames[assetIdx];
             var assetReq = info.Bundle.LoadAssetAsync<T>(assetName);
             await assetReq;
             T asset = assetReq.asset as T;
-            if (asset == null)
-            {
-                assetCache[location] = new AssetCacheEntry { Asset = asset, RefCount = 0 };
-                return new AssetRequest<T> { Name = name, Result = AssetRequestResult.AssetLoadFailed };
-            }
 
-            // Cache the loaded asset
-            assetCache[location] = new AssetCacheEntry { Asset = asset, RefCount = 1 };
-            return new AssetRequest<T> { Name = name, Value = asset, Result = AssetRequestResult.Succee };
-        }
-
-        public void ReleaseAsset(string name)
-        {
-            if (assetLoaction.TryGetValue(name, out int location))
+            // await之后再次检查（另一个协程可能已经缓存了同一资源）
+            if (assetCache.TryGetValue(location, out var raceEntry))
             {
-                if (assetCache.TryGetValue(location, out var entry))
+                if (raceEntry.Asset is T)
                 {
-                    entry.RefCount--;
+                    raceEntry.RefCount++;
+                    assetCache[location] = raceEntry;
+                    return new AssetLoadResult { Asset = raceEntry.Asset, Location = location, Result = AssetRequestResult.Success };
                 }
             }
+
+            if (asset == null)
+            {
+                return new AssetLoadResult { Result = AssetRequestResult.AssetLoadFailed };
+            }
+
+            assetCache[location] = new AssetCacheEntry { Asset = asset, RefCount = 1, BundleIndex = bundleIdx };
+            return new AssetLoadResult { Asset = asset, Location = location, Result = AssetRequestResult.Success };
         }
 
-        public void ClearUnusedAsset()
+        public void Release(int location)
         {
-            // Collect which bundles still have in-use assets
-            var activeBundles = new HashSet<int>();
+            if (assetCache.TryGetValue(location, out var entry))
+            {
+                entry.RefCount--;
+                if (entry.RefCount < 0) entry.RefCount = 0;
+                assetCache[location] = entry; // struct写回
+            }
+        }
+
+        public void ClearUnusedAssets()
+        {
+            if (bundleFlags == null) return;
+            System.Array.Clear(bundleFlags, 0, bundleFlags.Length);
+
+            // 标记仍有引用的Bundle及其依赖
             foreach (var kv in assetCache)
             {
                 if (kv.Value.RefCount > 0)
                 {
-                    activeBundles.Add(kv.Key >> 16);
+                    MarkBundleActive(kv.Value.BundleIndex);
                 }
             }
 
-            // Mark bundles that are dependencies of active bundles
-            var protectedBundles = new HashSet<int>(activeBundles);
-            foreach (int idx in activeBundles)
-            {
-                MarkDependencies(idx, protectedBundles);
-            }
-
-            // Remove unused cache entries and unload unprotected bundles
-            var removeKeys = new List<int>();
-            var unloadBundles = new HashSet<int>();
+            // 收集引用计数为0的缓存条目
+            tempRemoveKeys.Clear();
             foreach (var kv in assetCache)
             {
-                int bundleIdx = kv.Key >> 16;
-                if (!protectedBundles.Contains(bundleIdx))
+                if (kv.Value.RefCount <= 0)
                 {
-                    removeKeys.Add(kv.Key);
-                    unloadBundles.Add(bundleIdx);
+                    tempRemoveKeys.Add(kv.Key);
                 }
             }
-            foreach (int key in removeKeys)
+            for (int i = 0; i < tempRemoveKeys.Count; i++)
             {
-                assetCache.Remove(key);
+                assetCache.Remove(tempRemoveKeys[i]);
             }
-            foreach (int idx in unloadBundles)
+            tempRemoveKeys.Clear();
+
+            // 卸载没有活跃引用的Bundle
+            for (int i = 0; i < bundleInfos.Count; i++)
             {
-                var info = bundleInfos[idx];
-                if (info.State == BundleLoadState.Loaded)
+                if (bundleFlags[i] == 0 && bundleInfos[i].State == BundleLoadState.Loaded)
                 {
-                    info.Unload();
+                    bundleInfos[i].Unload();
                 }
             }
         }
 
-        private void MarkDependencies(int bundleIdx, HashSet<int> set)
+        private void MarkBundleActive(int index)
         {
-            var deps = bundleInfos[bundleIdx].DependenceIdx;
+            if (index < 0 || index >= bundleFlags.Length || bundleFlags[index] != 0) return;
+            bundleFlags[index] = 1;
+            var deps = bundleInfos[index].DependenceIdx;
             for (int i = 0; i < deps.Length; i++)
             {
-                int dep = deps[i];
-                if (dep >= 0 && set.Add(dep))
+                if (deps[i] >= 0)
                 {
-                    MarkDependencies(dep, set);
+                    MarkBundleActive(deps[i]);
                 }
             }
         }
@@ -212,40 +233,38 @@ namespace NamedAsset
             }
         }
 
-
         private void BuildBundleInfo(AssetManifest manifest)
         {
-            for (int i=0; i< manifest.Bundles.Count; ++i)
+            // 构建BundleName到索引的映射，避免后续O(N)查找
+            var bundleNameToIndex = new Dictionary<string, int>(manifest.Bundles.Count);
+            for (int i = 0; i < manifest.Bundles.Count; ++i)
             {
                 var bundle = manifest.Bundles[i];
                 AssetBundleInfo info = new AssetBundleInfo
                 {
-                    Owner = this,
                     Index = i,
                     Path = bundle.Name,
                     Hash = bundle.Hash,
                     Crc = bundle.Crc
                 };
-                int depCount = 0;
-                if (bundle.Dependencies != null && bundle.Dependencies.Length > 0)
-                {
-                    depCount = bundle.Dependencies.Length;
-                }
+                int depCount = bundle.Dependencies != null ? bundle.Dependencies.Length : 0;
                 info.DependenceIdx = new int[depCount];
                 if (bundle.Assets != null && bundle.Assets.Length > 0)
                 {
                     info.AssetNames = bundle.Assets;
                 }
                 bundleInfos.Add(info);
+                bundleNameToIndex[bundle.Name] = i;
             }
-            for (int i=0; i<bundleInfos.Count; ++i)
+            // 解析依赖索引
+            for (int i = 0; i < bundleInfos.Count; ++i)
             {
                 var info = bundleInfos[i];
-                var bundle = manifest.Bundles[i];
-                for (int j = 0; j < bundle.Dependencies.Length; ++j)
+                var deps = manifest.Bundles[i].Dependencies;
+                if (deps == null) continue;
+                for (int j = 0; j < deps.Length; ++j)
                 {
-                    var idx = bundleInfos.FindIndex(it => it.Path == bundle.Dependencies[j]);
-                    info.DependenceIdx[j] = idx;
+                    info.DependenceIdx[j] = bundleNameToIndex.TryGetValue(deps[j], out int idx) ? idx : -1;
                 }
             }
         }
@@ -253,16 +272,12 @@ namespace NamedAsset
         public void Destroy()
         {
             assetCache.Clear();
-            foreach (var bundle in bundleInfos)
+            for (int i = 0; i < bundleInfos.Count; i++)
             {
-                bundle.Unload();
+                bundleInfos[i].Unload();
             }
             bundleInfos.Clear();
+            bundleFlags = null;
         }
-
-        public void ReleaseBundle(AssetBundleInfo bundle)
-        {
-        }
-
     }
 }

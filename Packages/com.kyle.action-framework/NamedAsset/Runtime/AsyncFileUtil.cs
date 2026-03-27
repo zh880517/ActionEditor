@@ -1,9 +1,6 @@
-﻿using System;
-using System.IO;
-using System.Net;
+﻿using System.IO;
 using UnityEngine;
 using UnityEngine.Networking;
-using static UnityEngine.AdaptivePerformance.Provider.AdaptivePerformanceSubsystemDescriptor;
 
 namespace NamedAsset
 {
@@ -43,7 +40,7 @@ namespace NamedAsset
             {
                 json = System.Text.Encoding.UTF8.GetString(file.Data);
             }
-            if (string.IsNullOrEmpty(json))
+            if (!string.IsNullOrEmpty(json))
             {
                 AssetManifest manifest = new AssetManifest();
                 JsonUtility.FromJsonOverwrite(json, manifest);
