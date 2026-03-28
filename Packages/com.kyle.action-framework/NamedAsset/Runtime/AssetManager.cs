@@ -24,6 +24,7 @@ namespace NamedAsset
         public static IAssetPackageInfoProvider PackageInfo;
 #endif
         private static IAssetProvider s_Provider;
+        private static readonly GameObjectPool s_GameObjectPool = new();
 
         /// <summary>
         /// 检查Handle是否有效（未被Release）
@@ -127,6 +128,32 @@ namespace NamedAsset
         }
 
         /// <summary>
+        /// 异步实例化GameObject，优先从缓存池复用，池为空时加载Prefab并Instantiate
+        /// 返回的GameObject上挂有PoolableEntity组件，回收时自动调用Reset
+        /// </summary>
+        public static async Awaitable<GameObject> InstantiateAsync(string name, Transform parent = null)
+        {
+            return await s_GameObjectPool.GetAsync(name, parent);
+        }
+
+        /// <summary>
+        /// 归还实例到缓存池，回收时调用PoolableEntity.Reset()，然后SetActive(false)
+        /// 无PoolableEntity组件的GameObject会被直接Destroy
+        /// </summary>
+        public static void ReleaseInstance(GameObject go)
+        {
+            s_GameObjectPool.Release(go);
+        }
+
+        /// <summary>
+        /// 销毁所有缓存池中的闲置实例并释放对应Prefab引用
+        /// </summary>
+        public static void ClearPool()
+        {
+            s_GameObjectPool.Clear();
+        }
+
+        /// <summary>
         /// 卸载所有引用计数为0的资源及其AssetBundle
         /// </summary>
         public static void ClearUnusedAssets()
@@ -136,6 +163,7 @@ namespace NamedAsset
 
         public static void Destroy()
         {
+            s_GameObjectPool.Clear();
             s_Provider?.Destroy();
             s_Provider = null;
             System.Array.Clear(s_Slots, 0, s_Slots.Length);
