@@ -2,10 +2,9 @@
     "name": "EasyConfig.Editor",
     "rootNamespace": "",
     "references": [
-        "EasyConfig.Runtime",
-        "Common.Runtime",
-        "Common.Unity",
-        "Common.Editor"
+        "GUID:839d32ec46cf96d46949bfe3aba7aab2",
+        "GUID:4c21a2e7390f04d489b274fe2134650a",
+        "GUID:edca0bc4151401e458d0a30a4e81774a"
     ],
     "includePlatforms": [
         "Editor"
