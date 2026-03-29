@@ -1,4 +1,4 @@
-﻿#pragma warning disable 649 // Field `VisualShape.GizmoContext.activeTransform' is never assigned to, and will always have its default value `null'. Not used outside of the unity editor.
+#pragma warning disable 649 // Field `VisualShape.GizmoContext.activeTransform' is never assigned to, and will always have its default value `null'. Not used outside of the unity editor.
 using UnityEngine;
 using System.Collections;
 using System;
@@ -190,7 +190,6 @@ namespace VisualShape
 
         [System.NonSerialized]
         DetectedRenderPipeline detectedRenderPipeline = DetectedRenderPipeline.BuiltInOrCustom;
-        HashSet<ScriptableRenderer> scriptableRenderersWithPass = new HashSet<ScriptableRenderer>();
         VisualShapeURPRenderPassFeature renderPassFeature;
 
         private static readonly ProfilerMarker MarkerALINE = new ProfilerMarker("VisualShape");
@@ -306,11 +305,6 @@ namespace VisualShape
         }
 
         void BeginContextRendering(ScriptableRenderContext context, List<Camera> cameras)
-        {
-            RefreshRenderPipelineMode();
-        }
-
-        void BeginFrameRendering(ScriptableRenderContext context, Camera[] cameras)
         {
             RefreshRenderPipelineMode();
         }

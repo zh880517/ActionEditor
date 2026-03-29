@@ -49,39 +49,6 @@ namespace VisualShape
             }
             PopColor();
         }
-        /// <summary>\copydocref{CircleXZ(float3,float,float,float)}</summary>
-        /// <param name="color">对象的颜色</param>
-        [System.Obsolete("Use Draw.xz.Circle instead")]
-        public void CircleXZ(float3 center, float radius, float startAngle, float endAngle, Color color)
-        {
-            CircleXZInternal(center, radius, startAngle, endAngle, color);
-        }
-        /// <summary>\copydocref{CircleXZ(float3,float,float,float)}</summary>
-        /// <param name="color">对象的颜色</param>
-        [System.Obsolete("Use Draw.xz.Circle instead")]
-        public void CircleXZ(float3 center, float radius, Color color)
-        {
-            CircleXZ(center, radius, 0f, 2 * Mathf.PI, color);
-        }
-        /// <summary>\copydocref{CircleXY(float3,float,float,float)}</summary>
-        /// <param name="color">对象的颜色</param>
-        [System.Obsolete("Use Draw.xy.Circle instead")]
-        public void CircleXY(float3 center, float radius, float startAngle, float endAngle, Color color)
-        {
-            PushColor(color);
-            PushMatrix(XZtoXYPlaneMatrix);
-            CircleXZ(new float3(center.x, -center.z, center.y), radius, startAngle, endAngle);
-            PopMatrix();
-            PopColor();
-        }
-
-        /// <summary>\copydocref{CircleXY(float3,float,float,float)}</summary>
-        /// <param name="color">对象的颜色</param>
-        [System.Obsolete("Use Draw.xy.Circle instead")]
-        public void CircleXY(float3 center, float radius, Color color)
-        {
-            CircleXY(center, radius, 0f, 2 * Mathf.PI, color);
-        }
 
         /// <summary>\copydocref{Circle(float3,float3,float)}</summary>
         public void Circle(float3 center, float3 normal, float radius, Color color)
@@ -111,41 +78,6 @@ namespace VisualShape
             PopColor();
         }
 
-        /// <summary>\copydocref{SolidCircleXZ(float3,float,float,float)}</summary>
-        /// <param name="color">对象的颜色</param>
-        [System.Obsolete("Use Draw.xz.SolidCircle instead")]
-        public void SolidCircleXZ(float3 center, float radius, float startAngle, float endAngle, Color color)
-        {
-            SolidCircleXZInternal(center, radius, startAngle, endAngle, color);
-        }
-
-        /// <summary>\copydocref{SolidCircleXZ(float3,float,float,float)}</summary>
-        /// <param name="color">对象的颜色</param>
-        [System.Obsolete("Use Draw.xz.SolidCircle instead")]
-        public void SolidCircleXZ(float3 center, float radius, Color color)
-        {
-            SolidCircleXZ(center, radius, 0f, 2 * Mathf.PI, color);
-        }
-
-        /// <summary>\copydocref{SolidCircleXY(float3,float,float,float)}</summary>
-        /// <param name="color">对象的颜色</param>
-        [System.Obsolete("Use Draw.xy.SolidCircle instead")]
-        public void SolidCircleXY(float3 center, float radius, float startAngle, float endAngle, Color color)
-        {
-            PushColor(color);
-            PushMatrix(XZtoXYPlaneMatrix);
-            SolidCircleXZInternal(new float3(center.x, -center.z, center.y), radius, startAngle, endAngle);
-            PopMatrix();
-            PopColor();
-        }
-
-        /// <summary>\copydocref{SolidCircleXY(float3,float,float,float)}</summary>
-        /// <param name="color">对象的颜色</param>
-        [System.Obsolete("Use Draw.xy.SolidCircle instead")]
-        public void SolidCircleXY(float3 center, float radius, Color color)
-        {
-            SolidCircleXY(center, radius, 0f, 2 * Mathf.PI, color);
-        }
 
         /// <summary>\copydocref{SolidCircle(float3,float3,float)}</summary>
         public void SolidCircle(float3 center, float3 normal, float radius, Color color)
@@ -451,38 +383,7 @@ namespace VisualShape
         {
             Cross(position, 1, color);
         }
-        /// <summary>\copydocref{CrossXZ(float3,float)}</summary>
-        [System.Obsolete("Use Draw.xz.Cross instead")]
-        public void CrossXZ(float3 position, float size, Color color)
-        {
-            PushColor(color);
-            size *= 0.5f;
-            Line(position - new float3(size, 0, 0), position + new float3(size, 0, 0));
-            Line(position - new float3(0, 0, size), position + new float3(0, 0, size));
-            PopColor();
-        }
-        /// <summary>\copydocref{CrossXZ(float3,float)}</summary>
-        [System.Obsolete("Use Draw.xz.Cross instead")]
-        public void CrossXZ(float3 position, Color color)
-        {
-            CrossXZ(position, 1, color);
-        }
-        /// <summary>\copydocref{CrossXY(float3,float)}</summary>
-        [System.Obsolete("Use Draw.xy.Cross instead")]
-        public void CrossXY(float3 position, float size, Color color)
-        {
-            PushColor(color);
-            size *= 0.5f;
-            Line(position - new float3(size, 0, 0), position + new float3(size, 0, 0));
-            Line(position - new float3(0, size, 0), position + new float3(0, size, 0));
-            PopColor();
-        }
-        /// <summary>\copydocref{CrossXY(float3,float)}</summary>
-        [System.Obsolete("Use Draw.xy.Cross instead")]
-        public void CrossXY(float3 position, Color color)
-        {
-            CrossXY(position, 1, color);
-        }
+
         /// <summary>\copydocref{Bezier(float3,float3,float3,float3)}</summary>
         /// <param name="color">对象的颜色</param>
         public void Bezier(float3 p0, float3 p1, float3 p2, float3 p3, Color color)
@@ -732,24 +633,13 @@ namespace VisualShape
             PopColor();
         }
 
-        /// <summary>\copydocref{WireRectangleXZ(float3,float2)}</summary>
-        [System.Obsolete("Use Draw.xz.WireRectangle instead")]
-        public void WireRectangleXZ(float3 center, float2 size, Color color)
-        {
-            WireRectangle(center, quaternion.identity, size, color);
-        }
 
         /// <summary>\copydocref{WireRectangle(float3,quaternion,float2)}</summary>
         public void WireRectangle(float3 center, quaternion rotation, float2 size, Color color)
         {
             WirePlane(center, rotation, size, color);
         }
-        /// <summary>\copydocref{WireRectangle(Rect)}</summary>
-        [System.Obsolete("Use Draw.xy.WireRectangle instead")]
-        public void WireRectangle(Rect rect, Color color)
-        {
-            xy.WireRectangle(rect, color);
-        }
+
         /// <summary>\copydocref{WireTriangle(float3,quaternion,float)}</summary>
         /// <param name="color">对象的颜色</param>
         public void WireTriangle(float3 center, quaternion rotation, float radius, Color color)
@@ -789,12 +679,6 @@ namespace VisualShape
             PopColor();
         }
 
-        /// <summary>\copydocref{SolidRectangle(Rect)}</summary>
-        [System.Obsolete("Use Draw.xy.SolidRectangle instead")]
-        public void SolidRectangle(Rect rect, Color color)
-        {
-            xy.SolidRectangle(rect, color);
-        }
 
         /// <summary>\copydocref{SolidPlane(float3,float3,float2)}</summary>
         /// <param name="color">对象的颜色</param>

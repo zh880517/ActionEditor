@@ -958,27 +958,6 @@ namespace VisualShape
             Add(Command.PopPersist);
         }
 
-        /// <summary>
-        /// 绘制持续指定秒数直到下一个 PopPersist。
-        /// 警告：不建议在 DrawGizmos 回调内使用，因为 DrawGizmos 每帧都会被调用。
-        ///
-        /// Deprecated: Renamed to <see cref="PushDuration"/>
-        /// </summary>
-        [System.Obsolete("Renamed to PushDuration for consistency")]
-        public void PushPersist(float duration)
-        {
-            PushDuration(duration);
-        }
-
-        /// <summary>
-        /// 从栈中弹出持久作用域。
-        /// Deprecated: Renamed to <see cref="PopDuration"/>
-        /// </summary>
-        [System.Obsolete("Renamed to PopDuration for consistency")]
-        public void PopPersist()
-        {
-            PopDuration();
-        }
 
         /// <summary>
         /// 使用给定的像素线宽绘制所有线条直到下一个 PopLineWidth。
@@ -1167,27 +1146,6 @@ namespace VisualShape
             }
         }
 
-        /// <summary>
-        /// 在 XZ 平面绘制圆。
-        ///
-        /// 可以通过提供 startAngle 和 endAngle 参数来绘制圆弧。
-        ///
-        /// [Open online documentation to see images]
-        ///
-        /// See: <see cref="Circle(float3,float3,float)"/>
-        /// See: <see cref="CircleXY(float3,float,float,float)"/>
-        /// See: <see cref="Arc(float3,float3,float3)"/>
-        /// </summary>
-        /// <param name="center">圆或弧的中心。</param>
-        /// <param name="radius">圆或弧的半径。</param>
-        /// <param name="startAngle">起始角度（弧度）。0 对应正 X 轴。</param>
-        /// <param name="endAngle">结束角度（弧度）。</param>
-        [System.Obsolete("Use Draw.xz.Circle instead")]
-        public void CircleXZ(float3 center, float radius, float startAngle = 0f, float endAngle = 2 * Mathf.PI)
-        {
-            CircleXZInternal(center, radius, startAngle, endAngle);
-        }
-
         internal void CircleXZInternal(float3 center, float radius, float startAngle = 0f, float endAngle = 2 * Mathf.PI)
         {
             Reserve<CircleXZData>();
@@ -1206,27 +1164,6 @@ namespace VisualShape
         internal static readonly float4x4 XZtoXYPlaneMatrix = float4x4.RotateX(-math.PI * 0.5f);
         internal static readonly float4x4 XZtoYZPlaneMatrix = float4x4.RotateZ(math.PI * 0.5f);
 
-        /// <summary>
-        /// 在 XY 平面绘制圆。
-        ///
-        /// 可以通过提供 startAngle 和 endAngle 参数来绘制圆弧。
-        ///
-        /// [Open online documentation to see images]
-        ///
-        /// See: <see cref="Circle(float3,float3,float)"/>
-        /// See: <see cref="Arc(float3,float3,float3)"/>
-        /// </summary>
-        /// <param name="center">圆或弧的中心。</param>
-        /// <param name="radius">圆或弧的半径。</param>
-        /// <param name="startAngle">起始角度（弧度）。0 对应正 X 轴。</param>
-        /// <param name="endAngle">结束角度（弧度）。</param>
-        [System.Obsolete("Use Draw.xy.Circle instead")]
-        public void CircleXY(float3 center, float radius, float startAngle = 0f, float endAngle = 2 * Mathf.PI)
-        {
-            PushMatrix(XZtoXYPlaneMatrix);
-            CircleXZ(new float3(center.x, -center.z, center.y), radius, startAngle, endAngle);
-            PopMatrix();
-        }
 
         /// <summary>
         /// 绘制圆。
@@ -1278,26 +1215,6 @@ namespace VisualShape
             }
         }
 
-        /// <summary>
-        /// 在 XZ 平面绘制圆盘。
-        ///
-        /// 可以通过提供 startAngle 和 endAngle 参数来绘制圆弧。
-        ///
-        /// [Open online documentation to see images]
-        ///
-        /// See: <see cref="SolidCircle(float3,float3,float)"/>
-        /// See: <see cref="CommandBuilder2D.SolidCircle(float3,float,float,float)"/>
-        /// See: <see cref="SolidArc(float3,float3,float3)"/>
-        /// </summary>
-        /// <param name="center">圆盘或实心弧的中心。</param>
-        /// <param name="radius">圆盘或实心弧的半径。</param>
-        /// <param name="startAngle">起始角度（弧度）。0 对应正 X 轴。</param>
-        /// <param name="endAngle">结束角度（弧度）。</param>
-        [System.Obsolete("Use Draw.xz.SolidCircle instead")]
-        public void SolidCircleXZ(float3 center, float radius, float startAngle = 0f, float endAngle = 2 * Mathf.PI)
-        {
-            SolidCircleXZInternal(center, radius, startAngle, endAngle);
-        }
 
         internal void SolidCircleXZInternal(float3 center, float radius, float startAngle = 0f, float endAngle = 2 * Mathf.PI)
         {
@@ -1314,28 +1231,6 @@ namespace VisualShape
             Add(new CircleXZData { center = center, radius = radius, startAngle = startAngle, endAngle = endAngle });
         }
 
-        /// <summary>
-        /// 在 XY 平面绘制圆盘。
-        ///
-        /// 可以通过提供 startAngle 和 endAngle 参数来绘制圆弧。
-        ///
-        /// [Open online documentation to see images]
-        ///
-        /// See: <see cref="SolidCircle(float3,float3,float)"/>
-        /// See: <see cref="CommandBuilder2D.SolidCircle(float3,float,float,float)"/>
-        /// See: <see cref="SolidArc(float3,float3,float3)"/>
-        /// </summary>
-        /// <param name="center">圆盘或实心弧的中心。</param>
-        /// <param name="radius">圆盘或实心弧的半径。</param>
-        /// <param name="startAngle">起始角度（弧度）。0 对应正 X 轴。</param>
-        /// <param name="endAngle">结束角度（弧度）。</param>
-        [System.Obsolete("Use Draw.xy.SolidCircle instead")]
-        public void SolidCircleXY(float3 center, float radius, float startAngle = 0f, float endAngle = 2 * Mathf.PI)
-        {
-            PushMatrix(XZtoXYPlaneMatrix);
-            SolidCircleXZInternal(new float3(center.x, -center.z, center.y), radius, startAngle, endAngle);
-            PopMatrix();
-        }
 
         /// <summary>
         /// 绘制圆盘。
@@ -2163,31 +2058,6 @@ namespace VisualShape
             Line(position - new float3(0, 0, size), position + new float3(0, 0, size));
         }
 
-        /// <summary>
-        /// 在 XZ 平面绘制十字。
-        ///
-        /// [Open online documentation to see images]
-        /// </summary>
-        [System.Obsolete("Use Draw.xz.Cross instead")]
-        public void CrossXZ(float3 position, float size = 1)
-        {
-            size *= 0.5f;
-            Line(position - new float3(size, 0, 0), position + new float3(size, 0, 0));
-            Line(position - new float3(0, 0, size), position + new float3(0, 0, size));
-        }
-
-        /// <summary>
-        /// 在 XY 平面绘制十字。
-        ///
-        /// [Open online documentation to see images]
-        /// </summary>
-        [System.Obsolete("Use Draw.xy.Cross instead")]
-        public void CrossXY(float3 position, float size = 1)
-        {
-            size *= 0.5f;
-            Line(position - new float3(size, 0, 0), position + new float3(size, 0, 0));
-            Line(position - new float3(0, size, 0), position + new float3(0, size, 0));
-        }
 
         /// <summary>返回三次贝塞尔曲线上的点。t 被钳制在 0 和 1 之间</summary>
         public static float3 EvaluateCubicBezier(float3 p0, float3 p1, float3 p2, float3 p3, float t)
@@ -2555,22 +2425,6 @@ namespace VisualShape
             Line(c, a);
         }
 
-        /// <summary>
-        /// 绘制矩形轮廓。
-        /// 矩形将对齐到 X 和 Z 轴。
-        ///
-        /// <code>
-        /// Draw.xz.WireRectangle(new Vector3(0f, 0, 0), new Vector2(1, 1), Color.black);
-        /// </code>
-        /// [Open online documentation to see images]
-        ///
-        /// See: <see cref="WirePolygon"/>
-        /// </summary>
-        [System.Obsolete("Use Draw.xz.WireRectangle instead")]
-        public void WireRectangleXZ(float3 center, float2 size)
-        {
-            WireRectangle(center, quaternion.identity, size);
-        }
 
         /// <summary>
         /// 绘制矩形轮廓。
@@ -2588,28 +2442,6 @@ namespace VisualShape
         public void WireRectangle(float3 center, quaternion rotation, float2 size)
         {
             WirePlane(center, rotation, size);
-        }
-
-        /// <summary>
-        /// 绘制矩形轮廓。
-        /// 假定矩形角点在 XY 空间中。
-        /// 与 <see cref="InScreenSpace"/> 结合使用时特别有用。
-        ///
-        /// <code>
-        /// using (Draw.InScreenSpace(Camera.main)) {
-        ///     Draw.xy.WireRectangle(new Rect(10, 10, 100, 100), Color.black);
-        /// }
-        /// </code>
-        /// [Open online documentation to see images]
-        ///
-        /// See: <see cref="WireRectangleXZ"/>
-        /// See: <see cref="WireRectangle(float3,quaternion,float2)"/>
-        /// See: <see cref="WirePolygon"/>
-        /// </summary>
-        [System.Obsolete("Use Draw.xy.WireRectangle instead")]
-        public void WireRectangle(Rect rect)
-        {
-            xy.WireRectangle(rect);
         }
 
 
@@ -2702,29 +2534,6 @@ namespace VisualShape
             PopMatrix();
         }
 
-        /// <summary>
-        /// 绘制实心矩形。
-        /// 假定矩形角点在 XY 空间中。
-        /// 与 <see cref="InScreenSpace"/> 结合使用时特别有用。
-        ///
-        /// 底层使用 <see cref="SolidPlane"/> 实现。
-        ///
-        /// <code>
-        /// using (Draw.InScreenSpace(Camera.main)) {
-        ///     Draw.xy.SolidRectangle(new Rect(10, 10, 100, 100), Color.black);
-        /// }
-        /// </code>
-        /// [Open online documentation to see images]
-        ///
-        /// See: <see cref="WireRectangleXZ"/>
-        /// See: <see cref="WireRectangle(float3,quaternion,float2)"/>
-        /// See: <see cref="SolidBox"/>
-        /// </summary>
-        [System.Obsolete("Use Draw.xy.SolidRectangle instead")]
-        public void SolidRectangle(Rect rect)
-        {
-            xy.SolidRectangle(rect);
-        }
 
         /// <summary>
         /// 绘制实心平面。

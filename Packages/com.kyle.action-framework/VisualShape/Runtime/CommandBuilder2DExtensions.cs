@@ -109,19 +109,6 @@ namespace VisualShape
             draw.PopDuration();
         }
 
-        /// <summary>\copydocref{CommandBuilder.PushPersist(float)}</summary>
-        [System.Obsolete("Renamed to PushDuration for consistency")]
-        public void PushPersist(float duration)
-        {
-            draw.PushPersist(duration);
-        }
-
-        /// <summary>\copydocref{CommandBuilder.PopPersist()}</summary>
-        [System.Obsolete("Renamed to PopDuration for consistency")]
-        public void PopPersist()
-        {
-            draw.PopPersist();
-        }
 
         /// <summary>\copydocref{CommandBuilder.PushLineWidth(float,bool)}</summary>
         public void PushLineWidth(float pixels, bool automaticJoins = true)
@@ -179,19 +166,6 @@ namespace VisualShape
         public void Arc(float2 center, float2 start, float2 end)
         {
             Arc(xy ? new float3(center, 0) : new float3(center.x, 0, center.y), xy ? new float3(start, 0) : new float3(start.x, 0, start.y), xy ? new float3(end, 0) : new float3(end.x, 0, end.y));
-        }
-        /// <summary>\copydocref{CommandBuilder.CircleXY(float3,float,float,float)}</summary>
-        [System.Obsolete("Use Draw.xy.Circle instead")]
-        public void CircleXY(float3 center, float radius, float startAngle = 0f, float endAngle = 2 * Mathf.PI)
-        {
-            draw.CircleXY(center, radius, startAngle, endAngle);
-        }
-
-        /// <summary>\copydocref{CommandBuilder.CircleXY(float3,float,float,float)}</summary>
-        [System.Obsolete("Use Draw.xy.Circle instead")]
-        public void CircleXY(float2 center, float radius, float startAngle = 0f, float endAngle = 2 * Mathf.PI)
-        {
-            CircleXY(xy ? new float3(center, 0) : new float3(center.x, 0, center.y), radius, startAngle, endAngle);
         }
 
         /// <summary>\copydocref{CommandBuilder.SolidArc(float3,float3,float3)}</summary>
@@ -549,33 +523,6 @@ namespace VisualShape
         public void Arc(float2 center, float2 start, float2 end, Color color)
         {
             Arc(xy ? new float3(center, 0) : new float3(center.x, 0, center.y), xy ? new float3(start, 0) : new float3(start.x, 0, start.y), xy ? new float3(end, 0) : new float3(end.x, 0, end.y), color);
-        }
-        /// <summary>\copydocref{CircleXY(float3,float,float,float)}</summary>
-        [System.Obsolete("Use Draw.xy.Circle instead")]
-        public void CircleXY(float3 center, float radius, float startAngle, float endAngle, Color color)
-        {
-            draw.CircleXY(center, radius, startAngle, endAngle, color);
-        }
-
-        /// <summary>\copydocref{CircleXY(float3,float,float,float)}</summary>
-        [System.Obsolete("Use Draw.xy.Circle instead")]
-        public void CircleXY(float3 center, float radius, Color color)
-        {
-            CircleXY(center, radius, 0f, 2 * Mathf.PI, color);
-        }
-
-        /// <summary>\copydocref{CircleXY(float2,float,float,float)}</summary>
-        [System.Obsolete("Use Draw.xy.Circle instead")]
-        public void CircleXY(float2 center, float radius, float startAngle, float endAngle, Color color)
-        {
-            CircleXY(xy ? new float3(center, 0) : new float3(center.x, 0, center.y), radius, startAngle, endAngle, color);
-        }
-
-        /// <summary>\copydocref{CircleXY(float2,float,float,float)}</summary>
-        [System.Obsolete("Use Draw.xy.Circle instead")]
-        public void CircleXY(float2 center, float radius, Color color)
-        {
-            CircleXY(center, radius, 0f, 2 * Mathf.PI, color);
         }
 
         /// <summary>\copydocref{SolidArc(float3,float3,float3)}</summary>

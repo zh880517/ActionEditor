@@ -331,34 +331,6 @@ namespace VisualShape
         }
 
 
-        /// <summary>
-        /// \copydocref{Drawing::CommandBuilder::PushPersist(float)}
-        /// Warning: This method cannot be used inside of Burst jobs. See job-system (view in online documentation for working links) instead.
-        /// </summary>
-        [BurstDiscard]
-        [System.Obsolete("Renamed to PushDuration for consistency")]
-        public static void PushPersist(float duration)
-        {
-#if UNITY_EDITOR
-            ShapeManager.Init();
-            builder.PushPersist(duration);
-#endif
-        }
-
-
-        /// <summary>
-        /// \copydocref{Drawing::CommandBuilder::PopPersist()}
-        /// Warning: This method cannot be used inside of Burst jobs. See job-system (view in online documentation for working links) instead.
-        /// </summary>
-        [BurstDiscard]
-        [System.Obsolete("Renamed to PopDuration for consistency")]
-        public static void PopPersist()
-        {
-#if UNITY_EDITOR
-            ShapeManager.Init();
-            builder.PopPersist();
-#endif
-        }
 
 
         /// <summary>
@@ -467,33 +439,6 @@ namespace VisualShape
 #endif
         }
 
-        /// <summary>
-        /// \copydocref{Drawing::CommandBuilder::CircleXZ(float3,float,float,float)}
-        /// Warning: This method cannot be used inside of Burst jobs. See job-system (view in online documentation for working links) instead.
-        /// </summary>
-        [BurstDiscard]
-        [System.Obsolete("Use Draw.xz.Circle instead")]
-        public static void CircleXZ(float3 center, float radius, float startAngle = 0f, float endAngle = 2 * Mathf.PI)
-        {
-#if UNITY_EDITOR
-            ShapeManager.Init();
-            builder.CircleXZ(center, radius, startAngle, endAngle);
-#endif
-        }
-
-        /// <summary>
-        /// \copydocref{Drawing::CommandBuilder::CircleXY(float3,float,float,float)}
-        /// Warning: This method cannot be used inside of Burst jobs. See job-system (view in online documentation for working links) instead.
-        /// </summary>
-        [BurstDiscard]
-        [System.Obsolete("Use Draw.xy.Circle instead")]
-        public static void CircleXY(float3 center, float radius, float startAngle = 0f, float endAngle = 2 * Mathf.PI)
-        {
-#if UNITY_EDITOR
-            ShapeManager.Init();
-            builder.CircleXY(center, radius, startAngle, endAngle);
-#endif
-        }
 
 
         /// <summary>
@@ -523,34 +468,6 @@ namespace VisualShape
         }
 
 
-        /// <summary>
-        /// \copydocref{Drawing::CommandBuilder::SolidCircleXZ(float3,float,float,float)}
-        /// Warning: This method cannot be used inside of Burst jobs. See job-system (view in online documentation for working links) instead.
-        /// </summary>
-        [BurstDiscard]
-        [System.Obsolete("Use Draw.xz.SolidCircle instead")]
-        public static void SolidCircleXZ(float3 center, float radius, float startAngle = 0f, float endAngle = 2 * Mathf.PI)
-        {
-#if UNITY_EDITOR
-            ShapeManager.Init();
-            builder.SolidCircleXZ(center, radius, startAngle, endAngle);
-#endif
-        }
-
-
-        /// <summary>
-        /// \copydocref{Drawing::CommandBuilder::SolidCircleXY(float3,float,float,float)}
-        /// Warning: This method cannot be used inside of Burst jobs. See job-system (view in online documentation for working links) instead.
-        /// </summary>
-        [BurstDiscard]
-        [System.Obsolete("Use Draw.xy.SolidCircle instead")]
-        public static void SolidCircleXY(float3 center, float radius, float startAngle = 0f, float endAngle = 2 * Mathf.PI)
-        {
-#if UNITY_EDITOR
-            ShapeManager.Init();
-            builder.SolidCircleXY(center, radius, startAngle, endAngle);
-#endif
-        }
 
 
         /// <summary>
@@ -846,33 +763,6 @@ namespace VisualShape
 #endif
         }
 
-        /// <summary>
-        /// \copydocref{Drawing::CommandBuilder::CrossXZ(float3,float)}
-        /// Warning: This method cannot be used inside of Burst jobs. See job-system (view in online documentation for working links) instead.
-        /// </summary>
-        [BurstDiscard]
-        [System.Obsolete("Use Draw.xz.Cross instead")]
-        public static void CrossXZ(float3 position, float size = 1)
-        {
-#if UNITY_EDITOR
-            ShapeManager.Init();
-            builder.CrossXZ(position, size);
-#endif
-        }
-
-        /// <summary>
-        /// \copydocref{Drawing::CommandBuilder::CrossXY(float3,float)}
-        /// Warning: This method cannot be used inside of Burst jobs. See job-system (view in online documentation for working links) instead.
-        /// </summary>
-        [BurstDiscard]
-        [System.Obsolete("Use Draw.xy.Cross instead")]
-        public static void CrossXY(float3 position, float size = 1)
-        {
-#if UNITY_EDITOR
-            ShapeManager.Init();
-            builder.CrossXY(position, size);
-#endif
-        }
 
         /// <summary>
         /// \copydocref{Drawing::CommandBuilder::Bezier(float3,float3,float3,float3)}
@@ -1022,19 +912,6 @@ namespace VisualShape
         }
 
 
-        /// <summary>
-        /// \copydocref{Drawing::CommandBuilder::WireRectangleXZ(float3,float2)}
-        /// Warning: This method cannot be used inside of Burst jobs. See job-system (view in online documentation for working links) instead.
-        /// </summary>
-        [BurstDiscard]
-        [System.Obsolete("Use Draw.xz.WireRectangle instead")]
-        public static void WireRectangleXZ(float3 center, float2 size)
-        {
-#if UNITY_EDITOR
-            ShapeManager.Init();
-            builder.WireRectangleXZ(center, size);
-#endif
-        }
 
 
         /// <summary>
@@ -1050,19 +927,6 @@ namespace VisualShape
 #endif
         }
 
-        /// <summary>
-        /// \copydocref{Drawing::CommandBuilder::WireRectangle(Rect)}
-        /// Warning: This method cannot be used inside of Burst jobs. See job-system (view in online documentation for working links) instead.
-        /// </summary>
-        [BurstDiscard]
-        [System.Obsolete("Use Draw.xy.WireRectangle instead")]
-        public static void WireRectangle(Rect rect)
-        {
-#if UNITY_EDITOR
-            ShapeManager.Init();
-            builder.WireRectangle(rect);
-#endif
-        }
 
         /// <summary>
         /// \copydocref{Drawing::CommandBuilder::WireTriangle(float3,quaternion,float)}
@@ -1120,19 +984,6 @@ namespace VisualShape
         }
 
 
-        /// <summary>
-        /// \copydocref{Drawing::CommandBuilder::SolidRectangle(Rect)}
-        /// Warning: This method cannot be used inside of Burst jobs. See job-system (view in online documentation for working links) instead.
-        /// </summary>
-        [BurstDiscard]
-        [System.Obsolete("Use Draw.xy.SolidRectangle instead")]
-        public static void SolidRectangle(Rect rect)
-        {
-#if UNITY_EDITOR
-            ShapeManager.Init();
-            builder.SolidRectangle(rect);
-#endif
-        }
 
 
         /// <summary>
@@ -1602,62 +1453,6 @@ namespace VisualShape
 #endif
         }
 
-        /// <summary>
-        /// \copydocref{Drawing::CommandBuilder::CircleXZ(float3,float,float,float,Color)}
-        /// Warning: This method cannot be used inside of Burst jobs. See job-system (view in online documentation for working links) instead.
-        /// </summary>
-        [BurstDiscard]
-        [System.Obsolete("Use Draw.xz.Circle instead")]
-        public static void CircleXZ(float3 center, float radius, float startAngle, float endAngle, Color color)
-        {
-#if UNITY_EDITOR
-            ShapeManager.Init();
-            builder.CircleXZ(center, radius, startAngle, endAngle, color);
-#endif
-        }
-
-        /// <summary>
-        /// \copydocref{Drawing::CommandBuilder::CircleXZ(float3,float,Color)}
-        /// Warning: This method cannot be used inside of Burst jobs. See job-system (view in online documentation for working links) instead.
-        /// </summary>
-        [BurstDiscard]
-        [System.Obsolete("Use Draw.xz.Circle instead")]
-        public static void CircleXZ(float3 center, float radius, Color color)
-        {
-#if UNITY_EDITOR
-            ShapeManager.Init();
-            builder.CircleXZ(center, radius, color);
-#endif
-        }
-
-        /// <summary>
-        /// \copydocref{Drawing::CommandBuilder::CircleXY(float3,float,float,float,Color)}
-        /// Warning: This method cannot be used inside of Burst jobs. See job-system (view in online documentation for working links) instead.
-        /// </summary>
-        [BurstDiscard]
-        [System.Obsolete("Use Draw.xy.Circle instead")]
-        public static void CircleXY(float3 center, float radius, float startAngle, float endAngle, Color color)
-        {
-#if UNITY_EDITOR
-            ShapeManager.Init();
-            builder.CircleXY(center, radius, startAngle, endAngle, color);
-#endif
-        }
-
-
-        /// <summary>
-        /// \copydocref{Drawing::CommandBuilder::CircleXY(float3,float,Color)}
-        /// Warning: This method cannot be used inside of Burst jobs. See job-system (view in online documentation for working links) instead.
-        /// </summary>
-        [BurstDiscard]
-        [System.Obsolete("Use Draw.xy.Circle instead")]
-        public static void CircleXY(float3 center, float radius, Color color)
-        {
-#if UNITY_EDITOR
-            ShapeManager.Init();
-            builder.CircleXY(center, radius, color);
-#endif
-        }
 
 
         /// <summary>
@@ -1687,64 +1482,6 @@ namespace VisualShape
         }
 
 
-        /// <summary>
-        /// \copydocref{Drawing::CommandBuilder::SolidCircleXZ(float3,float,float,float,Color)}
-        /// Warning: This method cannot be used inside of Burst jobs. See job-system (view in online documentation for working links) instead.
-        /// </summary>
-        [BurstDiscard]
-        [System.Obsolete("Use Draw.xz.SolidCircle instead")]
-        public static void SolidCircleXZ(float3 center, float radius, float startAngle, float endAngle, Color color)
-        {
-#if UNITY_EDITOR
-            ShapeManager.Init();
-            builder.SolidCircleXZ(center, radius, startAngle, endAngle, color);
-#endif
-        }
-
-
-        /// <summary>
-        /// \copydocref{Drawing::CommandBuilder::SolidCircleXZ(float3,float,Color)}
-        /// Warning: This method cannot be used inside of Burst jobs. See job-system (view in online documentation for working links) instead.
-        /// </summary>
-        [BurstDiscard]
-        [System.Obsolete("Use Draw.xz.SolidCircle instead")]
-        public static void SolidCircleXZ(float3 center, float radius, Color color)
-        {
-#if UNITY_EDITOR
-            ShapeManager.Init();
-            builder.SolidCircleXZ(center, radius, color);
-#endif
-        }
-
-
-        /// <summary>
-        /// \copydocref{Drawing::CommandBuilder::SolidCircleXY(float3,float,float,float,Color)}
-        /// Warning: This method cannot be used inside of Burst jobs. See job-system (view in online documentation for working links) instead.
-        /// </summary>
-        [BurstDiscard]
-        [System.Obsolete("Use Draw.xy.SolidCircle instead")]
-        public static void SolidCircleXY(float3 center, float radius, float startAngle, float endAngle, Color color)
-        {
-#if UNITY_EDITOR
-            ShapeManager.Init();
-            builder.SolidCircleXY(center, radius, startAngle, endAngle, color);
-#endif
-        }
-
-
-        /// <summary>
-        /// \copydocref{Drawing::CommandBuilder::SolidCircleXY(float3,float,Color)}
-        /// Warning: This method cannot be used inside of Burst jobs. See job-system (view in online documentation for working links) instead.
-        /// </summary>
-        [BurstDiscard]
-        [System.Obsolete("Use Draw.xy.SolidCircle instead")]
-        public static void SolidCircleXY(float3 center, float radius, Color color)
-        {
-#if UNITY_EDITOR
-            ShapeManager.Init();
-            builder.SolidCircleXY(center, radius, color);
-#endif
-        }
 
 
         /// <summary>
@@ -2077,61 +1814,6 @@ namespace VisualShape
 #endif
         }
 
-        /// <summary>
-        /// \copydocref{Drawing::CommandBuilder::CrossXZ(float3,float,Color)}
-        /// Warning: This method cannot be used inside of Burst jobs. See job-system (view in online documentation for working links) instead.
-        /// </summary>
-        [BurstDiscard]
-        [System.Obsolete("Use Draw.xz.Cross instead")]
-        public static void CrossXZ(float3 position, float size, Color color)
-        {
-#if UNITY_EDITOR
-            ShapeManager.Init();
-            builder.CrossXZ(position, size, color);
-#endif
-        }
-
-        /// <summary>
-        /// \copydocref{Drawing::CommandBuilder::CrossXZ(float3,Color)}
-        /// Warning: This method cannot be used inside of Burst jobs. See job-system (view in online documentation for working links) instead.
-        /// </summary>
-        [BurstDiscard]
-        [System.Obsolete("Use Draw.xz.Cross instead")]
-        public static void CrossXZ(float3 position, Color color)
-        {
-#if UNITY_EDITOR
-            ShapeManager.Init();
-            builder.CrossXZ(position, color);
-#endif
-        }
-
-        /// <summary>
-        /// \copydocref{Drawing::CommandBuilder::CrossXY(float3,float,Color)}
-        /// Warning: This method cannot be used inside of Burst jobs. See job-system (view in online documentation for working links) instead.
-        /// </summary>
-        [BurstDiscard]
-        [System.Obsolete("Use Draw.xy.Cross instead")]
-        public static void CrossXY(float3 position, float size, Color color)
-        {
-#if UNITY_EDITOR
-            ShapeManager.Init();
-            builder.CrossXY(position, size, color);
-#endif
-        }
-
-        /// <summary>
-        /// \copydocref{Drawing::CommandBuilder::CrossXY(float3,Color)}
-        /// Warning: This method cannot be used inside of Burst jobs. See job-system (view in online documentation for working links) instead.
-        /// </summary>
-        [BurstDiscard]
-        [System.Obsolete("Use Draw.xy.Cross instead")]
-        public static void CrossXY(float3 position, Color color)
-        {
-#if UNITY_EDITOR
-            ShapeManager.Init();
-            builder.CrossXY(position, color);
-#endif
-        }
 
         /// <summary>
         /// \copydocref{Drawing::CommandBuilder::Bezier(float3,float3,float3,float3,Color)}
@@ -2294,19 +1976,6 @@ namespace VisualShape
         }
 
 
-        /// <summary>
-        /// \copydocref{Drawing::CommandBuilder::WireRectangleXZ(float3,float2,Color)}
-        /// Warning: This method cannot be used inside of Burst jobs. See job-system (view in online documentation for working links) instead.
-        /// </summary>
-        [BurstDiscard]
-        [System.Obsolete("Use Draw.xz.WireRectangle instead")]
-        public static void WireRectangleXZ(float3 center, float2 size, Color color)
-        {
-#if UNITY_EDITOR
-            ShapeManager.Init();
-            builder.WireRectangleXZ(center, size, color);
-#endif
-        }
 
 
         /// <summary>
@@ -2322,19 +1991,6 @@ namespace VisualShape
 #endif
         }
 
-        /// <summary>
-        /// \copydocref{Drawing::CommandBuilder::WireRectangle(Rect,Color)}
-        /// Warning: This method cannot be used inside of Burst jobs. See job-system (view in online documentation for working links) instead.
-        /// </summary>
-        [BurstDiscard]
-        [System.Obsolete("Use Draw.xy.WireRectangle instead")]
-        public static void WireRectangle(Rect rect, Color color)
-        {
-#if UNITY_EDITOR
-            ShapeManager.Init();
-            builder.WireRectangle(rect, color);
-#endif
-        }
 
         /// <summary>
         /// \copydocref{Drawing::CommandBuilder::WireTriangle(float3,quaternion,float,Color)}
@@ -2392,19 +2048,6 @@ namespace VisualShape
         }
 
 
-        /// <summary>
-        /// \copydocref{Drawing::CommandBuilder::SolidRectangle(Rect,Color)}
-        /// Warning: This method cannot be used inside of Burst jobs. See job-system (view in online documentation for working links) instead.
-        /// </summary>
-        [BurstDiscard]
-        [System.Obsolete("Use Draw.xy.SolidRectangle instead")]
-        public static void SolidRectangle(Rect rect, Color color)
-        {
-#if UNITY_EDITOR
-            ShapeManager.Init();
-            builder.SolidRectangle(rect, color);
-#endif
-        }
 
 
         /// <summary>
