@@ -18,7 +18,8 @@ namespace NamedAsset
                 using(var stream = new FileStream(file.Path, FileMode.Open))
                 {
                     var bytes = new byte[file.Length];
-                    stream.Read(bytes, (int)file.Offset, (int)file.Length);
+                    stream.Seek((long)file.Offset, SeekOrigin.Begin);
+                    stream.Read(bytes, 0, (int)file.Length);
                     json = System.Text.Encoding.UTF8.GetString(bytes);
                 }
             }
@@ -74,6 +75,7 @@ namespace NamedAsset
                 case FilePathType.Bytes:
                     {
                         var req = AssetBundle.LoadFromMemoryAsync(file.Data, info.Crc);
+                        await req;
                         info.Bundle = req.assetBundle;
                         info.State = info.Bundle ? BundleLoadState.Loaded : BundleLoadState.LoadFailed;
                     }

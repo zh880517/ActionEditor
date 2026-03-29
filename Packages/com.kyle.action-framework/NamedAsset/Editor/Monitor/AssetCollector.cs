@@ -52,7 +52,7 @@ namespace NamedAsset.Editor
                 {
                     AssetRef assetRef = new AssetRef
                     {
-                        Name = $"{setting.Name}/{System.IO.Path.GetFileNameWithoutExtension(assets[i])}",
+                        Name = $"{setting.Name}/{System.IO.Path.GetFileNameWithoutExtension(assets[i]).ToLower()}",
                         Path = assets[i]
                     };
                     package.Assets.Add(assetRef);

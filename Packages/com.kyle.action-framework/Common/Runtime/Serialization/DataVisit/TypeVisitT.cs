@@ -51,7 +51,7 @@ public class TypeVisitT<T> : TypeVisit
         throw new System.Exception($"None visit define for type {typeof(T)}");
     }
 
-    public static void RegusterStruct(VisitDelegate visit)
+    public static void RegisterStruct(VisitDelegate visit)
     {
         VisitFunc = visit;
         IsCustomStruct = true;

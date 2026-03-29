@@ -280,10 +280,19 @@ namespace DataVisit
 
         public void VisitEnum<T>(uint tag, string name, uint flag, ref T value) where T : Enum
         {
-            int v = Convert.ToInt32(value);
+            long v = Convert.ToInt64(value);
             if (v == 0 && !IsRequired(flag))
                 return;
-            PackInt(tag, v);
+            if (v >= 0)
+            {
+                PackHeader(tag, SevenBitDataType.Positive);
+                PackNumber((ulong)v);
+            }
+            else
+            {
+                PackHeader(tag, SevenBitDataType.Negative);
+                PackNumber((ulong)(-v));
+            }
         }
 
         public void VisitStruct<T>(uint tag, string name, uint flag, ref T value) where T : struct
@@ -304,10 +313,13 @@ namespace DataVisit
 
         public void VisitClass<T>(uint tag, string name, uint flag, ref T value) where T : class, new()
         {
-            if (value == null && IsRequired(flag))
+            if (value == null)
             {
-                PackHeader(tag, SevenBitDataType.StructBegin);
-                PackHeader(0, SevenBitDataType.StructEnd);
+                if (IsRequired(flag))
+                {
+                    PackHeader(tag, SevenBitDataType.StructBegin);
+                    PackHeader(0, SevenBitDataType.StructEnd);
+                }
                 return;
             }
             var posBefore = _memory.Position;
@@ -325,10 +337,13 @@ namespace DataVisit
         }
         public void VisitDynamicClass<T>(uint tag, string name, uint flag, ref T value) where T : class, new()
         {
-            if (value == null && IsRequired(flag))
+            if (value == null)
             {
-                PackHeader(tag, SevenBitDataType.StructBegin);
-                PackHeader(0, SevenBitDataType.StructEnd);
+                if (IsRequired(flag))
+                {
+                    PackHeader(tag, SevenBitDataType.StructBegin);
+                    PackHeader(0, SevenBitDataType.StructEnd);
+                }
                 return;
             }
             int id = TypeVisit.GetTypeId(value);

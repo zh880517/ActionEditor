@@ -4,7 +4,7 @@
     {
         PackAllInOne,//全部打包在一起
         PackSingleFile,//单一文件打包
-        PackDirectory,//目录打包
+        PackDirectory,//按照目录打包
     }
 
     [System.Serializable]

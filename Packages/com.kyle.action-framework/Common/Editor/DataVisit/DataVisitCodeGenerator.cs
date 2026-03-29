@@ -28,14 +28,14 @@ namespace CodeGen.DataVisit
             if(modifyFiles.Count > 0) 
                 AssetDatabase.Refresh();
         }
-        private static void GenerateCatalog(CatalogData catalog, HashSet<string> modifyFils)
+        private static void GenerateCatalog(CatalogData catalog, HashSet<string> modifyFiles)
         {
             string funcFilePath = GenerateVisitClass(catalog);
             if (funcFilePath != null)
-                modifyFils?.Add(funcFilePath);
-            string registerFilePath = GenerateVisistRegisterClass(catalog);
+                modifyFiles?.Add(funcFilePath);
+            string registerFilePath = GenerateVisitRegisterClass(catalog);
             if (registerFilePath != null)
-                modifyFils?.Add(registerFilePath);
+                modifyFiles?.Add(registerFilePath);
             
         }
 
@@ -124,7 +124,7 @@ namespace CodeGen.DataVisit
         }
 
         //生成访问注册类，单独一个文件
-        private static string GenerateVisistRegisterClass(CatalogData catalog)
+        private static string GenerateVisitRegisterClass(CatalogData catalog)
         {
             CSharpCodeWriter writer = new CSharpCodeWriter();
             writer.WriteLine("using DataVisit;");
@@ -157,7 +157,7 @@ namespace CodeGen.DataVisit
                             string typeName = GeneratorUtils.TypeToName(typeInfo.Type, catalog.NameSpace);
                             if (typeInfo.IsStruct)
                             {
-                                writer.WriteLine($"TypeVisitT<{typeName}>.RegusterStruct(Visit({typeInfo.TypeName}));");
+                                writer.WriteLine($"TypeVisitT<{typeName}>.RegisterStruct(Visit{typeInfo.TypeName});");
                             }
                             else
                             {

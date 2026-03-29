@@ -30,7 +30,7 @@ namespace NamedAsset.Editor
                 for (int i=0; i<files.Length; ++i)
                 {
                     var filePath = files[i];
-                    var fileName = Path.GetFileNameWithoutExtension(filePath);
+                    var fileName = Path.GetFileNameWithoutExtension(filePath).ToLower();
                     string assetName = $"{p.Name}/{fileName}";
                     if (NamedAssets.TryGetValue(assetName, out string existPath))
                     {
@@ -53,8 +53,8 @@ namespace NamedAsset.Editor
                         foreach (var file in files)
                         {
                             int lastSlash = file.LastIndexOf('/');
-                            int lastBackSlash = file.LastIndexOf('/', lastSlash + 1);
-                            AddAssetToBundle(file, $"{p.Name}/{file.Substring(lastBackSlash + 1, lastBackSlash - lastSlash - 1)}", false);
+                            int prevSlash = file.LastIndexOf('/', lastSlash - 1);
+                            AddAssetToBundle(file, $"{p.Name}/{file.Substring(prevSlash + 1, lastSlash - prevSlash - 1)}", false);
                         }
                         break;
                     case AssetPackType.PackSingleFile:
@@ -124,7 +124,7 @@ namespace NamedAsset.Editor
                     string fileName = Path.GetFileName(file);
                     if (!fileName.EndsWith(externalName) || fileName.EndsWith(".json"))
                         continue;
-                    string partName = fileName.Replace(targetPath, "").Replace('\\', '/');
+                    string partName = file.Replace('\\', '/').Replace(exportPath, "");
                     if (!bundles.Contains(partName))
                     {
                         File.Delete(file);

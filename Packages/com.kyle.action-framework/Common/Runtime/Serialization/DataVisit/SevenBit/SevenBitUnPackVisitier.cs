@@ -447,7 +447,7 @@ namespace DataVisit
 
         public void VisitEnum<T>(uint tag, string name, uint flag, ref T value) where T : Enum
         {
-            ulong v = UnPackULong(tag);
+            long v = (long)UnPackULong(tag);
             value = (T)Enum.ToObject(typeof(T), v);
         }
 

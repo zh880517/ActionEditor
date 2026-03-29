@@ -85,28 +85,34 @@ namespace CodeGen.DataVisit
                         var attr= type.GetCustomAttribute<VisitTypeIDCatalogAttribute>();
                         if (attr != null)
                         {
-                            var catalog = catalogs.FirstOrDefault(c => c.AttributeType == typeof(VisitTypeIDCatalogAttribute));
-                            catalog ??= CreateCatalog(attr.CatalogType);
+                            var catalog = catalogs.FirstOrDefault(c => c.AttributeType == attr.CatalogType);
+                            if (catalog == null)
+                            {
+                                catalog = CreateCatalog(attr.CatalogType);
+                                catalogs.Add(catalog);
+                            }
                             var fields = type.GetFields(BindingFlags.Public | BindingFlags.Static);
                             foreach (var field in fields)
                             {
                                 var fieldAttr = field.GetCustomAttribute<VisitTypeTagAttribute>();
                                 if(fieldAttr == null || fieldAttr.TagType == null)
                                     continue;
-                                if(!catalog.TypeIDs.TryGetValue(fieldAttr.TagType, out int exitID))
+                                int typeIdValue = (int)field.GetRawConstantValue();
+                                if(!catalog.TypeIDs.TryGetValue(fieldAttr.TagType, out int existID))
                                 {
-                                    catalog.TypeIDs.Add(fieldAttr.TagType, exitID);
+                                    catalog.TypeIDs.Add(fieldAttr.TagType, typeIdValue);
                                 }
-                                else
+                                else if(existID != typeIdValue)
                                 {
-                                    Debug.LogError($"Duplicate TypeID for type {fieldAttr.TagType.FullName} in enum {type.FullName}");
+                                    Debug.LogError($"Conflicting TypeID for type {fieldAttr.TagType.FullName} in enum {type.FullName}");
                                 }
                             }
                         }
                     }
                     else if (type.IsSubclassOf(typeof(VisitCatalogAttribute)))
                     {
-                        catalogs.Add(CreateCatalog(type));
+                        if (!catalogs.Any(c => c.AttributeType == type))
+                            catalogs.Add(CreateCatalog(type));
                     }
                     else
                     {
@@ -114,7 +120,11 @@ namespace CodeGen.DataVisit
                         if (catalogAttr != null)
                         {
                             var catalog = catalogs.FirstOrDefault(c => c.AttributeType == catalogAttr.GetType());
-                            catalog ??= CreateCatalog(catalogAttr.GetType());
+                            if (catalog == null)
+                            {
+                                catalog = CreateCatalog(catalogAttr.GetType());
+                                catalogs.Add(catalog);
+                            }
                             var typeInfo = CreateTypeInfo(type);
                             catalog.Types.Add(typeInfo);
                         }
@@ -130,6 +140,14 @@ namespace CodeGen.DataVisit
 
         private static bool BuildCatalogs(List<CatalogData> catalogs)
         {
+            // 预建类型查找字典，避免嵌套LINQ O(N²)
+            var typeMap = new Dictionary<Type, TypeData>();
+            foreach (var catalog in catalogs)
+            {
+                foreach (var t in catalog.Types)
+                    typeMap[t.Type] = t;
+            }
+
             foreach (var catalog in catalogs)
             {
                 if(catalog.TypeIDFieldIndex == 0)
@@ -147,13 +165,12 @@ namespace CodeGen.DataVisit
                     var baseType = typeInfo.Type.BaseType;
                     if (baseType != typeof(object))
                     {
-                        typeInfo.Base = catalogs
-                            .SelectMany(c => c.Types)
-                            .FirstOrDefault(t => t.Type == baseType);
+                        typeMap.TryGetValue(baseType, out typeInfo.Base);
                         if(typeInfo.Base == null)
                         {
                             var baseTypeInfo = CreateTypeInfo(baseType);
                             catalog.Types.Add(baseTypeInfo);
+                            typeMap[baseType] = baseTypeInfo;
                             typeInfo.Base = baseTypeInfo;
                         }
                     }
@@ -226,9 +243,7 @@ namespace CodeGen.DataVisit
                             field.IsCollections = true;
                             realFieldType = field.FieldType.GetElementType();
                         }
-                        field.CustomFieldType = catalogs
-                            .SelectMany(c => c.Types)
-                            .FirstOrDefault(t => t.Type == realFieldType);
+                        field.CustomFieldType = typeMap.GetValueOrDefault(realFieldType);
                     }
                 }
             }

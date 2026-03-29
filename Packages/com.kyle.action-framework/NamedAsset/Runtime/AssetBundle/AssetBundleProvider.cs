@@ -215,10 +215,21 @@ namespace NamedAsset
         private async Awaitable LoadBundle(AssetBundleInfo info)
         {
             loadingCount++;
-            var path = pathProvider.GetAssetBundlePath(info.Path);
-            await AsyncFileUtil.LoadAssetBundleAsync(path, info);
-            loadingCount--;
-            FlushQueue();
+            try
+            {
+                var path = pathProvider.GetAssetBundlePath(info.Path);
+                await AsyncFileUtil.LoadAssetBundleAsync(path, info);
+            }
+            catch (System.Exception e)
+            {
+                info.State = BundleLoadState.LoadFailed;
+                Debug.LogException(e);
+            }
+            finally
+            {
+                loadingCount--;
+                FlushQueue();
+            }
         }
 
         private void FlushQueue()

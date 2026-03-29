@@ -55,8 +55,10 @@ namespace NamedAsset
             }
 
             var newGo = Object.Instantiate(entry.AssetRequest.Asset, parent);
+            newGo.SetActive(false);
             var entity = newGo.AddComponent<PoolableEntity>();
             entity.PoolKey = name;
+            newGo.SetActive(true);
             return newGo;
         }
 
