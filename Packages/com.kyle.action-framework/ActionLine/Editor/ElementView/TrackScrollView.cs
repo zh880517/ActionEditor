@@ -108,7 +108,7 @@ namespace ActionLine.EditorView
         {
             if (!hasGeometryChange)
                 return;
-            float framePosition = ActionLineStyles.FrameInTrackPosition(frame, viewScale);
+            float framePosition = ActionLineStyles.FrameInTrackPosition(frame);
             float viewVisualWidth = trackClipArea.localBound.size.x;
             float viewWidth = viewVisualWidth / viewScale;
             float offset = Mathf.Min(40, viewVisualWidth * 0.1f);
@@ -145,7 +145,10 @@ namespace ActionLine.EditorView
             Vector2 trackGroupSize = trackGroup.localBound.size;
             Vector2 viewSize = trackClipArea.localBound.size;
             float range = trackGroupSize.y - viewSize.y;
-            verticalSlider.slider.SetValueWithoutNotify((verticalOffset * 100) / range);
+            if (range > 0)
+                verticalSlider.slider.SetValueWithoutNotify((verticalOffset * 100) / range);
+            else
+                verticalSlider.slider.SetValueWithoutNotify(0);
             trackGroup.style.top = -verticalOffset;
 
             OnScaleChange();

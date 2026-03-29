@@ -22,7 +22,7 @@ namespace ActionLine.EditorView
         public ActionLineAsset Target { get; internal set; }
         public PreviewResourceContext ResourceContext { get; internal set; }
 
-        public void Resfresh(List<ActionClipData> clips)
+        public void Refresh(List<ActionClipData> clips)
         {
             clipDatas = clips;
             //TODO:刷新simulators列表
@@ -73,7 +73,7 @@ namespace ActionLine.EditorView
                 var data = clipDatas[i];
                 int endFrame = data.Clip.StartFrame + data.Clip.Length;
                 bool isIn = index >= data.Clip.StartFrame && index < endFrame;
-                if (isIn == unit.InSimulate)
+                if (isIn != unit.InSimulate)
                 {
                     if(isIn)
                     {

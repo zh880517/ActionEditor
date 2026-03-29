@@ -34,7 +34,8 @@ namespace ActionLine
         {
             if(!source)
                 frameCount = Mathf.Max(1, count);
-            frameCount = count;
+            else
+                frameCount = count;
             EditorUtility.SetDirty(this);
         }
 
@@ -133,7 +134,7 @@ namespace ActionLine
                 return false;
             if (enableClips.Contains(clip))
                 return true;
-            if (!source)
+            if (source)
                 return source.IsClipActive(clip);
             return false;
         }

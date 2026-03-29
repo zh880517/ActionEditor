@@ -58,7 +58,7 @@ namespace ActionLine.EditorView
                 float start = FrameToPosition(unit.ClipView.StartFrame);
                 float end = FrameToPosition(unit.ClipView.EndFrame);
                 unit.ClipView.style.left = start;
-                unit.ClipView.style.width = start - end;
+                unit.ClipView.style.width = end - start;
             }
         }
 
@@ -106,13 +106,13 @@ namespace ActionLine.EditorView
                 Add(bg);
                 ActionClipView clip = new ActionClipView { Index = indexInQueue };
                 bg.Add(clip);
-                VisualElement disbale = new VisualElement();
-                disbale.StretchToParentSize();
-                disbale.pickingMode = PickingMode.Ignore;
-                disbale.style.backgroundColor = ActionLineStyles.DisbleTrackColor;
-                disbale.style.display = DisplayStyle.None;
-                bg.Add(disbale);
-                clips.Add(new ClipUnit { ClipView = clip, BG = bg });
+                VisualElement disable = new VisualElement();
+                disable.StretchToParentSize();
+                disable.pickingMode = PickingMode.Ignore;
+                disable.style.backgroundColor = ActionLineStyles.DisbleTrackColor;
+                disable.style.display = DisplayStyle.None;
+                bg.Add(disable);
+                clips.Add(new ClipUnit { ClipView = clip, BG = bg, Disable = disable });
             }
         }
 

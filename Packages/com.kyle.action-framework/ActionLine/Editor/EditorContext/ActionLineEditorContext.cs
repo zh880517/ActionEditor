@@ -79,7 +79,7 @@ namespace ActionLine.EditorView
                 DestroyImmediate(typeSelectWindow);
                 typeSelectWindow = null;
             }
-            DestroyPrview();
+            DestroyPreview();
         }
 
 
@@ -92,7 +92,7 @@ namespace ActionLine.EditorView
                 var provider = ActionLineEditorProvider.GetProvider(target.GetType());
                 resourceContext = provider.CreateResourceContext();
             }
-            if (preview != null)
+            if (preview == null)
             {
                 var provider = ActionLineEditorProvider.GetProvider(target.GetType());
                 preview = provider.CreatePreview(target, resourceContext);
@@ -101,7 +101,7 @@ namespace ActionLine.EditorView
             }
         }
 
-        public void DestroyPrview()
+        public void DestroyPreview()
         {
             if (preview != null)
             {
@@ -321,7 +321,7 @@ namespace ActionLine.EditorView
             SelectedTracks.RemoveAll(it => !it.Clip);
             RefreshSelectState();
             view.Track.Group.UpdateClipPosition();
-            preview?.Resfresh(clips);
+            preview?.Refresh(clips);
         }
 
         public void RefreshSelectState()
@@ -414,7 +414,7 @@ namespace ActionLine.EditorView
         {
             if (state == PlayModeStateChange.ExitingEditMode)
             {
-                DestroyPrview();
+                DestroyPreview();
             }
         }
     }

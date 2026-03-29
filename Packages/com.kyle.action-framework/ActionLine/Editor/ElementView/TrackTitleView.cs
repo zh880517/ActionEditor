@@ -26,7 +26,7 @@ namespace ActionLine.EditorView
             titleLabel.pickingMode = PickingMode.Ignore;
             titleLabel.style.unityTextAlign = TextAnchor.MiddleLeft;
             Add(titleLabel);
-            custom.pickingMode = PickingMode.Ignore;
+            customArea.pickingMode = PickingMode.Ignore;
             customArea.style.flexGrow = 1;
             customArea.style.flexDirection = FlexDirection.Row;
             Add(customArea);
