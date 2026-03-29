@@ -59,8 +59,8 @@ namespace Flow
                     {
                         if(kv.Key == nodeID)
                         {
-                            if(!dep.Dependencies.Contains(kv.Key) && kv.Key != dep.NodeID)
-                                dep.Dependencies.Add(kv.Key);
+                            if(!dep.Dependencies.Contains(kv.Value) && kv.Value != dep.NodeID)
+                                dep.Dependencies.Add(kv.Value);
                         }
                     }
                 }

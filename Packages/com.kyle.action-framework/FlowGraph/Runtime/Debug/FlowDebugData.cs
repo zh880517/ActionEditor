@@ -9,7 +9,7 @@
     public enum FlowDebugNodeType
     {
         Execute = 0,
-        ExecuteDataNode = 2,
+        ExecuteDataNode = 1,
         Output = 2,
         OutputValue = 3,
     }

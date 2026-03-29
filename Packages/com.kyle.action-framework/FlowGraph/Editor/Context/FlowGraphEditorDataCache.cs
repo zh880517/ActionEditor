@@ -31,7 +31,7 @@ namespace Flow.EditorView
             {
                 dataType = context.GetEditorDataType();
             }
-            if(dataType == null && !dataType.IsSubclassOf(typeof(FlowGraphEditorData)))
+            if(dataType == null || !dataType.IsSubclassOf(typeof(FlowGraphEditorData)))
             {
                 dataType = typeof(FlowGraphEditorData);
             }

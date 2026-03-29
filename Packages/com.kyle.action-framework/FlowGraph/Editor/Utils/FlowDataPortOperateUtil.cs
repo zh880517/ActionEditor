@@ -16,7 +16,7 @@ namespace Flow.EditorView
                 var e = graph.DataEdges[i];
                 if (e.Input == input && e.InputSlot == inputFieldName)
                 {
-                    graph.Edges.RemoveAt(i);
+                    graph.DataEdges.RemoveAt(i);
                     i--;
                     continue;
                 }

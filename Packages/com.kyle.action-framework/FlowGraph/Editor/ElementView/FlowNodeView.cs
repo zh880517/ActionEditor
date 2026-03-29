@@ -76,7 +76,7 @@ namespace Flow.EditorView
                         falsePort.portName = "False";
                         falsePort.visualClass = "Port_False";
                         outputContainer.Add(falsePort);
-                        ports.Add(new PortUnit { Name = "False", Port = falsePort, Type = PortType.FlowOutput, Index = 0 });
+                        ports.Add(new PortUnit { Name = "False", Port = falsePort, Type = PortType.FlowOutput, Index = 1 });
                     }
                     break;
                 case NodeOutputType.Dynamic:

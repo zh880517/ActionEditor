@@ -58,7 +58,7 @@ namespace Flow.EditorView
             foreach (var item in files)
             {
                 var obj = AssetDatabase.LoadAssetAtPath<T>(item);
-                if (!obj)
+                if (obj)
                 {
                     graphs.Add(obj);
                 }

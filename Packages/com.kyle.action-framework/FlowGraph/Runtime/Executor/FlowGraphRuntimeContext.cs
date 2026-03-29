@@ -33,6 +33,8 @@ namespace Flow
                 if (variables.TryGetValue(edgeID, out var v))
                 {
                     var dv = v as TDynamicVariable<T>;
+                    if (dv == null)
+                        return false;
                     value = dv.Value;
                     return true;
                 }
@@ -80,7 +82,7 @@ namespace Flow
                     break;
                 }
                 //执行依赖的数据节点
-                if(depenceIndex > 0)
+                if(depenceIndex >= 0)
                 {
                     var dep = runtimeData.DataNodeDependencies[depenceIndex];
                     foreach (var item in dep.Dependencies)
