@@ -8,7 +8,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: visualshape_text_mat
-  m_Shader: {fileID: 4800000, guid: 0000000000000000e000000000000002, type: 3}
+  m_Shader: {fileID: 4800000, guid: 8fb0b4aea7522714e83da3b9a3e02c52, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -19,16 +19,16 @@ Material:
   m_CustomRenderQueue: -1
   stringTagMap: {}
   disabledShaderPasses: []
-  m_LockedProperties:
+  m_LockedProperties: 
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
     - _FallbackTex:
-        m_Texture: {fileID: 0}
+        m_Texture: {fileID: 2800000, guid: e523fa3607ea7af4d978f456e0e4d111, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
-        m_Texture: {fileID: 0}
+        m_Texture: {fileID: 2800000, guid: 8cb18bee9ef34334db0c36310e8bcb41, type: 3}
         m_Scale: {x: 2, y: 2}
         m_Offset: {x: 0, y: 0}
     m_Ints: []
@@ -41,3 +41,4 @@ Material:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _FadeColor: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []
+  m_AllowLocking: 1
