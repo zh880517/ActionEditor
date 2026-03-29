@@ -86,8 +86,8 @@ namespace LiteAnim
                 Time = 0,
                 Loop = 0
             };
-            playingStates.Add(play);
             var pre = playingStates.Find(p => p.State.LayerIndex == layer);
+            playingStates.Add(play);
             if(pre.State != null)
             {
                 var mixer = graph.GetMixerPlayable();
@@ -139,17 +139,19 @@ namespace LiteAnim
                 var fade = layerFades[i];
                 if(fade.Time > fade.Duration)
                 {
-                    for(int j = 0; j < transitions.Count; j++)
+                    for(int j = transitions.Count - 1; j >= 0; j--)
                     {
                         var t = transitions[j];
                         if(t.LayerIndex == fade.LayerIndex)
                         {
-                            OnTransitionEnd(t);
-                            playingStates.RemoveAll(it => it.State == t.From || it.State == t.To); 
-                            layerMixerPlayable.DisconnectInput(fade.LayerIndex);
-                            layerMixerPlayable.SetInputWeight(fade.LayerIndex, 0);
+                            graph.RecycleMixerPlayable(t.Mixer);
+                            playingStates.RemoveAll(it => it.State == t.From || it.State == t.To);
+                            transitions.RemoveAt(j);
                         }
                     }
+                    playingStates.RemoveAll(it => it.State.LayerIndex == fade.LayerIndex);
+                    layerMixerPlayable.DisconnectInput(fade.LayerIndex);
+                    layerMixerPlayable.SetInputWeight(fade.LayerIndex, 0);
                     layerFades.RemoveAt(i);
                     --i;
                     continue;

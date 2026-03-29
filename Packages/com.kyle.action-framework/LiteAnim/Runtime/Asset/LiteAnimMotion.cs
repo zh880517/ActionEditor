@@ -24,6 +24,7 @@ namespace LiteAnim
         public readonly float GetLength()
         {
             if (!Asset) return 0;
+            if (Speed <= 0) return 0;
             return Mathf.Max(0, Asset.length - StartOffset - EndOffset) / Speed;
         }
 

@@ -14,6 +14,7 @@ namespace LiteAnim
         public int LayerIndex => Motion.LayerIndex;
         public virtual void Init(LiteAnimMotion motion)
         {
+            Motion = motion;
             Name = motion.name;
             Length = motion.GetLength();
             version = motion.Version;

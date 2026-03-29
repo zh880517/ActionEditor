@@ -43,14 +43,12 @@ namespace LiteAnim
                 {
                     //已经连接过了，更新权重
                     rootMixer.SetInputWeight(i, weight);
-                    var info = connectInfos[i];
-                    connectInfos[i] = info;
                     return i;
                 }
                 else if(connectInfos[i] == PlayableHandle.Null)
                 {
                     //找到空位，复用
-                    playable.ConnectInput(i, rootMixer, 0);
+                    rootMixer.ConnectInput(i, playable, 0);
                     rootMixer.SetInputWeight(i, weight);
                     connectInfos[i] = playable.GetHandle();
                     return i;
@@ -60,7 +58,7 @@ namespace LiteAnim
             int nexIndex = connectInfos.Length;
             Array.Resize(ref connectInfos, connectInfos.Length + 1);
             rootMixer.SetInputCount(connectInfos.Length);
-            playable.ConnectInput(nexIndex, rootMixer, 0);
+            rootMixer.ConnectInput(nexIndex, playable, 0);
             rootMixer.SetInputWeight(nexIndex, weight);
             connectInfos[nexIndex] = playable.GetHandle();
             return nexIndex;
@@ -95,7 +93,7 @@ namespace LiteAnim
         {
             if (index >= 0 && index < connectInfos.Length)
             {
-                playable.ConnectInput(index, rootMixer, 0);
+                rootMixer.ConnectInput(index, playable, 0);
                 connectInfos[index] = playable.GetHandle();
             }
         }

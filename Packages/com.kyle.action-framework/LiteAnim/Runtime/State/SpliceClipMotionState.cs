@@ -28,7 +28,7 @@ namespace LiteAnim
                 {
                     var playable = AnimationClipPlayable.Create(graph, splice.Asset);
                     playables[i] = playable;
-                    playable.ConnectInput(0, mixerPlayable, i);
+                    mixerPlayable.ConnectInput(i, playable, 0);
                 }
             }
             timeInfos = new ClipTimeInfo[Motion.Clips.Count];
@@ -97,6 +97,10 @@ namespace LiteAnim
                             weight = Mathf.Clamp01(weight);
                         }
                         mixerPlayable.SetInputWeight(i, 1 - weight);
+                    }
+                    else
+                    {
+                        mixerPlayable.SetInputWeight(i, 1f);
                     }
                 }
                 else

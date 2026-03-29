@@ -70,7 +70,7 @@ namespace LiteAnim
             for (int i = 0; i < transitions.Count; i++)
             {
                 var transition = transitions[i];
-                if(transition.FadeDuration >= transition.FadeTime)
+                if(transition.FadeTime >= transition.FadeDuration)
                 {
                     transitions.RemoveAt(i);
                     i--;
@@ -93,7 +93,6 @@ namespace LiteAnim
                     continue;
                 }
                 play.Time += dt;
-                int loop = play.Loop;
                 if (play.Time > play.State.Length)
                 {
                     play.Loop++;

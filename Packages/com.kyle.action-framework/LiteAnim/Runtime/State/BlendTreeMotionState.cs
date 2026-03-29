@@ -24,7 +24,7 @@ namespace LiteAnim
                 {
                     var playable = AnimationClipPlayable.Create(graph, clip.Asset);
                     playables[i] = playable;
-                    playable.ConnectInput(0, mixerPlayable, i);
+                    mixerPlayable.ConnectInput(i, playable, 0);
                     totalWeight += clip.Weight;
                 }
             }
