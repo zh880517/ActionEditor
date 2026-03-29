@@ -5,21 +5,12 @@ using UnityEngine.Rendering.Universal;
 
 namespace VisualShape
 {
-    /// <summary>Custom Universal Render Pipeline Render Pass for VisualShape</summary>
+    /// <summary>VisualShape 的自定义通用渲染管线渲染通道</summary>
     public class VisualShapeURPRenderPassFeature : ScriptableRendererFeature
     {
-        /// <summary>Custom Universal Render Pipeline Render Pass for VisualShape</summary>
+        /// <summary>VisualShape 的自定义通用渲染管线渲染通道</summary>
         public class VisualShapeURPRenderPass : ScriptableRenderPass
         {
-            /// <summary>This method is called before executing the render pass</summary>
-            public override void Configure(CommandBuffer cmd, RenderTextureDescriptor cameraTextureDescriptor)
-            {
-            }
-
-            public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
-            {
-                ShapeManager.instance.ExecuteCustomRenderPass(context, renderingData.cameraData.camera);
-            }
 
             public VisualShapeURPRenderPass() : base()
             {
@@ -42,7 +33,7 @@ namespace VisualShape
 
                     if (Application.isEditor && (cameraData.cameraType & (CameraType.SceneView | CameraType.Preview)) != 0)
                     {
-                        // We need this to be able to disable wireframe rendering in the scene view
+                        // 需要此项以便在场景视图中禁用线框渲染
                         builder.AllowGlobalStateModification(true);
                         allowDisablingWireframe = true;
                     }
@@ -71,12 +62,12 @@ namespace VisualShape
         {
             m_ScriptablePass = new VisualShapeURPRenderPass();
 
-            // URP's post processing actually happens in BeforeRenderingPostProcessing, not after BeforeRenderingPostProcessing as one would expect.
-            // Use BeforeRenderingPostProcessing-1 to ensure this pass gets executed before post processing effects.
+            // URP 的后处理实际上发生在 BeforeRenderingPostProcessing 期间，而不是在其之后。
+            // 使用 BeforeRenderingPostProcessing-1 以确保此通道在后处理效果之前执行。
             m_ScriptablePass.renderPassEvent = RenderPassEvent.BeforeRenderingPostProcessing - 1;
         }
 
-        /// <summary>This method is called when setting up the renderer once per-camera</summary>
+        /// <summary>此方法在每个相机设置渲染器时调用</summary>
         public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
         {
             AddRenderPasses(renderer);

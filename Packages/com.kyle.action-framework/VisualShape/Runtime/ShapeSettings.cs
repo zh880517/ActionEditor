@@ -4,40 +4,40 @@ using UnityEngine;
 
 namespace VisualShape
 {
-    /// <summary>Stores VisualShape project settings</summary>
+    /// <summary>存储 VisualShape 项目设置</summary>
     public class ShapeSettings : ScriptableObject
     {
         public const string SettingsPathCompatibility = "Assets/Settings/VisualShape.asset";
         public const string SettingsName = "VisualShape";
         public const string SettingsPath = "Assets/Settings/Resources/" + SettingsName + ".asset";
 
-        /// <summary>Stores VisualShape project settings</summary>
+        /// <summary>存储 VisualShape 项目设置</summary>
         [System.Serializable]
         public class Settings
         {
-            /// <summary>Opacity of lines when in front of objects</summary>
+            /// <summary>线条在物体前方时的不透明度</summary>
             public float lineOpacity = 1.0f;
 
-            /// <summary>Opacity of solid objects when in front of other objects</summary>
+            /// <summary>实体在其他物体前方时的不透明度</summary>
             public float solidOpacity = 0.55f;
 
-            /// <summary>Opacity of text when in front of other objects</summary>
+            /// <summary>文本在其他物体前方时的不透明度</summary>
             public float textOpacity = 1.0f;
 
-            /// <summary>Additional opacity multiplier of lines when behind or inside objects</summary>
+            /// <summary>线条在物体后方或内部时的附加不透明度乘数</summary>
             public float lineOpacityBehindObjects = 0.12f;
 
-            /// <summary>Additional opacity multiplier of solid objects when behind or inside other objects</summary>
+            /// <summary>实体在其他物体后方或内部时的附加不透明度乘数</summary>
             public float solidOpacityBehindObjects = 0.45f;
 
-            /// <summary>Additional opacity multiplier of text when behind or inside other objects</summary>
+            /// <summary>文本在其他物体后方或内部时的附加不透明度乘数</summary>
             public float textOpacityBehindObjects = 0.9f;
 
             /// <summary>
-            /// Resolution of curves, as a fraction of the default.
+            /// 曲线分辨率，以默认值的倍数表示。
             ///
-            /// The resolution of curves is dynamic based on the distance to the camera.
-            /// This setting will make the curves higher or lower resolution by a factor from the default.
+            /// 曲线分辨率会根据到相机的距离动态调整。
+            /// 此设置将基于默认值按倍数提高或降低曲线分辨率。
             /// </summary>
             public float curveResolution = 1.0f;
         }
@@ -68,6 +68,10 @@ namespace VisualShape
             }
 #else
             var settings = Resources.Load<ShapeSettings>(SettingsName);
+            if (settings == null)
+            {
+                Debug.LogWarning($"VisualShape: Could not load settings asset from Resources/{SettingsName}. Using default settings.");
+            }
 #endif
             return settings;
         }

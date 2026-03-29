@@ -15,7 +15,7 @@ using UnityEngine.Rendering.Universal;
 
 namespace VisualShape
 {
-    /// <summary>Info about the current selection in the editor</summary>
+    /// <summary>编辑器中当前选择的信息</summary>
     public static class GizmoContext
     {
 #if UNITY_EDITOR
@@ -28,7 +28,7 @@ namespace VisualShape
         static internal bool dirty;
         private static int selectionSizeInternal;
 
-        /// <summary>Number of top-level transforms that are selected</summary>
+        /// <summary>选中的顶层 Transform 数量</summary>
         public static int selectionSize
         {
             get
@@ -66,8 +66,8 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// True if the component is selected.
-        /// This is a deep selection: even children of selected transforms are considered to be selected.
+        /// 如果组件被选中则为 true。
+        /// 这是深度选择：即使选中 Transform 的子对象也被视为选中。
         /// </summary>
         public static bool InSelection(Component c)
         {
@@ -75,8 +75,8 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// True if the transform is selected.
-        /// This is a deep selection: even children of selected transforms are considered to be selected.
+        /// 如果 Transform 被选中则为 true。
+        /// 这是深度选择：即使选中 Transform 的子对象也被视为选中。
         /// </summary>
         public static bool InSelection(Transform tr)
         {
@@ -95,8 +95,8 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// True if the component is shown in the inspector.
-        /// The active selection is the GameObject that is currently visible in the inspector.
+        /// 如果组件在检查器中显示则为 true。
+        /// 活动选择是当前在检查器中可见的 GameObject。
         /// </summary>
         public static bool InActiveSelection(Component c)
         {
@@ -104,8 +104,8 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// True if the transform is shown in the inspector.
-        /// The active selection is the GameObject that is currently visible in the inspector.
+        /// 如果 Transform 在检查器中显示则为 true。
+        /// 活动选择是当前在检查器中可见的 GameObject。
         /// </summary>
         public static bool InActiveSelection(Transform tr)
         {
@@ -119,7 +119,7 @@ namespace VisualShape
     }
 
     /// <summary>
-    /// Every object that wants to draw gizmos should implement this interface.
+    /// 每个想要绘制 Gizmos 的对象都应实现此接口。
     /// See: <see cref="VisualShape.MonoBehaviourGizmos"/>
     /// </summary>
     public interface IDrawGizmos
@@ -134,13 +134,13 @@ namespace VisualShape
     }
 
     /// <summary>
-    /// Global script which draws debug items and gizmos.
-    /// If a Draw.* method has been used or if any script inheriting from the <see cref="VisualShape.MonoBehaviourGizmos"/> class is in the scene then an instance of this script
-    /// will be created and put on a hidden GameObject.
+    /// 绘制调试项和 Gizmos 的全局脚本。
+    /// 如果使用了 Draw.* 方法，或场景中有任何继承自 <see cref="VisualShape.MonoBehaviourGizmos"/> 的脚本，则会创建此脚本的实例
+    /// 并放置在隐藏的 GameObject 上。
     ///
-    /// It will inject drawing logic into any cameras that are rendered.
+    /// 它将在所有渲染的相机中注入绘制逻辑。
     ///
-    /// Usually you never have to interact with this class.
+    /// 通常无需与此类交互。
     /// </summary>
     [ExecuteAlways]
     [AddComponentMenu("")]
@@ -158,16 +158,16 @@ namespace VisualShape
         bool builtGizmos;
 #endif
 
-        /// <summary>True if OnEnable has been called on this instance and OnDisable has not</summary>
+        /// <summary>如果此实例已调用 OnEnable 且未调用 OnDisable 则为 true</summary>
         [SerializeField]
         bool actuallyEnabled;
 
         RedrawScope previousFrameRedrawScope;
 
         /// <summary>
-        /// Allow rendering to cameras that render to RenderTextures.
-        /// By default cameras which render to render textures are never rendered to.
-        /// You may enable this if you wish.
+        /// 允许渲染到使用 RenderTexture 的相机。
+        /// 默认情况下不会渲染到使用 RenderTexture 的相机。
+        /// 如果需要可以启用此选项。
         ///
         /// See: <see cref="VisualShape.CommandBuilder.cameraTargets"/>
         /// See: advanced (view in online documentation for working links)
@@ -176,13 +176,13 @@ namespace VisualShape
         public static bool drawToAllCameras = false;
 
         /// <summary>
-        /// Multiply all line widths by this value.
-        /// This can be used to make lines thicker or thinner.
+        /// 将所有线宽乘以此值。
+        /// 可用于使线条更粗或更细。
         ///
-        /// This is primarily useful when generating screenshots, and you want to render at a higher resolution before scaling down the image.
+        /// 这主要在生成截图时有用，当你想以更高分辨率渲染后再缩小图像时。
         ///
-        /// It is only read when a camera is being rendered. So it cannot be used to change line thickness on a per-item basis.
-        /// Use <see cref="Draw.WithLineWidth"/> for that.
+        /// 仅在相机渲染时读取。因此不能用于按项目更改线条粗细。
+        /// 请使用 <see cref="Draw.WithLineWidth"/>。
         /// </summary>
         public static float lineWidthMultiplier = 1.0f;
 
@@ -221,15 +221,15 @@ namespace VisualShape
 #endif
             if (_instance != null) return;
 
-            // Here one might try to look for existing instances of the class that haven't yet been enabled.
-            // However, this turns out to be tricky.
-            // Resources.FindObjectsOfTypeAll<T>() is the only call that includes HideInInspector GameObjects.
-            // But it is hard to distinguish between objects that are internal ones which will never be enabled and objects that will be enabled.
-            // Checking .gameObject.scene.isLoaded doesn't work reliably (object may be enabled and working even if isLoaded is false)
-            // Checking .gameObject.scene.isValid doesn't work reliably (object may be enabled and working even if isValid is false)
+            // 这里可能会尝试查找尚未启用的现有类实例。
+            // 但事实证明这很棘手。
+            // Resources.FindObjectsOfTypeAll<T>() 是唯一包含 HideInInspector 对象的调用。
+            // 但很难区分永远不会启用的内部对象和将要启用的对象。
+            // 检查 .gameObject.scene.isLoaded 不可靠（即使 isLoaded 为 false 对象也可能正常工作）
+            // 检查 .gameObject.scene.isValid 不可靠（即使 isValid 为 false 对象也可能正常工作）
 
-            // So instead we just always create a new instance. This is not a particularly heavy operation and it only happens once per game, so why not.
-            // The OnEnable call will clean up duplicate managers if there are any.
+            // 所以我们总是创建新实例。这不是特别耗费的操作，且每次游戏只发生一次。
+            // OnEnable 调用会清理重复的管理器（如果有的话）。
 
             var go = new GameObject("RetainedGizmos")
             {
@@ -239,7 +239,7 @@ namespace VisualShape
             if (Application.isPlaying) DontDestroyOnLoad(go);
         }
 
-        /// <summary>Detects which render pipeline is being used and configures them for rendering</summary>
+        /// <summary>检测正在使用的渲染管线并配置它们进行渲染</summary>
         void RefreshRenderPipelineMode()
         {
             var pipelineType = RenderPipelineManager.currentPipeline != null ? RenderPipelineManager.currentPipeline.GetType() : null;
@@ -255,7 +255,7 @@ namespace VisualShape
         void DelayedDestroy()
         {
             EditorApplication.update -= DelayedDestroy;
-            // Check if the object still exists (it might have been destroyed in some other way already).
+            // 检查对象是否仍然存在（它可能已被其他方式销毁）。
             if (gameObject) GameObject.DestroyImmediate(gameObject);
         }
 
@@ -272,14 +272,14 @@ namespace VisualShape
         {
             if (_instance == null) _instance = this;
 
-            // Ensure we don't have duplicate managers
+            // 确保没有重复的管理器
             if (_instance != this)
             {
-                // We cannot destroy the object while it is being enabled, so we need to delay it a bit
+                // 无法在启用过程中销毁对象，需要稍微延迟
 #if UNITY_EDITOR
-                // This is only important in the editor to avoid a build-up of old managers.
-                // In an actual game at most 1 (though in practice zero) old managers will be laying around.
-                // It would be nice to use a coroutine for this instead, but unfortunately they do not work for objects marked with HideAndDontSave.
+                // 这仅在编辑器中重要，以避免旧管理器堆积。
+                // 在实际游戏中最多有 1 个（实际上为零）旧管理器残留。
+                // 最好使用协程，但不幸的是它们不适用于标记为 HideAndDontSave 的对象。
                 EditorApplication.update += DelayedDestroy;
 #endif
                 return;
@@ -293,9 +293,9 @@ namespace VisualShape
             commandBuffer = new CommandBuffer();
             commandBuffer.name = "VisualShape Gizmos";
 
-            // Callback when rendering with the built-in render pipeline
+            // 使用内置渲染管线时的回调
             Camera.onPostRender += PostRender;
-            // Callback when rendering with a scriptable render pipeline
+            // 使用可脚本化渲染管线时的回调
             UnityEngine.Rendering.RenderPipelineManager.beginContextRendering += BeginContextRendering;
             UnityEngine.Rendering.RenderPipelineManager.beginCameraRendering += BeginCameraRendering;
             UnityEngine.Rendering.RenderPipelineManager.endCameraRendering += EndCameraRendering;
@@ -346,7 +346,7 @@ namespace VisualShape
             EditorApplication.update -= OnEditorUpdate;
             EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
 #endif
-            // Gizmos can be null here if this GameObject was duplicated by a user in the hierarchy.
+            // 如果用户在层级中复制了此 GameObject，Gizmos 可能为 null。
             if (gizmos != null)
             {
                 Draw.builder.DiscardAndDisposeInternal();
@@ -360,18 +360,18 @@ namespace VisualShape
             }
         }
 
-        // When enter play mode = reload scene & reload domain
-        //	editor => play mode: OnDisable -> OnEnable (same object)
-        //  play mode => editor: OnApplicationQuit (note: no OnDisable/OnEnable)
-        // When enter play mode = reload scene & !reload domain
-        //	editor => play mode: Nothing
-        //  play mode => editor: OnApplicationQuit
-        // When enter play mode = !reload scene & !reload domain
-        //	editor => play mode: Nothing
-        //  play mode => editor: OnApplicationQuit
-        // OnDestroy is never really called for this object (unless Unity or the game quits I quess)
+        // 进入播放模式 = 重新加载场景 & 重新加载域
+        //	编辑器 => 播放模式: OnDisable -> OnEnable（同一对象）
+        //  播放模式 => 编辑器: OnApplicationQuit（注意：无 OnDisable/OnEnable）
+        // 进入播放模式 = 重新加载场景 & 不重新加载域
+        //	编辑器 => 播放模式: 无
+        //  播放模式 => 编辑器: OnApplicationQuit
+        // 进入播放模式 = 不重新加载场景 & 不重新加载域
+        //	编辑器 => 播放模式: 无
+        //  播放模式 => 编辑器: OnApplicationQuit
+        // OnDestroy 对此对象几乎不会被调用（除非 Unity 或游戏退出）
 
-        // TODO: Should run in OnDestroy. OnApplicationQuit runs BEFORE OnDestroy (which we do not want)
+        // TODO: 应在 OnDestroy 中运行。OnApplicationQuit 在 OnDestroy 之前运行（这不是我们想要的）
         // private void OnApplicationQuit () {
         // Debug.Log("OnApplicationQuit");
         // Draw.builder.DiscardAndDisposeInternal();
@@ -398,23 +398,23 @@ namespace VisualShape
         {
             if (Time.frameCount > lastFrameCount + 1)
             {
-                // More than one frame old
-                // It is possible no camera is being rendered at all.
-                // Ensure we don't get any memory leaks from drawing items being queued every frame.
+                // 超过一帧未更新
+                // 可能根本没有相机在渲染。
+                // 确保不会因为每帧排队的绘制项而产生内存泄漏。
                 CheckFrameTicking();
                 gizmos.PostRenderCleanup();
 
-                // Note: We do not always want to call the above method here
-                // because it is nicer to call it right after the cameras have been rendered.
-                // Otherwise drawing items queued before Update/OnEditorUpdate or after Update/OnEditorUpdate may end up
-                // in different frames (for the purposes of rendering gizmos)
+                // 注意：我们不总是想在这里调用上述方法
+                // 因为在相机渲染完成后立即调用更好。
+                // 否则在 Update/OnEditorUpdate 之前或之后排队的绘制项可能
+                // 最终在不同帧中（就渲染 Gizmos 而言）
             }
 
             if (Time.realtimeSinceStartup - lastFrameTime > NO_DRAWING_TIMEOUT_SECS)
             {
-                // More than NO_DRAWING_TIMEOUT_SECS seconds since we drew the last frame.
-                // In the editor some script could be queuing drawing commands in e.g. EditorWindow.Update without the scene
-                // view or any game view being re-rendered. We discard these commands if nothing has been rendered for a long time.
+                // 距离上次绘制帧已超过 NO_DRAWING_TIMEOUT_SECS 秒。
+                // 在编辑器中，某些脚本可能在例如 EditorWindow.Update 中排队绘制命令而场景
+                // 视图或任何游戏视图都没有重新渲染。如果长时间没有渲染，我们会丢弃这些命令。
                 Draw.builder.DiscardAndDisposeInternal();
                 Draw.ingame_builder.DiscardAndDisposeInternal();
                 Draw.builder = gizmos.GetBuiltInBuilder(false);
@@ -423,8 +423,8 @@ namespace VisualShape
                 RemoveDestroyedGizmoDrawers();
             }
 
-            // Avoid potential memory leak if gizmos are not being drawn
-            if (lastFilterFrame - Time.frameCount > 5)
+            // 避免不绘制 Gizmos 时的潜在内存泄漏
+            if (Time.frameCount - lastFilterFrame > 5)
             {
                 lastFilterFrame = Time.frameCount;
                 RemoveDestroyedGizmoDrawers();
@@ -450,19 +450,19 @@ namespace VisualShape
         {
             if (detectedRenderPipeline == DetectedRenderPipeline.BuiltInOrCustom)
             {
-                // Execute the custom render pass after the camera has finished rendering.
-                // For the URP the render pass will already have been executed.
-                // However for a custom render pipline we execute the rendering code here.
-                // This is only best effort. It's impossible to be compatible with all custom render pipelines.
-                // However it should work for most simple ones.
-                // For Unity's built-in render pipeline the EndCameraRendering method will never be called.
+                // 相机渲染完成后执行自定义渲染通道。
+                // 对于 URP，渲染通道已经执行过了。
+                // 但对于自定义渲染管线，我们在这里执行渲染代码。
+                // 这只是尽力而为。不可能兼容所有自定义渲染管线。
+                // 但对于大多数简单的应该可以工作。
+                // 对于 Unity 内置渲染管线，EndCameraRendering 方法永远不会被调用。
                 ExecuteCustomRenderPass(context, camera);
             }
         }
 
         void PostRender(Camera camera)
         {
-            // This method is only called when using Unity's built-in render pipeline
+            // 此方法仅在使用 Unity 内置渲染管线时调用
             commandBuffer.Clear();
             SubmitFrame(camera, new ShapeData.CommandBufferWrapper { cmd = commandBuffer }, false);
             MarkerCommandBuffer.Begin();
@@ -487,10 +487,10 @@ namespace VisualShape
             }
             else if (framePassed && Application.isPlaying)
             {
-                // Rendered frame passed without a game frame passing!
-                // This might mean the game is paused.
-                // Redraw gizmos while the game is paused.
-                // It might also just mean that we are rendering with multiple cameras.
+                // 渲染帧已过但游戏帧未过！
+                // 这可能意味着游戏已暂停。
+                // 游戏暂停时重绘 Gizmos。
+                // 也可能只是我们正在使用多个相机渲染。
                 previousFrameRedrawScope.Draw();
             }
 
@@ -512,7 +512,7 @@ namespace VisualShape
 #else
             bool isSceneViewCamera = false;
 #endif
-            // Do not include when rendering to a texture unless this is a scene view camera
+            // 渲染到纹理时不包含，除非是场景视图相机
             bool allowCameraDefault = allowRenderToRenderTextures || drawToAllCameras || camera.targetTexture == null || isSceneViewCamera;
 
             CheckFrameTicking();
@@ -532,9 +532,9 @@ namespace VisualShape
         bool ShouldDrawGizmos(UnityEngine.Object obj)
         {
 #if UNITY_EDITOR
-            // Use reflection to call EditorGUIUtility.IsGizmosAllowedForObject which is an internal method.
-            // It is exactly the information we want though.
-            // In case Unity has changed its API or something so that the method can no longer be found then just return true
+            // 使用反射调用 EditorGUIUtility.IsGizmosAllowedForObject（这是一个内部方法）。
+            // 不过这正是我们需要的信息。
+            // 如果 Unity 更改了 API 导致找不到该方法，则直接返回 true
             cachedObjectParameterArray[0] = obj;
             return IsGizmosAllowedForObject == null || (bool)IsGizmosAllowedForObject.Invoke(null, cachedObjectParameterArray);
 #else
@@ -566,7 +566,7 @@ namespace VisualShape
             MarkerGizmosAllowed.Begin();
             typeToGizmosEnabled.Clear();
 
-            // Fill the typeToGizmosEnabled dict with info about which classes should be drawn
+            // 用哪些类应该被绘制的信息填充 typeToGizmosEnabled 字典
             foreach (var tp in gizmoDrawerTypes)
             {
                 if (GizmoUtility.TryGetGizmoInfo(tp.Key, out var gizmoInfo))
@@ -581,20 +581,20 @@ namespace VisualShape
 
             MarkerGizmosAllowed.End();
 
-            // Set the current frame's redraw scope to an empty scope.
-            // This is because gizmos are rendered every frame anyway so we never want to redraw them.
-            // The frame redraw scope is otherwise used when the game has been paused.
+            // 将当前帧的重绘作用域设置为空作用域。
+            // 因为 Gizmos 无论如何每帧都会渲染，所以我们永远不想重绘它们。
+            // 否则帧重绘作用域在游戏暂停时使用。
             var frameRedrawScope = gizmos.frameRedrawScope;
             gizmos.frameRedrawScope = default(RedrawScope);
 
             var currentStage = StageUtility.GetCurrentStage();
             var isInNonMainStage = currentStage != StageUtility.GetMainStage();
 
-            // This would look nicer as a 'using' block, but built-in command builders
-            // cannot be disposed normally to prevent user error.
-            // The try-finally is equivalent to a 'using' block.
+            // 用 'using' 块会更美观，但内置命令构建器
+            // 不能正常释放以防止用户错误。
+            // try-finally 等同于 'using' 块。
             var gizmoBuilder = gizmos.GetBuiltInBuilder();
-            // Replace Draw.builder with a custom one just for gizmos
+            // 将 Draw.builder 替换为仅用于 Gizmos 的自定义构建器
             var debugBuilder = Draw.builder;
             MarkerDrawGizmos.Begin();
             GizmoContext.drawingGizmos = true;
@@ -606,7 +606,7 @@ namespace VisualShape
                     for (int i = gizmoDrawers.Count - 1; i >= 0; i--)
                     {
                         var mono = gizmoDrawers[i] as MonoBehaviour;
-                        // True if the scene is in isolation mode (e.g. focusing on a single prefab) and this object is not part of that sub-stage
+                        // 如果场景处于隔离模式（如聚焦于单个预制体）且此对象不属于该子阶段则为 true
                         var disabledDueToIsolationMode = isInNonMainStage && StageUtility.GetStage(mono.gameObject) != currentStage;
                         var gizmosEnabled = mono.isActiveAndEnabled && typeToGizmosEnabled[gizmoDrawers[i].GetType()];
                         if (gizmosEnabled && (mono.hideFlags & HideFlags.HideInHierarchy) == 0 && !disabledDueToIsolationMode)
@@ -629,7 +629,7 @@ namespace VisualShape
                         var mono = gizmoDrawers[i] as MonoBehaviour;
                         if (mono.isActiveAndEnabled && (mono.hideFlags & HideFlags.HideInHierarchy) == 0 && typeToGizmosEnabled[gizmoDrawers[i].GetType()])
                         {
-                            // True if the scene is in isolation mode (e.g. focusing on a single prefab) and this object is not part of that sub-stage
+                            // 如果场景处于隔离模式（如聚焦于单个预制体）且此对象不属于该子阶段则为 true
                             var disabledDueToIsolationMode = isInNonMainStage && StageUtility.GetStage(mono.gameObject) != currentStage;
                             try
                             {
@@ -647,26 +647,26 @@ namespace VisualShape
             {
                 GizmoContext.drawingGizmos = false;
                 MarkerDrawGizmos.End();
-                // Revert to the original builder
+                // 恢复到原始构建器
                 Draw.builder = debugBuilder;
                 gizmoBuilder.DisposeInternal();
             }
 
             gizmos.frameRedrawScope = frameRedrawScope;
 
-            // Schedule jobs that may have been scheduled while drawing gizmos
+            // 调度绘制 Gizmos 时可能已安排的 Job
             JobHandle.ScheduleBatchedJobs();
         }
 #endif
 
-        /// <summary>Submit a camera for rendering.</summary>
-        /// <param name="allowCameraDefault">Indicates if built-in command builders and custom ones without a custom CommandBuilder.cameraTargets should render to this camera.</param>
+        /// <summary>提交相机进行渲染。</summary>
+        /// <param name="allowCameraDefault">指示内置命令构建器和没有自定义 CommandBuilder.cameraTargets 的自定义构建器是否应渲染到此相机。</param>
         void Submit(Camera camera, ShapeData.CommandBufferWrapper cmd, bool usingRenderPipeline, bool allowCameraDefault)
         {
 #if UNITY_EDITOR
             bool drawGizmos = Handles.ShouldRenderGizmos() || drawToAllCameras;
-            // Only build gizmos if a camera actually needs them.
-            // This is only done for the first camera that needs them each frame.
+            // 仅在相机实际需要时构建 Gizmos。
+            // 每帧仅对第一个需要它们的相机执行此操作。
             if (drawGizmos && !builtGizmos && allowCameraDefault)
             {
                 RemoveDestroyedGizmoDrawers();
@@ -688,16 +688,16 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Registers an object for gizmo drawing.
-        /// The DrawGizmos method on the object will be called every frame until it is destroyed (assuming there are cameras with gizmos enabled).
+        /// 注册对象以进行 Gizmo 绘制。
+        /// 对象上的 DrawGizmos 方法将每帧调用直到其被销毁（假设有启用了 Gizmos 的相机）。
         /// </summary>
         public static void Register(IDrawGizmos item)
         {
             var tp = item.GetType();
 
-            // Use reflection to figure out if the DrawGizmos method has not been overriden from the MonoBehaviourGizmos class.
-            // If it hasn't, then we know that this type will never draw gizmos and we can skip it.
-            // This improves performance by not having to keep track of objects and check if they are active and enabled every frame.
+            // 使用反射判断 DrawGizmos 方法是否未从 MonoBehaviourGizmos 类重写。
+            // 如果没有重写，则此类型永远不会绘制 Gizmos，可以跳过。
+            // 通过不必跟踪对象并每帧检查它们是否激活来提高性能。
             bool mayDrawGizmos;
             if (gizmoDrawerTypes.TryGetValue(tp, out mayDrawGizmos))
             {
@@ -705,7 +705,7 @@ namespace VisualShape
             else
             {
                 var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
-                // Check for a public method first, and then an explicit interface implementation.
+                // 先检查公共方法，然后检查显式接口实现。
                 var m = tp.GetMethod("DrawGizmos", flags) ?? tp.GetMethod("VisualShape.IDrawGizmos.DrawGizmos", flags);
                 if (m == null)
                 {
@@ -720,46 +720,46 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Get an empty builder for queuing drawing commands.
+        /// 获取空的构建器以排队绘制命令。
         ///
         /// <code>
-        /// // Create a new CommandBuilder
+        /// // 创建一个新的 CommandBuilder
         /// using (var draw = ShapeManager.GetBuilder()) {
-        ///     // Use the exact same API as the global Draw class
+        ///     // 使用与全局 Draw 类完全相同的 API
         ///     draw.WireBox(Vector3.zero, Vector3.one);
         /// }
         /// </code>
         /// See: <see cref="VisualShape.CommandBuilder"/>
         /// </summary>
-        /// <param name="renderInGame">If true, this builder will be rendered in standalone games and in the editor even if gizmos are disabled.
-        /// If false, it will only be rendered in the editor when gizmos are enabled.</param>
+        /// <param name="renderInGame">如果为 true，此构建器将在独立游戏和编辑器中渲染，即使 Gizmos 被禁用。
+        /// 如果为 false，仅在编辑器中启用 Gizmos 时渲染。</param>
         public static CommandBuilder GetBuilder(bool renderInGame = false) => instance.gizmos.GetBuilder(renderInGame);
 
         /// <summary>
-        /// Get an empty builder for queuing drawing commands.
+        /// 获取空的构建器以排队绘制命令。
         ///
         /// See: <see cref="VisualShape.CommandBuilder"/>
         /// </summary>
-        /// <param name="redrawScope">Scope for this command builder. See #GetRedrawScope.</param>
-        /// <param name="renderInGame">If true, this builder will be rendered in standalone games and in the editor even if gizmos are disabled.
-        /// If false, it will only be rendered in the editor when gizmos are enabled.</param>
+        /// <param name="redrawScope">此命令构建器的作用域。参见 #GetRedrawScope。</param>
+        /// <param name="renderInGame">如果为 true，此构建器将在独立游戏和编辑器中渲染，即使 Gizmos 被禁用。
+        /// 如果为 false，仅在编辑器中启用 Gizmos 时渲染。</param>
         public static CommandBuilder GetBuilder(RedrawScope redrawScope, bool renderInGame = false) => instance.gizmos.GetBuilder(redrawScope, renderInGame);
 
         /// <summary>
-        /// Get an empty builder for queuing drawing commands.
-        /// TODO: Example usage.
+        /// 获取空的构建器以排队绘制命令。
+        /// TODO: 示例用法。
         ///
         /// See: <see cref="VisualShape.CommandBuilder"/>
         /// </summary>
-        /// <param name="hasher">Hash of whatever inputs you used to generate the drawing data.</param>
-        /// <param name="redrawScope">Scope for this command builder. See #GetRedrawScope.</param>
-        /// <param name="renderInGame">If true, this builder will be rendered in standalone games and in the editor even if gizmos are disabled.</param>
+        /// <param name="hasher">用于生成绘制数据的输入的哈希值。</param>
+        /// <param name="redrawScope">此命令构建器的作用域。参见 #GetRedrawScope。</param>
+        /// <param name="renderInGame">如果为 true，此构建器将在独立游戏和编辑器中渲染，即使 Gizmos 被禁用。</param>
         public static CommandBuilder GetBuilder(ShapeData.Hasher hasher, RedrawScope redrawScope = default, bool renderInGame = false) => instance.gizmos.GetBuilder(hasher, redrawScope, renderInGame);
 
         /// <summary>
-        /// A scope which can be used to draw things over multiple frames.
-        /// You can use <see cref="GetBuilder(RedrawScope,bool)"/> to get a builder with a given redraw scope.
-        /// After you have disposed the builder you may call <see cref="VisualShape.RedrawScope.Draw"/> in any number of future frames to render the command builder again.
+        /// 可用于跨多帧绘制的作用域。
+        /// 可使用 <see cref="GetBuilder(RedrawScope,bool)"/> 获取具有给定重绘作用域的构建器。
+        /// 释放构建器后，可在之后任意帧调用 <see cref="VisualShape.RedrawScope.Draw"/> 再次渲染命令构建器。
         ///
         /// <code>
         /// private RedrawScope redrawScope;
@@ -776,9 +776,9 @@ namespace VisualShape
         /// }
         /// </code>
         ///
-        /// Note: The data will only be kept if <see cref="VisualShape.RedrawScope.Draw"/> is called every frame.
-        /// The command builder's data will be cleared if you do not call <see cref="VisualShape.RedrawScope.Draw"/> in a future frame.
-        /// After that point calling <see cref="VisualShape.RedrawScope.Draw"/> will not do anything.
+        /// 注意：仅当每帧调用 <see cref="VisualShape.RedrawScope.Draw"/> 时数据才会保留。
+        /// 如果在之后的帧中不调用 <see cref="VisualShape.RedrawScope.Draw"/>，命令构建器的数据将被清除。
+        /// 清除后再调用 <see cref="VisualShape.RedrawScope.Draw"/> 将不会有任何效果。
         /// </summary>
         public static RedrawScope GetRedrawScope()
         {

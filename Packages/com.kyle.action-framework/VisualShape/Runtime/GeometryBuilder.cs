@@ -38,11 +38,11 @@ namespace VisualShape
 
         internal static unsafe JobHandle Build(ShapeData gizmos, ProcessedBuilderData.MeshBuffers* buffers, ref CameraInfo cameraInfo, JobHandle dependency)
         {
-            // Create a new builder and schedule it.
-            // Why is characterInfo passed as a pointer and a length instead of just a NativeArray?
-            // 	This is because passing it as a NativeArray invokes the safety system which adds some tracking to the NativeArray.
-            //  This is normally not a problem, but we may be scheduling hundreds of jobs that use that particular NativeArray and this causes a bit of a slowdown
-            //  in the safety checking system. Passing it as a pointer + length makes the whole scheduling code about twice as fast compared to passing it as a NativeArray.
+            // 创建新的构建器并调度它。
+            // 为什么 characterInfo 是以指针和长度的形式传递而不是直接传递 NativeArray？
+            //  因为传递 NativeArray 会触发安全系统，该系统会为 NativeArray 添加一些跟踪信息。
+            //  通常这不是问题，但我们可能会调度数百个使用该 NativeArray 的 Job，这会导致安全检查系统有些变慢。
+            //  以指针+长度方式传递可以使整个调度代码速度提高约两倍。
             return new GeometryBuilderJob
             {
                 buffers = buffers,
@@ -65,9 +65,9 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Helper for determining how large a pixel is at a given depth.
-        /// A a distance D from the camera a pixel corresponds to roughly value.x * D + value.y world units.
-        /// Where value is the return value from this function.
+        /// 用于确定在给定深度下一个像素有多大的辅助方法。
+        /// 在距离相机 D 处，一个像素大约对应 value.x * D + value.y 个世界单位。
+        /// 其中 value 是此函数的返回值。
         /// </summary>
         private static float2 CameraDepthToPixelSize(Camera camera)
         {
@@ -125,26 +125,26 @@ namespace VisualShape
             var mesh = gizmos.GetMesh(verticesView.Length);
 
             CommandBuilderSamplers.MarkerSetLayout.Begin();
-            // Resize the vertex buffer if necessary
-            // Note: also resized if the vertex buffer is significantly larger than necessary.
-            //       This is because apparently when executing the command buffer Unity does something with the whole buffer for some reason (shows up as Mesh.CreateMesh in the profiler)
-            // TODO: This could potentially cause bad behaviour if multiple meshes are used each frame and they have differing sizes.
-            // We should query for meshes that already have an appropriately sized buffer.
+            // 必要时调整顶点缓冲区大小
+            // 注意：当顶点缓冲区明显大于所需时也会调整。
+            //       因为在执行命令缓冲区时，Unity 似乎会对整个缓冲区做某些操作（在 Profiler 中显示为 Mesh.CreateMesh）
+            // TODO: 如果每帧使用多个大小不同的 Mesh，可能会导致问题。
+            // 应该查询已有合适大小缓冲区的 Mesh。
             // if (mesh.vertexCount < verticesView.Length || mesh.vertexCount > verticesView.Length * 2) {
 
             // }
-            // TODO: Use Mesh.GetVertexBuffer/Mesh.GetIndexBuffer once they stop being buggy.
-            // Currently they don't seem to get refreshed properly after resizing them (2022.2.0b1)
+            // TODO: 当 Mesh.GetVertexBuffer/Mesh.GetIndexBuffer 不再有 Bug 时切换使用。
+            // 目前调整大小后似乎无法正确刷新（2022.2.0b1）
             mesh.SetVertexBufferParams(math.ceilpow2(verticesView.Length), layout);
             mesh.SetIndexBufferParams(math.ceilpow2(trianglesView.Length), IndexFormat.UInt32);
             CommandBuilderSamplers.MarkerSetLayout.End();
 
             CommandBuilderSamplers.MarkerUpdateVertices.Begin();
-            // Update the mesh data
+            // 更新网格数据
             mesh.SetVertexBufferData(verticesView, 0, 0, verticesView.Length);
             CommandBuilderSamplers.MarkerUpdateVertices.End();
             CommandBuilderSamplers.MarkerUpdateIndices.Begin();
-            // Update the index buffer and assume all our indices are correct
+            // 更新索引缓冲区并假定所有索引正确
             mesh.SetIndexBufferData(trianglesView, 0, 0, trianglesView.Length, MeshUpdateFlags.DontValidateIndices);
             CommandBuilderSamplers.MarkerUpdateIndices.End();
 
@@ -163,7 +163,7 @@ namespace VisualShape
         }
     }
 
-    /// <summary>Some static fields that need to be in a separate class because Burst doesn't support them</summary>
+    /// <summary>某些静态字段需要在单独的类中，因为 Burst 不支持它们</summary>
     static class MeshLayouts
     {
         internal static readonly VertexAttributeDescriptor[] MeshLayout = {
@@ -181,13 +181,13 @@ namespace VisualShape
     }
 
     /// <summary>
-    /// Job to build the geometry from a stream of rendering commands.
+    /// 从渲染命令流构建几何体的 Job。
     ///
     /// See: <see cref="CommandBuilder"/>
     /// </summary>
-    // Note: Setting FloatMode to Fast causes visual artificats when drawing circles.
-    // I think it is because math.sin(float4) produces slightly different results
-    // for each component in the input.
+    // 注意：将 FloatMode 设为 Fast 会导致绘制圆时出现视觉缺陷。
+    // 我认为这是因为 math.sin(float4) 对输入的每个分量
+    // 产生了略有不同的结果。
     [BurstCompile(FloatMode = FloatMode.Default)]
     internal struct GeometryBuilderJob : IJob
     {
@@ -230,8 +230,8 @@ namespace VisualShape
         static unsafe void Add<T>(UnsafeAppendBuffer* buffer, T value) where T : unmanaged
         {
             int size = UnsafeUtility.SizeOf<T>();
-            // We know that the buffer has enough capacity, so we can just write to the buffer without
-            // having to add branches for the overflow case (like buffer->Add will do).
+            // 我们知道缓冲区有足够容量，所以可以直接写入而无需
+            // 为溢出情况添加分支（像 buffer->Add 那样）。
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             UnityEngine.Assertions.Assert.IsTrue(buffer->Length + size <= buffer->Capacity);
 #endif
@@ -301,7 +301,7 @@ namespace VisualShape
             right *= fontWorldSize;
             up *= fontWorldSize;
 
-            // Calculate the total width (in pixels divided by fontSize) of the text
+            // 计算文本的总宽度（以像素除以字体大小表示）
             float maxWidth = 0;
             float currentWidth = 0;
             float numLines = 1;
@@ -325,12 +325,12 @@ namespace VisualShape
             }
             maxWidth = math.max(maxWidth, currentWidth);
 
-            // Calculate the world space position of the text given the camera and text alignment
+            // 根据相机和文本对齐方式计算文本的世界空间位置
             var pos = pivot;
             pos -= right * maxWidth * alignment.relativePivot.x;
-            // Size of a character as a fraction of a whole line using the current font
+            // 使用当前字体时，字符大小占整行的比例
             const float FontCharacterFractionOfLine = 0.75f;
-            // Where the upper and lower parts of the text will be assuming we start to write at y=0
+            // 假设从 y=0 开始书写，文本上下部分的位置
             var lower = 1 - numLines;
             var upper = FontCharacterFractionOfLine;
             var yAdjustment = math.lerp(lower, upper, alignment.relativePivot.y);
@@ -341,7 +341,7 @@ namespace VisualShape
             var textVertices = &buffers->textVertices;
             var textTriangles = &buffers->textTriangles;
 
-            // Reserve all buffer space beforehand
+            // 预先分配所有缓冲区空间
             Reserve(textVertices, numCharacters * VerticesPerCharacter * UnsafeUtility.SizeOf<TextVertex>());
             Reserve(textTriangles, numCharacters * TrianglesPerCharacter * UnsafeUtility.SizeOf<int>());
 
@@ -358,7 +358,7 @@ namespace VisualShape
                     continue;
                 }
 
-                // Get character rendering information from the font
+                // 从字体获取字符渲染信息
                 SDFCharacter ch = characterInfo[characterInfoIndex];
 
                 int vertexIndexStart = textVertices->Length / UnsafeUtility.SizeOf<TextVertex>();
@@ -413,7 +413,7 @@ namespace VisualShape
                 Add(textTriangles, vertexIndexStart + 2);
                 Add(textTriangles, vertexIndexStart + 3);
 
-                // Advance character position
+                // 推进字符位置
                 pos += right * ch.advance;
             }
         }
@@ -428,9 +428,9 @@ namespace VisualShape
 
         void AddLine(LineData line)
         {
-            // Store the line direction in the vertex.
-            // A line consists of 4 vertices. The line direction will be used to
-            // offset the vertices to create a line with a fixed pixel thickness
+            // 将线段方向存储在顶点中。
+            // 一条线由 4 个顶点组成。线段方向将用于
+            // 偏移顶点以创建固定像素厚度的线条
             var a = PerspectiveDivide(math.mul(currentMatrix, new float4(line.a, 1.0f)));
             var b = PerspectiveDivide(math.mul(currentMatrix, new float4(line.b, 1.0f)));
 
@@ -443,7 +443,7 @@ namespace VisualShape
                 return;
             }
 
-            // Update the bounding box
+            // 更新包围盒
             minBounds = math.min(minBounds, math.min(a, b));
             maxBounds = math.max(maxBounds, math.max(a, b));
 
@@ -451,38 +451,38 @@ namespace VisualShape
             {
                 var outlineVertices = &buffers->vertices;
 
-                // Make sure there is enough allocated capacity for 4 more vertices
+                // 确保有足够的分配容量容纳 4 个更多顶点
                 Reserve(outlineVertices, 4 * UnsafeUtility.SizeOf<Vertex>());
 
-                // Insert 4 vertices
-                // Doing it with pointers is faster, and this is the hottest
-                // code of the whole gizmo drawing process.
+                // 插入 4 个顶点
+                // 使用指针操作更快，这是整个 Gizmo
+                // 绘制过程中最热的代码。
                 var ptr = (Vertex*)((byte*)outlineVertices->Ptr + outlineVertices->Length);
 
                 var startLineDir = normalizedLineDir * lineWidth;
                 var endLineDir = normalizedLineDir * lineWidth;
 
-                // If dot(last dir, this dir) >= 0 => use join
+                // 如果 dot(上一方向, 当前方向) >= 0 => 使用连接
                 if (lineWidth > 1 && currentLineWidthData.automaticJoins && outlineVertices->Length > 2 * UnsafeUtility.SizeOf<Vertex>())
                 {
-                    // has previous vertex
+                    // 有前一个顶点
                     Vertex* lastVertex1 = (Vertex*)(ptr - 1);
                     Vertex* lastVertex2 = (Vertex*)(ptr - 2);
 
                     var cosAngle = math.dot(normalizedLineDir, lastNormalizedLineDir);
                     if (math.all(lastVertex2->position == a) && lastLineWidth == lineWidth && cosAngle >= -0.6f)
                     {
-                        // Safety: tangent cannot be 0 because cosAngle > -1
+                        // 安全：tangent 不可能为 0 因为 cosAngle > -1
                         var tangent = normalizedLineDir + lastNormalizedLineDir;
-                        // From the law of cosines we get that
+                        // 由余弦定理得
                         // tangent.magnitude = sqrt(2)*sqrt(1+cosAngle)
 
-                        // Create join!
-                        // Trigonometry gives us
+                        // 创建连接！
+                        // 三角函数给出
                         // joinRadius = lineWidth / (2*cos(alpha / 2))
-                        // Using half angle identity for cos we get
+                        // 使用余弦半角公式得
                         // joinRadius = lineWidth / (sqrt(2)*sqrt(1 + cos(alpha))
-                        // Since the tangent already has mostly the same factors we can simplify the calculation
+                        // 由于 tangent 已经包含大部分相同因子，可以简化计算
                         // normalize(tangent) * joinRadius * 2
                         // = tangent / (sqrt(2)*sqrt(1+cosAngle)) * joinRadius * 2
                         // = tangent * lineWidth / (1 + cos(alpha)
@@ -530,15 +530,15 @@ namespace VisualShape
             }
         }
 
-        /// <summary>Calculate number of steps to use for drawing a circle at the specified point and radius to get less than the specified pixel error.</summary>
+        /// <summary>计算在指定点和半径处绘制圆时，为使像素误差小于指定值所需的步数。</summary>
         internal static int CircleSteps(float3 center, float radius, float maxPixelError, ref float4x4 currentMatrix, float2 cameraDepthToPixelSize, float3 cameraPosition)
         {
             var centerv4 = math.mul(currentMatrix, new float4(center, 1.0f));
 
             if (math.abs(centerv4.w) < 0.0000001f) return 3;
             var cc = PerspectiveDivide(centerv4);
-            // Take the maximum scale factor among the 3 axes.
-            // If the current matrix has a uniform scale then they are all the same.
+            // 取 3 个轴中最大的缩放因子。
+            // 如果当前矩阵是均匀缩放则它们都相同。
             var maxScaleFactor = math.sqrt(math.max(math.max(math.lengthsq(currentMatrix.c0.xyz), math.lengthsq(currentMatrix.c1.xyz)), math.lengthsq(currentMatrix.c2.xyz))) / centerv4.w;
             var realWorldRadius = radius * maxScaleFactor;
             var distance = math.length(cc - cameraPosition);
@@ -552,22 +552,22 @@ namespace VisualShape
 
         void AddCircle(CircleData circle)
         {
-            // If the circle has a zero normal then just ignore it
+            // 如果圆的法线为零则忽略
             if (math.all(circle.normal == 0)) return;
 
             circle.normal = math.normalize(circle.normal);
-            // Canonicalize
+            // 规范化
             if (circle.normal.y < 0) circle.normal = -circle.normal;
 
             float3 tangent1;
             if (math.all(math.abs(circle.normal - new float3(0, 1, 0)) < 0.001f))
             {
-                // The normal was (almost) identical to (0, 1, 0)
+                // 法线（几乎）等于 (0, 1, 0)
                 tangent1 = new float3(0, 0, 1);
             }
             else
             {
-                // Common case
+                // 常见情况
                 tangent1 = math.normalizesafe(math.cross(circle.normal, new float3(0, 1, 0)));
             }
 
@@ -596,7 +596,7 @@ namespace VisualShape
 
         void AddDisc(CircleData circle)
         {
-            // If the circle has a zero normal then just ignore it
+            // 如果圆的法线为零则忽略
             if (math.all(circle.normal == 0)) return;
 
             var steps = CircleSteps(circle.center, circle.radius, maxPixelError, ref currentMatrix, cameraDepthToPixelSize, cameraPosition);
@@ -605,12 +605,12 @@ namespace VisualShape
             float3 tangent1;
             if (math.all(math.abs(circle.normal - new float3(0, 1, 0)) < 0.001f))
             {
-                // The normal was (almost) identical to (0, 1, 0)
+                // 法线（几乎）等于 (0, 1, 0)
                 tangent1 = new float3(0, 0, 1);
             }
             else
             {
-                // Common case
+                // 常见情况
                 tangent1 = math.cross(circle.normal, new float3(0, 1, 0));
             }
 
@@ -635,7 +635,7 @@ namespace VisualShape
                     math.sincos(t, out float sin, out float cos);
 
                     var p = PerspectiveDivide(math.mul(matrix, new float4(cos, sin, 0, 1)));
-                    // Update the bounding box
+                    // 更新包围盒
                     mn = math.min(mn, p);
                     mx = math.max(mx, p);
 
@@ -666,8 +666,8 @@ namespace VisualShape
 
             if (math.abs(centerv4.w) < 0.0000001f) return;
             var center = PerspectiveDivide(centerv4);
-            // Figure out the actual radius of the sphere after all the matrix multiplications.
-            // In case of a non-uniform scale, pick the largest radius
+            // 计算经过所有矩阵变换后球体的实际半径。
+            // 非均匀缩放时，选择最大半径
             var maxScaleFactor = math.sqrt(math.max(math.max(math.lengthsq(currentMatrix.c0.xyz), math.lengthsq(currentMatrix.c1.xyz)), math.lengthsq(currentMatrix.c2.xyz))) / centerv4.w;
             var realWorldRadius = circle.radius * maxScaleFactor;
 
@@ -686,7 +686,7 @@ namespace VisualShape
             else
             {
                 var dist = math.length(this.cameraPosition - center);
-                // Camera is inside the sphere, cannot draw
+                // 相机在球体内部，无法绘制
                 if (dist <= realWorldRadius) return;
 
                 var offsetTowardsCamera = realWorldRadius * realWorldRadius / dist;
@@ -768,7 +768,7 @@ namespace VisualShape
                     prevTangent = tangent;
                 }
 
-                // Update the global bounds with the bounding box of the circle
+                // 用圆的包围盒更新全局边界
                 var b0 = PerspectiveDivide(math.mul(m, new float4(-1, 0, 0, 1)));
                 var b1 = PerspectiveDivide(math.mul(m, new float4(0, -1, 0, 1)));
                 var b2 = PerspectiveDivide(math.mul(m, new float4(+1, 0, 0, 1)));
@@ -814,7 +814,7 @@ namespace VisualShape
                     math.sincos(t, out float sin, out float cos);
 
                     var p = PerspectiveDivide(math.mul(matrix, new float4(cos, 0, sin, 1)));
-                    // Update the bounding box
+                    // 更新包围盒
                     mn = math.min(mn, p);
                     mx = math.max(mx, p);
 
@@ -832,7 +832,7 @@ namespace VisualShape
 
                 for (int i = 0; i < steps; i++)
                 {
-                    // Center vertex
+                    // 中心顶点
                     Add(solidTriangles, vertexCount - 1);
                     Add(solidTriangles, vertexCount + i + 0);
                     Add(solidTriangles, vertexCount + i + 1);
@@ -931,11 +931,11 @@ namespace VisualShape
         };
 
         internal static readonly int[] BoxTriangles = {
-            // Bottom two triangles
+            // 底部两个三角形
             0, 1, 5,
             0, 5, 4,
 
-            // Top
+            // 顶部
             7, 3, 2,
             7, 2, 6,
 
@@ -980,7 +980,7 @@ namespace VisualShape
                 for (int i = 0; i < BoxVertices.Length; i++)
                 {
                     var p = PerspectiveDivide(math.mul(matrix, BoxVertices[i]));
-                    // Update the bounding box
+                    // 更新包围盒
                     mn = math.min(mn, p);
                     mx = math.max(mx, p);
 
@@ -1006,7 +1006,7 @@ namespace VisualShape
             }
         }
 
-        // AggressiveInlining because this is only called from a single location, and burst doesn't inline otherwise
+        // 使用 AggressiveInlining 因为只在一个位置调用，否则 Burst 不会内联
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void Next(ref UnsafeAppendBuffer.Reader reader, ref NativeArray<float4x4> matrixStack, ref NativeArray<Color32> colorStack, ref NativeArray<LineWidthData> lineWidthStack, ref int matrixStackSize, ref int colorStackSize, ref int lineWidthStackSize)
         {
@@ -1121,11 +1121,11 @@ namespace VisualShape
                     AddSolidTriangle(reader.ReadNext<TriangleData>());
                     break;
                 case Command.PushPersist:
-                    // This command does not need to be handled by the builder
+                    // 此命令不需要由构建器处理
                     reader.ReadNext<PersistData>();
                     break;
                 case Command.PopPersist:
-                    // This command does not need to be handled by the builder
+                    // 此命令不需要由构建器处理
                     break;
                 case Command.Text:
                     var data = reader.ReadNext<TextData>();
@@ -1169,15 +1169,15 @@ namespace VisualShape
 
         void CreateTriangles()
         {
-            // Create triangles for all lines
-            // A triangle consists of 3 indices
-            // A line (4 vertices) consists of 2 triangles, so 6 triangle indices
+            // 为所有线条创建三角形
+            // 一个三角形由 3 个索引组成
+            // 一条线（4 个顶点）由 2 个三角形组成，即 6 个三角形索引
             unsafe
             {
                 var outlineVertices = &buffers->vertices;
                 var outlineTriangles = &buffers->triangles;
                 var vertexCount = outlineVertices->Length / UnsafeUtility.SizeOf<Vertex>();
-                // Each line is made out of 4 vertices
+                // 每条线由 4 个顶点组成
                 var lineCount = vertexCount / 4;
                 var trianglesSizeInBytes = lineCount * 6 * UnsafeUtility.SizeOf<int>();
                 if (trianglesSizeInBytes >= outlineTriangles->Capacity)
@@ -1188,12 +1188,12 @@ namespace VisualShape
                 int* ptr = (int*)outlineTriangles->Ptr;
                 for (int i = 0, vi = 0; i < lineCount; i++, vi += 4)
                 {
-                    // First triangle
+                    // 第一个三角形
                     *ptr++ = vi + 0;
                     *ptr++ = vi + 1;
                     *ptr++ = vi + 2;
 
-                    // Second triangle
+                    // 第二个三角形
                     *ptr++ = vi + 1;
                     *ptr++ = vi + 3;
                     *ptr++ = vi + 2;
@@ -1251,7 +1251,7 @@ namespace VisualShape
 
                 if (math.any(math.isnan(outBounds->min)) && (buffers->vertices.Length > 0 || buffers->solidTriangles.Length > 0))
                 {
-                    // Fall back to a bounding box that covers everything
+                    // 回退到覆盖所有内容的包围盒
                     *outBounds = new Bounds(Vector3.zero, new Vector3(float.PositiveInfinity, float.PositiveInfinity, float.PositiveInfinity));
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
                     throw new Exception("NaN bounds. A Draw.* command may have been given NaN coordinates.");

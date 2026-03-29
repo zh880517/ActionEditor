@@ -20,8 +20,8 @@ namespace VisualShape
     public static class SharedShapeData
     {
         /// <summary>
-        /// Same as Time.time, but not updated as frequently.
-        /// Used since burst jobs cannot access Time.time.
+        /// 与 Time.time 相同，但更新频率较低。
+        /// 因为 Burst Job 无法访问 Time.time 所以使用此变量。
         /// </summary>
         public static readonly Unity.Burst.SharedStatic<float> BurstTime = Unity.Burst.SharedStatic<float>.GetOrCreate<ShapeManager, BurstTimeKey>(4);
 
@@ -29,8 +29,8 @@ namespace VisualShape
     }
 
     /// <summary>
-    /// Used to cache drawing data over multiple frames.
-    /// This is useful as a performance optimization when you are drawing the same thing over multiple consecutive frames.
+    /// 用于跨多帧缓存绘制数据。
+    /// 当你在多个连续帧中绘制相同内容时，这是一种有用的性能优化。
     ///
     /// <code>
     /// private RedrawScope redrawScope;
@@ -51,11 +51,11 @@ namespace VisualShape
     /// </summary>
     public struct RedrawScope : System.IDisposable
     {
-        // Stored as a GCHandle to allow storing this struct in an unmanaged ECS component or system
+        // 存储为 GCHandle 以允许在非托管 ECS 组件或系统中存储此结构体
         internal System.Runtime.InteropServices.GCHandle gizmos;
         /// <summary>
-        /// ID of the scope.
-        /// Zero means no or invalid scope.
+        /// 作用域的 ID。
+        /// 零表示无效或不存在的作用域。
         /// </summary>
         internal int id;
 
@@ -70,17 +70,17 @@ namespace VisualShape
         internal RedrawScope(ShapeData gizmos)
         {
             this.gizmos = gizmos.gizmosHandle;
-            // Should be enough with 4 billion ids before they wrap around.
+            // 40 亿个 ID 在回绕前应该足够了。
             id = idCounter++;
         }
 
         /// <summary>
-        /// Everything rendered with this scope and which is not older than one frame is drawn again.
-        /// This is useful if you for some reason cannot draw some items during a frame (e.g. some asynchronous process is modifying the contents)
-        /// but you still want to draw the same thing as the last frame to at least draw *something*.
+        /// 使用此作用域渲染的且不超过一帧的所有内容将重新绘制。
+        /// 如果由于某种原因无法在帧内绘制某些项（例如某个异步过程正在修改内容），这很有用
+        /// 但你仍然想绘制与上一帧相同的内容以至少绘制*一些东西*。
         ///
-        /// Note: The items age will be reset. So the next frame you can call
-        /// this method again to draw the items yet again.
+        /// 注意：项的年龄将被重置。因此下一帧你可以调用
+        /// 此方法再次绘制这些项。
         /// </summary>
         internal void Draw()
         {
@@ -91,8 +91,8 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Stops keeping all previously rendered items alive, and starts a new scope.
-        /// Equivalent to first calling Dispose on the old scope and then creating a new one.
+        /// 停止保持所有之前渲染的项存活，并开始一个新作用域。
+        /// 等同于先在旧作用域上调用 Dispose 然后创建新的。
         /// </summary>
         public void Rewind()
         {
@@ -106,11 +106,11 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Dispose the redraw scope to stop rendering the items.
+        /// 释放重绘作用域以停止渲染这些项。
         ///
-        /// You must do this when you are done with the scope, even if it was never used to actually render anything.
-        /// The items will stop rendering immediately: the next camera to render will not render the items unless kept alive in some other way.
-        /// For example items are always rendered at least once.
+        /// 使用完作用域后必须执行此操作，即使它从未用于实际渲染任何内容。
+        /// 这些项将立即停止渲染：下一个渲染的相机将不会渲染这些项，除非以其他方式保持存活。
+        /// 例如项至少会被渲染一次。
         /// </summary>
         public void Dispose()
         {
@@ -123,21 +123,21 @@ namespace VisualShape
     };
 
     /// <summary>
-    /// Helper for drawing Gizmos in a performant way.
-    /// This is a replacement for the Unity Gizmos class as that is not very performant
-    /// when drawing very large amounts of geometry (for example a large grid graph).
-    /// These gizmos can be persistent, so if the data does not change, the gizmos
-    /// do not need to be updated.
+    /// 以高性能方式绘制 Gizmos 的辅助类。
+    /// 这是 Unity Gizmos 类的替代方案，因为该类在绘制大量几何体时性能不佳
+    /// （例如大型网格图）。
+    /// 这些 Gizmos 可以是持久的，如果数据不变，Gizmos
+    /// 不需要更新。
     ///
-    /// How to use
-    /// - Create a Hasher object and hash whatever data you will be using to draw the gizmos
-    ///      Could be for example the positions of the vertices or something. Just as long as
-    ///      if the gizmos should change, then the hash changes as well.
-    /// - Check if a cached mesh exists for that hash
-    /// - If not, then create a Builder object and call the drawing methods until you are done
-    ///      and then call Finalize with a reference to a gizmos class and the hash you calculated before.
-    /// - Call gizmos.Draw with the hash.
-    /// - When you are done with drawing gizmos for this frame, call gizmos.FinalizeDraw
+    /// 使用方法
+    /// - 创建 Hasher 对象并哈希你将用于绘制 Gizmos 的数据
+    ///      例如顶点的位置等。只要
+    ///      Gizmos 变化时哈希也会变化即可。
+    /// - 检查该哈希是否存在缓存的网格
+    /// - 如果没有，创建 Builder 对象并调用绘制方法直到完成
+    ///      然后使用 Gizmos 类的引用和之前计算的哈希调用 Finalize。
+    /// - 使用哈希调用 gizmos.Draw。
+    /// - 当此帧的 Gizmos 绘制完成后，调用 gizmos.FinalizeDraw
     ///
     /// <code>
     /// var a = Vector3.zero;
@@ -151,7 +151,7 @@ namespace VisualShape
     /// var gizmos = ShapeManager.instance.gizmos;
     /// if (!gizmos.Draw(hasher)) {
     ///     using (var builder = gizmos.GetBuilder(hasher)) {
-    ///         // Ideally something very complex, not just a single line
+    ///         // 最好是非常复杂的内容，而不仅仅是一条线
     ///         builder.Line(a, b, color);
     ///     }
     /// }
@@ -159,7 +159,7 @@ namespace VisualShape
     /// </summary>
     public class ShapeData
     {
-        /// <summary>Combines hashes into a single hash value</summary>
+        /// <summary>将多个哈希值组合为单个哈希值</summary>
         public struct Hasher : IEquatable<Hasher>
         {
             ulong hash;
@@ -176,8 +176,8 @@ namespace VisualShape
 
             public void Add<T>(T hash)
             {
-                // Just a regular hash function. The + 12289 is to make sure that hashing zeros doesn't just produce a zero (and generally that hashing one X doesn't produce a hash of X)
-                // (with a struct we can't provide default initialization)
+                // 普通的哈希函数。+ 12289 是为了确保哈希零值不会只产生零（以及一般情况下哈希 X 不会产生 X 的哈希）
+                // （结构体无法提供默认初始化）
                 this.hash = (1572869UL * this.hash) ^ (ulong)hash.GetHashCode() + 12289;
             }
 
@@ -214,9 +214,9 @@ namespace VisualShape
             public BuilderData.Meta meta;
             bool submitted;
 
-            // A single instance of a MeshBuffers struct.
-            // This needs to be stored in a NativeArray because we will use it as a pointer
-            // and it needs to be guaranteed to stay in the same position in memory.
+            // MeshBuffers 结构体的单个实例。
+            // 需要存储在 NativeArray 中因为我们将用作指针
+            // 并且需要保证在内存中保持不变的位置。
             public NativeArray<MeshBuffers> temporaryMeshBuffers;
             JobHandle buildJob, splitterJob;
             public List<MeshWithType> meshes;
@@ -312,7 +312,7 @@ namespace VisualShape
                     }
 
                     SubmittedJobs++;
-                    // ScheduleBatchedJobs is expensive, so only do it once in a while
+                    // ScheduleBatchedJobs 开销大，所以只偶尔执行
                     if (SubmittedJobs % 8 == 0)
                     {
                         MarkerScheduleJobs.Begin();
@@ -326,23 +326,23 @@ namespace VisualShape
             {
                 if (type != Type.Persistent) throw new System.InvalidOperationException();
 
-                // If data was from a different game mode then it shouldn't live any longer.
-                // E.g. editor mode => game mode
+                // 如果数据来自不同的游戏模式则不应继续存活。
+                // 例如编辑器模式 => 游戏模式
                 if (meta.sceneModeVersion != sceneModeVersion)
                 {
                     meta.version = -1;
                     return;
                 }
 
-                // Guarantee that all drawing commands survive at least one frame
-                // Don't filter them until they have had the opportunity to be drawn once at least.
-                // (they may not actually have been drawn because no cameras may be active)
+                // 保证所有绘制命令至少存活一帧
+                // 至少给它们一次绘制机会后再过滤。
+                // （它们可能实际未被绘制因为可能没有活动相机）
                 if (meta.version < lastTickVersion || submitted)
                 {
                     splitterJob.Complete();
                     meta.version = version;
 
-                    // If the command buffer is empty then this instance should not live longer
+                    // 如果命令缓冲区为空则此实例不应继续存活
                     var splitterOutput = temporaryMeshBuffers[0].splitterOutput;
                     if (splitterOutput.Length == 0)
                     {
@@ -378,7 +378,7 @@ namespace VisualShape
 
             public void Schedule(ShapeData gizmos, ref GeometryBuilder.CameraInfo cameraInfo)
             {
-                // The job for Static will already have been scheduled in SetSplitterJob
+                // 静态的 Job 已在 SetSplitterJob 中调度
                 if (type != Type.Static)
                 {
                     unsafe
@@ -415,8 +415,8 @@ namespace VisualShape
                     {
                         UnityEngine.Assertions.Assert.IsTrue(customMeshIndex < maxCustomMeshes);
 
-                        // The color and orientation of custom meshes are stored in the captured state array.
-                        // It is indexed in the same order as the custom meshes in the #meshes list.
+                        // 自定义网格的颜色和方向存储在捕获状态数组中。
+                        // 它与 #meshes 列表中的自定义网格顺序相同。
                         unsafe
                         {
                             var state = *((CapturedState*)capturedState.Ptr + customMeshIndex);
@@ -424,14 +424,14 @@ namespace VisualShape
                             matrix = state.matrix;
                             customMeshIndex += 1;
                         }
-                        // Custom meshes are rendered *after* all similar builders.
-                        // In practice this means all custom meshes are drawn after all dynamic items.
+                        // 自定义网格在所有类似构建器*之后*渲染。
+                        // 实际上这意味着所有自定义网格在所有动态项之后绘制。
                         drawOrderIndex = meta.drawOrderIndex + 1;
                     }
                     else
                     {
-                        // All other meshes use default colors and identity matrices
-                        // since their data is already baked into the vertex colors and positions
+                        // 所有其他网格使用默认颜色和单位矩阵
+                        // 因为它们的数据已烘焙到顶点颜色和位置中
                         color = Color.white;
                         matrix = Matrix4x4.identity;
                         drawOrderIndex = meta.drawOrderIndex;
@@ -453,15 +453,15 @@ namespace VisualShape
                 var outIndex = 0;
                 for (int i = 0; i < meshes.Count; i++)
                 {
-                    // Custom meshes should only be pooled if the Pool flag is set.
-                    // Otherwise they are supplied by the user and it's up to them how to handle it.
+                    // 仅当设置了 Pool 标志时才回收自定义网格。
+                    // 否则它们由用户提供，如何处理由用户决定。
                     if ((meshes[i].type & MeshType.Custom) == 0 || (includeCustom && (meshes[i].type & MeshType.Pool) != 0))
                     {
                         gizmos.PoolMesh(meshes[i].mesh);
                     }
                     else
                     {
-                        // Retain custom meshes
+                        // 保留自定义网格
                         meshes[outIndex] = meshes[i];
                         outIndex += 1;
                     }
@@ -479,7 +479,7 @@ namespace VisualShape
             {
                 if (!isValid) throw new System.InvalidOperationException();
                 PoolMeshes(gizmos, true);
-                // Clear custom meshes too
+                // 也清除自定义网格
                 meshes.Clear();
                 type = Type.Invalid;
                 splitterJob.Complete();
@@ -527,7 +527,7 @@ namespace VisualShape
                 public RedrawScope redrawScope2;
                 public int version;
                 public bool isGizmos;
-                /// <summary>Used to invalidate gizmos when the scene mode changes</summary>
+                /// <summary>用于在场景模式变化时使 Gizmos 失效</summary>
                 public int sceneModeVersion;
                 public int drawOrderIndex;
                 public Camera[] cameraTargets;
@@ -546,7 +546,7 @@ namespace VisualShape
 
                 public BitPackedMeta(int dataIndex, int uniqueID, bool isBuiltInCommandBuilder)
                 {
-                    // Important to make ensure bitpacking doesn't collide
+                    // 确保位打包不会冲突很重要
                     if (dataIndex > MaxDataIndex) throw new System.Exception("Too many command builders active. Are some command builders not being disposed?");
                     UnityEngine.Assertions.Assert.IsTrue(uniqueID <= UniqueIdMask && uniqueID >= 0);
 
@@ -700,10 +700,10 @@ namespace VisualShape
 
                 unsafe
                 {
-                    // There are about 128 buffers we need to check and it's faster to do that using Burst
+                    // 大约有 128 个缓冲区需要检查，使用 Burst 更快
                     if (meshes.Count == 0 && !AnyBuffersWrittenToInvoke((UnsafeAppendBuffer*)commandBuffers.GetUnsafeReadOnlyPtr(), commandBuffers.Length))
                     {
-                        // If no buffers have been written to then simply discard this builder
+                        // 如果没有缓冲区被写入则直接丢弃此构建器
                         Release();
                         return;
                     }
@@ -711,25 +711,25 @@ namespace VisualShape
 
                 meta.version = gizmos.version;
 
-                // Command stream
-                // split to static, dynamic and persistent
-                // render static
-                // render dynamic per camera
-                // render persistent per camera
+                // 命令流
+                // 分为静态、动态和持久
+                // 渲染静态
+                // 按相机渲染动态
+                // 按相机渲染持久
                 const int PersistentDrawOrderOffset = 1000000;
                 var tmpMeta = meta;
-                // Reserve some buffers.
-                // We need to set a deterministic order in which things are drawn to avoid flickering.
-                // The shaders use the z buffer most of the time, but there are still
-                // things which are not order independent.
-                // Static stuff is drawn first
+                // 预留一些缓冲区。
+                // 需要设置确定性的绘制顺序以避免闪烁。
+                // 着色器大部分时间使用 Z 缓冲区，但仍有
+                // 不与顺序无关的内容。
+                // 静态内容先绘制
                 tmpMeta.drawOrderIndex = meta.drawOrderIndex * 3 + 0;
                 int staticBuffer = gizmos.processedData.Reserve(ProcessedBuilderData.Type.Static, tmpMeta);
-                // Dynamic stuff is drawn directly after the static stuff
-                // Note that any custom meshes will get this draw order index + 1.
+                // 动态内容紧接在静态内容之后绘制
+                // 注意任何自定义网格的绘制顺序索引会 + 1。
                 tmpMeta.drawOrderIndex = meta.drawOrderIndex * 3 + 1;
                 int dynamicBuffer = gizmos.processedData.Reserve(ProcessedBuilderData.Type.Dynamic, tmpMeta);
-                // Persistent stuff is always drawn after everything else
+                // 持久内容始终在所有其他内容之后绘制
                 tmpMeta.drawOrderIndex = meta.drawOrderIndex + PersistentDrawOrderOffset;
                 int persistentBuffer = gizmos.processedData.Reserve(ProcessedBuilderData.Type.Persistent, tmpMeta);
 
@@ -756,18 +756,18 @@ namespace VisualShape
                     // the meshBuffers.capturedState array in the #dynamicBuffer.
                     var customMeshes = gizmos.processedData.Get(dynamicBuffer).meshes;
 
-                    // Copy meshes to render
+                    // 复制要渲染的网格
                     for (int i = 0; i < meshes.Count; i++) customMeshes.Add(new MeshWithType { mesh = meshes[i].mesh, type = MeshType.Solid | MeshType.Custom | (meshes[i].temporary ? MeshType.Pool : 0) });
                     meshes.Clear();
                 }
 
-                // TODO: Allocate 3 output objects and pipe splitter to them
+                // TODO: 分配 3 个输出对象并将分离器输出管道连接到它们
 
-                // Only meshes valid for all cameras have been submitted.
-                // Meshes that depend on the specific camera will be submitted just before rendering
-                // that camera. Line drawing depends on the exact camera.
-                // In particular when drawing circles different number of segments
-                // are used depending on the distance to the camera.
+                // 仅提交了对所有相机有效的网格。
+                // 依赖特定相机的网格将在渲染前提交
+                // 该相机。线条绘制取决于具体相机。
+                // 特别是绘制圆时，不同数量的段
+                // 取决于到相机的距离。
                 state = State.WaitingForSplitter;
             }
 
@@ -792,8 +792,8 @@ namespace VisualShape
 
             void ClearData()
             {
-                // Wait for any jobs that might be running
-                // This is important to avoid memory corruption bugs
+                // 等待可能正在运行的任何 Job
+                // 这对于避免内存损坏错误很重要
                 disposeDependency.Complete();
                 splitterJob.Complete();
                 meta = default;
@@ -802,7 +802,7 @@ namespace VisualShape
                 meshes.Clear();
                 unsafe
                 {
-                    // There are about 128 buffers we need to reset and it's faster to do that using Burst
+                    // 大约有 128 个缓冲区需要重置，使用 Burst 更快
                     ResetAllBuffers((UnsafeAppendBuffer*)commandBuffers.GetUnsafePtr(), commandBuffers.Length);
                 }
             }
@@ -813,7 +813,7 @@ namespace VisualShape
                 {
                     disposeDependency.Complete();
                     disposeGCHandle.Free();
-                    // We would call Submit here, but we are deleting the data anyway, so who cares.
+                    // 这里本应调用 Submit，但反正要删除数据，所以无所谓。
                     state = State.WaitingForSplitter;
                 }
 
@@ -1047,7 +1047,7 @@ namespace VisualShape
 
                 MarkerSchedule.End();
 
-                // Ensure all jobs start to be executed on the worker threads now
+                // 确保所有 Job 现在开始在工作线程上执行
                 JobHandle.ScheduleBatchedJobs();
 
                 MarkerBuild.Begin();
@@ -1062,8 +1062,8 @@ namespace VisualShape
             }
 
             /// <summary>
-            /// Remove any existing dynamic meshes since we know we will not need them after this frame.
-            /// We do not remove custom meshes or static ones because those may be kept between frames and cameras.
+            /// 移除任何现有的动态网格，因为此帧之后不再需要它们。
+            /// 不移除自定义网格或静态网格，因为它们可能在帧和相机之间保留。
             /// </summary>
             public void PoolDynamicMeshes(ShapeData gizmos)
             {
@@ -1206,10 +1206,10 @@ namespace VisualShape
             Solid = 1 << 0,
             Lines = 1 << 1,
             Text = 1 << 2,
-            // Set if the mesh is not a built-in mesh. These may have non-identity matrices set.
+            // 如果网格不是内置网格则设置。这些可能设置了非单位矩阵。
             Custom = 1 << 3,
-            // If set for a custom mesh, the mesh will be pooled.
-            // This is used for temporary custom meshes that are created by ALINE
+            // 如果为自定义网格设置此标志，网格将被回收。
+            // 用于 ALINE 创建的临时自定义网格
             Pool = 1 << 4,
             BaseType = Solid | Lines | Text,
         }
@@ -1225,9 +1225,9 @@ namespace VisualShape
             public Mesh mesh;
             public MeshType type;
             public int drawingOrderIndex;
-            // May only be set to non-white if type contains MeshType.Custom
+            // 仅当 type 包含 MeshType.Custom 时才能设为非白色
             public Color color;
-            // May only be set to a non-identity matrix if type contains MeshType.Custom
+            // 仅当 type 包含 MeshType.Custom 时才能设为非单位矩阵
             public Matrix4x4 matrix;
         }
 
@@ -1242,28 +1242,28 @@ namespace VisualShape
         int currentDrawOrderIndex = 0;
 
         /// <summary>
-        /// Incremented every time the editor goes from play mode -> edit mode, or edit mode -> play mode.
-        /// Used to ensure that no WithDuration scopes survive this transition.
+        /// 每次编辑器从播放模式切换到编辑模式或反之时递增。
+        /// 用于确保没有 WithDuration 作用域在此过渡中幸存。
         ///
-        /// Normally it is not important, but when Unity's enter play mode settings have reload domain disabled
-        /// then it can become important since this manager will survive the transition.
+        /// 通常不重要，但当 Unity 的进入播放模式设置禁用了域重新加载时
+        /// 会变得重要，因为此管理器会在过渡中保留。
         /// </summary>
         internal int sceneModeVersion = 0;
 
         /// <summary>
-        /// Slightly adjusted scene mode version.
-        /// This takes into account `Application.isPlaying` too. It is possible for <see cref="sceneModeVersion"/> to be modified
-        /// and then some gizmos are drawn before the actual play mode change happens (with the old Application.isPlaying) mode.
+        /// 稍微调整的场景模式版本。
+        /// 这也考虑了 `Application.isPlaying`。<see cref="sceneModeVersion"/> 可能被修改
+        /// 然后在实际播放模式变化发生之前（使用旧的 Application.isPlaying 模式）绘制了某些 Gizmos。
         ///
-        /// More precisely, what could happen without this adjustment is
-        /// 1. EditorApplication.playModeStateChanged (PlayModeStateChange.ExitingPlayMode) fires which increments sceneModeVersion.
-        /// 2. A final update loop runs with Application.isPlaying = true.
-        /// 3. During this loop, a new command builder is created with the new sceneModeVersion and Application.isPlaying=true and is drawn to using a WithDuration scope.
-        /// 4. The play mode changes to editor mode.
-        /// 5. The WithDuration scope survives!
+        /// 更精确地说，没有此调整可能发生的情况是
+        /// 1. EditorApplication.playModeStateChanged (PlayModeStateChange.ExitingPlayMode) 触发，递增 sceneModeVersion。
+        /// 2. 最后一次更新循环以 Application.isPlaying = true 运行。
+        /// 3. 在此循环中，使用新的 sceneModeVersion 和 Application.isPlaying=true 创建了新的命令构建器并使用 WithDuration 作用域绘制。
+        /// 4. 播放模式切换到编辑模式。
+        /// 5. WithDuration 作用域幸存了！
         ///
-        /// We cannot increment sceneModeVersion on PlayModeStateChange.ExitedPlayMode (not Exiting) instead, because some gizmos which we want to keep may
-        /// be drawn before that event fires. Yay, Unity is so helpful.
+        /// 我们不能改为在 PlayModeStateChange.ExitedPlayMode（而非 Exiting）上递增 sceneModeVersion，因为我们想保留的某些 Gizmos 可能
+        /// 在该事件触发之前被绘制。
         /// </summary>
         int adjustedSceneModeVersion
         {
@@ -1281,15 +1281,15 @@ namespace VisualShape
 
         internal void PoolMesh(Mesh mesh)
         {
-            // Note: clearing the mesh here will deallocate the vertex/index buffers
-            // This is not good for performance as it will have to be allocated again (likely with the same size) in the next frame
+            // 注意：在此清除网格会释放顶点/索引缓冲区
+            // 这对性能不好，因为下一帧可能需要重新分配（可能相同大小）
             //mesh.Clear();
             stagingCachedMeshes.Add(mesh);
         }
 
         void SortPooledMeshes()
         {
-            // TODO: Is accessing the vertex count slow?
+            // TODO: 访问顶点数是否很慢？
             cachedMeshes.Sort((a, b) => b.vertexCount - a.vertexCount);
         }
 
@@ -1297,9 +1297,9 @@ namespace VisualShape
         {
             if (cachedMeshes.Count > 0)
             {
-                // Do a binary search to find the smallest cached mesh which is larger or equal to the desired vertex count
-                // TODO: We should actually compare the byte size of the vertex buffer, not the number of vertices because
-                // the vertex size can change depending on the mesh attribute layout.
+                // 二分搜索找到大于或等于所需顶点数的最小缓存网格
+                // TODO: 实际上应该比较顶点缓冲区的字节大小，而不是顶点数因为
+                // 顶点大小可能因网格属性布局而变化。
                 int mn = 0;
                 int mx = cachedMeshes.Count;
                 while (mx > mn + 1)
@@ -1351,25 +1351,25 @@ namespace VisualShape
 
         static void UpdateTime()
         {
-            // Time.time cannot be accessed in the job system, so create a global variable which *can* be accessed.
-            // It's not updated as frequently, but it's only used for the WithDuration method, so it should be ok
+            // Time.time 无法在 Job 系统中访问，因此创建一个*可以*访问的全局变量。
+            // 更新频率不高，但仅用于 WithDuration 方法，所以应该没问题
             SharedShapeData.BurstTime.Data = CurrentTime;
         }
 
         /// <summary>
-        /// Get an empty builder for queuing drawing commands.
+        /// 获取空的构建器以排队绘制命令。
         ///
         /// <code>
-        /// // Create a new CommandBuilder
+        /// // 创建一个新的 CommandBuilder
         /// using (var draw = ShapeManager.GetBuilder()) {
-        ///     // Use the exact same API as the global Draw class
+        ///     // 使用与全局 Draw 类完全相同的 API
         ///     draw.WireBox(Vector3.zero, Vector3.one);
         /// }
         /// </code>
         /// See: <see cref="VisualShape.CommandBuilder"/>
         /// </summary>
-        /// <param name="renderInGame">If true, this builder will be rendered in standalone games and in the editor even if gizmos are disabled.
-        /// If false, it will only be rendered in the editor when gizmos are enabled.</param>
+        /// <param name="renderInGame">如果为 true，此构建器将在独立游戏和编辑器中渲染，即使 Gizmos 被禁用。
+        /// 如果为 false，仅在编辑器中启用 Gizmos 时渲染。</param>
         public CommandBuilder GetBuilder(bool renderInGame = false)
         {
             UpdateTime();
@@ -1383,11 +1383,11 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Get an empty builder for queuing drawing commands.
+        /// 获取空的构建器以排队绘制命令。
         ///
         /// See: <see cref="VisualShape.CommandBuilder"/>
         /// </summary>
-        /// <param name="renderInGame">If true, this builder will be rendered in standalone games and in the editor even if gizmos are disabled.</param>
+        /// <param name="renderInGame">如果为 true，此构建器将在独立游戏和编辑器中渲染，即使 Gizmos 被禁用。</param>
         public CommandBuilder GetBuilder(RedrawScope redrawScope, bool renderInGame = false)
         {
             UpdateTime();
@@ -1395,28 +1395,28 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Get an empty builder for queuing drawing commands.
+        /// 获取空的构建器以排队绘制命令。
         ///
         /// See: <see cref="VisualShape.CommandBuilder"/>
         /// </summary>
-        /// <param name="renderInGame">If true, this builder will be rendered in standalone games and in the editor even if gizmos are disabled.</param>
+        /// <param name="renderInGame">如果为 true，此构建器将在独立游戏和编辑器中渲染，即使 Gizmos 被禁用。</param>
         public CommandBuilder GetBuilder(Hasher hasher, RedrawScope redrawScope = default, bool renderInGame = false)
         {
-            // The user is going to rebuild the data with the given hash
-            // Let's clear the previous data with that hash since we know it is not needed any longer.
-            // Do not do this if a hash is not given.
+            // 用户将使用给定的哈希重建数据
+            // 清除之前该哈希的数据因为我们知道不再需要。
+            // 如果未给定哈希则不执行此操作。
             if (!hasher.Equals(Hasher.NotSupplied)) DiscardData(hasher);
             UpdateTime();
             return new CommandBuilder(this, hasher, frameRedrawScope, redrawScope, !renderInGame, false, adjustedSceneModeVersion);
         }
 
-        /// <summary>Material to use for surfaces</summary>
+        /// <summary>用于表面的材质</summary>
         public Material surfaceMaterial;
 
-        /// <summary>Material to use for lines</summary>
+        /// <summary>用于线条的材质</summary>
         public Material lineMaterial;
 
-        /// <summary>Material to use for text</summary>
+        /// <summary>用于文本的材质</summary>
         public Material textMaterial;
 
         public ShapeSettings settingsAsset;
@@ -1477,13 +1477,13 @@ namespace VisualShape
             sceneModeVersion++;
 
 #if UNITY_EDITOR
-            // If we are in the editor, we schedule a callback to check if any RedrawScope objects were not disposed.
-            // OnChangingPlayMode will run before the scene is destroyed. So we know that any persistent redraw scopes
-            // that are alive right now should be destroyed soon.
-            // We wait a few updates to allow the scene to be destroyed before we check for leaks.
-            // EditorApplication.delayCall may be called before the scene has actually been destroyed.
-            // Usually it has, but in particular if the user double-clicks the play button to start and then immediately
-            // stop the game, then it may run before the scene has been destroyed.
+            // 在编辑器中，我们安排回调检查是否有 RedrawScope 对象未被释放。
+            // OnChangingPlayMode 在场景销毁前运行。因此任何当前存活的持久重绘作用域
+            // 应该很快被销毁。
+            // 我们等几次更新让场景销毁后再检查泄漏。
+            // EditorApplication.delayCall 可能在场景实际销毁前被调用。
+            // 通常已销毁，但特别是如果用户双击播放按钮启动然后立即
+            // 停止游戏，则可能在场景销毁前运行。
             var shouldBeDestroyed = this.persistentRedrawScopes.ToArray();
             UnityEditor.EditorApplication.CallbackFunction checkLeaks = null;
             int remainingFrames = 2;
@@ -1526,9 +1526,9 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Schedules the meshes for the specified hash to be drawn.
-        /// Returns: False if there is no cached mesh for this hash, you may want to
-        ///  submit one in that case. The draw command will be issued regardless of the return value.
+        /// 安排指定哈希的网格进行绘制。
+        /// 返回：如果此哈希没有缓存的网格则为 False，此时你可能需要
+        ///  提交一个。无论返回值如何，绘制命令都会发出。
         /// </summary>
         public bool Draw(Hasher hasher)
         {
@@ -1537,12 +1537,12 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Schedules the meshes for the specified hash to be drawn.
-        /// Returns: False if there is no cached mesh for this hash, you may want to
-        ///  submit one in that case. The draw command will be issued regardless of the return value.
+        /// 安排指定哈希的网格进行绘制。
+        /// 返回：如果此哈希没有缓存的网格则为 False，此时你可能需要
+        ///  提交一个。无论返回值如何，绘制命令都会发出。
         ///
-        /// This overload will draw all meshes within the specified redraw scope.
-        /// Note that if they had been drawn with another redraw scope earlier they will be removed from that scope.
+        /// 此重载将绘制指定重绘作用域内的所有网格。
+        /// 注意如果它们之前在另一个重绘作用域中绘制过，将从该作用域中移除。
         /// </summary>
         public bool Draw(Hasher hasher, RedrawScope scope)
         {
@@ -1551,7 +1551,7 @@ namespace VisualShape
             return processedData.SetVersion(hasher, version);
         }
 
-        /// <summary>Schedules all meshes that were drawn the last frame with this redraw scope to be drawn again</summary>
+        /// <summary>安排上一帧使用此重绘作用域绘制的所有网格再次绘制</summary>
         internal void Draw(RedrawScope scope)
         {
             if (scope.id != 0) processedData.SetVersion(scope, version);
@@ -1586,41 +1586,41 @@ namespace VisualShape
         public void TickFramePreRender()
         {
             data.DisposeCommandBuildersWithJobDependencies(this);
-            // Remove persistent commands that have timed out.
-            // When not playing then persistent commands are never drawn twice
+            // 移除已超时的持久命令。
+            // 不在播放时持久命令不会绘制两次
             processedData.FilterOldPersistentCommands(version, lastTickVersion, CurrentTime, adjustedSceneModeVersion);
             foreach (var scopeId in persistentRedrawScopes)
             {
                 processedData.SetVersion(new RedrawScope(this, scopeId), version);
             }
 
-            // All cameras rendered between the last tick and this one will have
-            // a version that is at least lastTickVersion + 1.
-            // However the user may want to reuse meshes from the previous frame (see Draw(Hasher)).
-            // This requires us to keep data from one more frame and thus we use lastTickVersion2 + 1
-            // TODO: One frame should be enough, right?
+            // 上次 tick 和此次之间渲染的所有相机将有
+            // 至少为 lastTickVersion + 1 的版本。
+            // 但用户可能想复用上一帧的网格（见 Draw(Hasher)）。
+            // 这要求我们多保留一帧数据，因此使用 lastTickVersion2 + 1
+            // TODO: 一帧应该够了吧？
             processedData.ReleaseDataOlderThan(this, lastTickVersion2 + 1);
             lastTickVersion2 = lastTickVersion;
             lastTickVersion = version;
             currentDrawOrderIndex = 0;
 
-            // Pooled meshes from two frames ago can now be used.
-            // One would think that pooled meshes from only one frame ago can be used.
-            // And yes, Unity will allow this, but the GPU may still be working on the meshes from the previous frame.
-            // Therefore, when we try to write to the raw mesh vertex buffers Unity will block until the previous
-            // frame's GPU work is done, which may take a long time.
-            // Using "double buffering" for the meshes that are updated every frame is more efficient.
-            // When we use simplified methods for setting the vertex/index data we don't have to do this
-            // because Unity seems to manage an upload buffer or something for us.
+            // 两帧前回收的网格现在可以使用了。
+            // 人们可能认为一帧前回收的网格就可以使用。
+            // 是的，Unity 允许这样做，但 GPU 可能仍在处理上一帧的网格。
+            // 因此当我们尝试写入原始网格顶点缓冲区时 Unity 会阻塞直到上一
+            // 帧的 GPU 工作完成，这可能需要很长时间。
+            // 对每帧更新的网格使用"双缓冲"更高效。
+            // 使用简化方法设置顶点/索引数据时不需要这样做
+            // 因为 Unity 似乎为我们管理了上传缓冲区。
             cachedMeshes.AddRange(stagingCachedMeshesDelay);
-            // Move stagingCachedMeshes to stagingCachedMeshesDelay, and make stagingCachedMeshes an empty list.
+            // 将 stagingCachedMeshes 移到 stagingCachedMeshesDelay，并使 stagingCachedMeshes 成为空列表。
             stagingCachedMeshesDelay.Clear();
             var tmp = stagingCachedMeshesDelay;
             stagingCachedMeshesDelay = stagingCachedMeshes;
             stagingCachedMeshes = tmp;
             SortPooledMeshes();
 
-            // If the largest cached mesh hasn't been used in a while, then remove it to free up the memory
+            // 如果最大的缓存网格一段时间未使用，则移除以释放内存
             if (version - lastTimeLargestCachedMeshWasUsed > 60 && cachedMeshes.Count > 0)
             {
                 Mesh.DestroyImmediate(cachedMeshes[0]);
@@ -1628,7 +1628,7 @@ namespace VisualShape
                 lastTimeLargestCachedMeshWasUsed = version;
             }
 
-            // TODO: Filter cameraVersions to avoid memory leak
+            // TODO: 过滤 cameraVersions 以避免内存泄漏
         }
 
         public void PostRenderCleanup()
@@ -1643,7 +1643,7 @@ namespace VisualShape
         {
             public int Compare(RenderedMeshWithType a, RenderedMeshWithType b)
             {
-                // Extract if the meshes are Solid/Lines/Text
+                // 提取网格是 Solid/Lines/Text
                 var ta = (int)a.type & 0x7;
                 var tb = (int)b.type & 0x7;
                 return ta != tb ? ta - tb : a.drawingOrderIndex - b.drawingOrderIndex;
@@ -1651,18 +1651,18 @@ namespace VisualShape
         }
 
         static readonly MeshCompareByDrawingOrder meshSorter = new MeshCompareByDrawingOrder();
-        // Temporary array, cached to avoid allocations
+        // 临时数组，缓存以避免分配
         Plane[] frustrumPlanes = new Plane[6];
-        // Temporary block, cached to avoid allocations
+        // 临时块，缓存以避免分配
         MaterialPropertyBlock customMaterialProperties = new MaterialPropertyBlock();
 
         int totalMemoryUsage => this.data.memoryUsage + this.processedData.memoryUsage;
 
         void LoadMaterials()
         {
-            // Make sure the material references are correct
+            // 确保材质引用正确
 
-            // Note: When importing the package for the first time the asset database may not be up to date and Resources.Load may return null.
+            // 注意：首次导入包时资产数据库可能未更新，Resources.Load 可能返回 null。
 
             if (surfaceMaterial == null)
             {
@@ -1703,16 +1703,16 @@ namespace VisualShape
 
         static int CeilLog2(int x)
         {
-            // Should use `math.ceillog2` whenever we next raise the minimum compatible version of the mathematics package.
-            // This variant is prone to floating point errors.
+            // 下次提高数学包最低兼容版本时应使用 `math.ceillog2`。
+            // 此变体容易出现浮点错误。
             return (int)math.ceil(math.log2(x));
         }
 
         /// <summary>
-        /// Wrapper for different kinds of commands buffers.
+        /// 不同类型命令缓冲区的封装。
         ///
-        /// Annoyingly, they all use a CommandBuffer in the end, but the universal render pipeline wraps it in a RasterCommandBuffer,
-        /// and it's not possible to get the underlaying CommandBuffer.
+        /// 令人烦恼的是，它们最终都使用 CommandBuffer，但通用渲染管线将其封装在 RasterCommandBuffer 中，
+        /// 且无法获取底层的 CommandBuffer。
         /// </summary>
         public struct CommandBufferWrapper
         {
@@ -1745,7 +1745,7 @@ namespace VisualShape
         }
 
         /// <summary>Call after all <see cref="Draw"/> commands for the frame have been done to draw everything.</summary>
-        /// <param name="allowCameraDefault">Indicates if built-in command builders and custom ones without a custom CommandBuilder.cameraTargets should render to this camera.</param>
+        /// <param name="allowCameraDefault">指示内置命令构建器和没有自定义 CommandBuilder.cameraTargets 的自定义构建器是否应渲染到此相机。</param>
         public void Render(Camera cam, bool allowGizmos, CommandBufferWrapper commandBuffer, bool allowCameraDefault)
         {
             LoadMaterials();

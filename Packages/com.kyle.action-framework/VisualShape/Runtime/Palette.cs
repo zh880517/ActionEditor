@@ -3,9 +3,9 @@ using UnityEngine;
 namespace VisualShape
 {
     /// <summary>
-    /// Collections of colors.
+    /// 颜色集合。
     ///
-    /// The easiest way to use this class is to import it with a "using" statement:
+    /// 使用此类最简单的方式是通过 "using" 语句导入：
     ///
     /// <code>
     /// using Palette = VisualShape.Palette.Colorbrewer.Set1;
@@ -19,7 +19,7 @@ namespace VisualShape
     /// </summary>
     public static class Palette
     {
-        /// <summary>Pure colors</summary>
+        /// <summary>纯色</summary>
         public static class Pure
         {
             public static readonly Color Yellow = new Color(1, 1, 0, 1);
@@ -35,12 +35,12 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Colorbrewer colors.
+        /// Colorbrewer 配色方案。
         /// See: http://colorbrewer2.org/
         /// </summary>
         public static class Colorbrewer
         {
-            /// <summary>Set 1 - Qualitative</summary>
+            /// <summary>Set 1 - 定性配色</summary>
             public static class Set1
             {
                 public static readonly Color Red = new Color(228 / 255f, 26 / 255f, 28 / 255f, 1);
@@ -54,7 +54,7 @@ namespace VisualShape
                 public static readonly Color Grey = new Color(153 / 255f, 153 / 255f, 153 / 255f, 1);
             }
 
-            /// <summary>Blues - Sequential</summary>
+            /// <summary>Blues - 顺序配色</summary>
             public static class Blues
             {
                 static readonly Color[] Colors = new Color[] {
@@ -113,9 +113,9 @@ namespace VisualShape
                     new Color(2/255f, 56/255f, 88/255f),
                 };
 
-                /// <summary>Returns a color for the specified class.</summary>
-                /// <param name="classes">Number of classes. Must be between 1 and 9.</param>
-                /// <param name="index">Index of the color class. Must be between 0 and classes-1.</param>
+                /// <summary>返回指定分类的颜色。</summary>
+                /// <param name="classes">分类数量。必须在 1 到 9 之间。</param>
+                /// <param name="index">颜色分类索引。必须在 0 到 classes-1 之间。</param>
                 public static Color GetColor(int classes, int index)
                 {
                     if (index < 0 || index >= classes) throw new System.ArgumentOutOfRangeException("index", "Index must be less than classes and at least 0");

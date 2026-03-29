@@ -19,13 +19,13 @@ namespace VisualShape
     using Unity.Profiling;
 
     /// <summary>
-    /// Specifies text alignment relative to an anchor point.
+    /// 指定相对于锚点的文本对齐方式。
     ///
     /// <code>
     /// Draw.Label2D(transform.position, "Hello World", 14, LabelAlignment.TopCenter);
     /// </code>
     /// <code>
-    /// // Draw the label 20 pixels below the object
+    /// // 在物体下方 20 像素处绘制标签
     /// Draw.Label2D(transform.position, "Hello World", 14, LabelAlignment.TopCenter.withPixelOffset(0, -20));
     /// </code>
     ///
@@ -35,12 +35,12 @@ namespace VisualShape
     public struct LabelAlignment
     {
         /// <summary>
-        /// Where on the text's bounding box to anchor the text.
+        /// 文本包围盒上的锚点位置。
         ///
-        /// The pivot is specified in relative coordinates, where (0,0) is the bottom left corner and (1,1) is the top right corner.
+        /// 锚点使用相对坐标指定，其中 (0,0) 是左下角，(1,1) 是右上角。
         /// </summary>
         public float2 relativePivot;
-        /// <summary>How much to move the text in screen-space</summary>
+        /// <summary>在屏幕空间中移动文本的量</summary>
         public float2 pixelOffset;
 
         public static readonly LabelAlignment TopLeft = new LabelAlignment { relativePivot = new float2(0.0f, 1.0f), pixelOffset = new float2(0, 0) };
@@ -54,10 +54,10 @@ namespace VisualShape
         public static readonly LabelAlignment Center = new LabelAlignment { relativePivot = new float2(0.5f, 0.5f), pixelOffset = new float2(0, 0) };
 
         /// <summary>
-        /// Moves the text by the specified amount of pixels in screen-space.
+        /// 按指定的像素量在屏幕空间中移动文本。
         ///
         /// <code>
-        /// // Draw the label 20 pixels below the object
+        /// // 在物体下方 20 像素处绘制标签
         /// Draw.Label2D(transform.position, "Hello World", 14, LabelAlignment.TopCenter.withPixelOffset(0, -20));
         /// </code>
         /// </summary>
@@ -71,22 +71,22 @@ namespace VisualShape
         }
     }
 
-    /// <summary>Maximum allowed delay for a job that is drawing to a command buffer</summary>
+    /// <summary>绘制到命令缓冲区的 Job 的最大允许延迟</summary>
     public enum AllowedDelay
     {
         /// <summary>
-        /// If the job is not complete at the end of the frame, drawing will block until it is completed.
-        /// This is recommended for most jobs that are expected to complete within a single frame.
+        /// 如果 Job 在帧结束时未完成，绘制将阻塞直到完成。
+        /// 建议用于大多数预期在单帧内完成的 Job。
         /// </summary>
         EndOfFrame,
         /// <summary>
-        /// Wait indefinitely for the job to complete, and only submit the results for rendering once it is done.
-        /// This is recommended for long running jobs that may take many frames to complete.
+        /// 无限等待 Job 完成，仅在完成后提交渲染结果。
+        /// 建议用于可能需要多帧才能完成的长时间运行的 Job。
         /// </summary>
         Infinite,
     }
 
-    /// <summary>Some static fields that need to be in a separate class because Burst doesn't support them</summary>
+    /// <summary>某些静态字段需要在单独的类中，因为 Burst 不支持它们</summary>
     static class CommandBuilderSamplers
     {
         internal static readonly ProfilerMarker MarkerConvert = new ProfilerMarker("Convert");
@@ -101,25 +101,25 @@ namespace VisualShape
     }
 
     /// <summary>
-    /// Builder for drawing commands.
-    /// You can use this to queue many drawing commands. The commands will be queued for rendering when you call the Dispose method.
-    /// It is recommended that you use the <a href="https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/using-statement">using statement</a> which automatically calls the Dispose method.
+    /// 绘制命令的构建器。
+    /// 可以使用此类排队多个绘制命令。调用 Dispose 方法时命令将排队渲染。
+    /// 建议使用 <a href="https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/using-statement">using 语句</a>，它会自动调用 Dispose 方法。
     ///
     /// <code>
-    /// // Create a new CommandBuilder
+    /// // 创建一个新的 CommandBuilder
     /// using (var draw = ShapeManager.GetBuilder()) {
-    ///     // Use the exact same API as the global Draw class
+    ///     // 使用与全局 Draw 类完全相同的 API
     ///     draw.WireBox(Vector3.zero, Vector3.one);
     /// }
     /// </code>
     ///
-    /// Warning: You must call either <see cref="Dispose"/> or <see cref="DiscardAndDispose"/> when you are done with this object to avoid memory leaks.
+    /// 警告：使用完此对象后必须调用 <see cref="Dispose"/> 或 <see cref="DiscardAndDispose"/> 以避免内存泄漏。
     /// </summary>
     [StructLayout(LayoutKind.Sequential)]
     [BurstCompile]
     public partial struct CommandBuilder : IDisposable
     {
-        // Note: Many fields/methods are explicitly marked as private. This is because doxygen otherwise thinks they are public by default (like struct members are in c++)
+        // 注意：许多字段/方法被显式标记为 private。因为 doxygen 默认认为它们是 public 的（就像 C++ 中的结构体成员）
 
         [NativeDisableUnsafePtrRestriction]
         internal unsafe UnsafeAppendBuffer* buffer;
@@ -142,8 +142,8 @@ namespace VisualShape
 
         internal CommandBuilder(ShapeData gizmos, Hasher hasher, RedrawScope frameRedrawScope, RedrawScope customRedrawScope, bool isGizmos, bool isBuiltInCommandBuilder, int sceneModeVersion)
         {
-            // We need to use a GCHandle instead of a normal reference to be able to pass this object to burst compiled function pointers.
-            // The NativeSetClassTypeToNullOnSchedule unfortunately only works together with the job system, not with raw functions.
+            // 我们需要使用 GCHandle 而不是普通引用，以便将此对象传递给 Burst 编译的函数指针。
+            // 遗憾的是 NativeSetClassTypeToNullOnSchedule 只能与 Job 系统配合使用，不能与原始函数一起使用。
             this.gizmos = GCHandle.Alloc(gizmos, GCHandleType.Normal);
 
             threadIndex = 0;
@@ -168,16 +168,16 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Wrapper for drawing in the XY plane.
+        /// 在 XY 平面绘制的包装器。
         ///
         /// <code>
         /// var p1 = new Vector2(0, 1);
         /// var p2 = new Vector2(5, 7);
         ///
-        /// // Draw it in the XY plane
+        /// // 在 XY 平面绘制
         /// Draw.xy.Line(p1, p2);
         ///
-        /// // Draw it in the XZ plane
+        /// // 在 XZ 平面绘制
         /// Draw.xz.Line(p1, p2);
         /// </code>
         ///
@@ -187,16 +187,16 @@ namespace VisualShape
         public CommandBuilder2D xy => new CommandBuilder2D(this, true);
 
         /// <summary>
-        /// Wrapper for drawing in the XZ plane.
+        /// 在 XZ 平面绘制的包装器。
         ///
         /// <code>
         /// var p1 = new Vector2(0, 1);
         /// var p2 = new Vector2(5, 7);
         ///
-        /// // Draw it in the XY plane
+        /// // 在 XY 平面绘制
         /// Draw.xy.Line(p1, p2);
         ///
-        /// // Draw it in the XZ plane
+        /// // 在 XZ 平面绘制
         /// Draw.xz.Line(p1, p2);
         /// </code>
         ///
@@ -208,18 +208,18 @@ namespace VisualShape
         static readonly float3 DEFAULT_UP = new float3(0, 1, 0);
 
         /// <summary>
-        /// Can be set to render specifically to these cameras.
-        /// If you set this property to an array of cameras then this command builder will only be rendered
-        /// to the specified cameras. Setting this property bypasses <see cref="VisualShape.ShapeManager.allowRenderToRenderTextures"/>.
-        /// The camera will be rendered to even if it renders to a render texture.
+        /// 可以设置为专门渲染到这些相机。
+        /// 如果将此属性设置为相机数组，则此命令构建器仅会渲染
+        /// 到指定的相机。设置此属性将绕过 <see cref="VisualShape.ShapeManager.allowRenderToRenderTextures"/>。
+        /// 即使相机渲染到 RenderTexture 也会被渲染。
         ///
-        /// A null value indicates that all valid cameras should be rendered to. This is the default value.
+        /// null 值表示应渲染到所有有效相机。这是默认值。
         ///
         /// <code>
         /// var draw = ShapeManager.GetBuilder(true);
         ///
         /// draw.cameraTargets = new Camera[] { myCamera };
-        /// // This sphere will only be rendered to myCamera
+        /// // 此球体仅会渲染到 myCamera
         /// draw.WireSphere(Vector3.zero, 0.5f, Color.black);
         /// draw.Dispose();
         /// </code>
@@ -255,7 +255,7 @@ namespace VisualShape
             }
         }
 
-        /// <summary>Submits this command builder for rendering</summary>
+        /// <summary>提交此命令构建器进行渲染</summary>
         public void Dispose()
         {
             if (uniqueID.isBuiltInCommandBuilder) throw new System.Exception("You cannot dispose a built-in command builder");
@@ -263,18 +263,18 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Disposes this command builder after the given job has completed.
+        /// 在给定的 Job 完成后释放此命令构建器。
         ///
-        /// This is convenient if you are using the entity-component-system/burst in Unity and don't know exactly when the job will complete.
+        /// 如果你使用 Unity 的 ECS/Burst 且不确定 Job 何时完成，这很方便。
         ///
-        /// You will not be able to use this command builder on the main thread anymore.
+        /// 你将无法再在主线程使用此命令构建器。
         ///
         /// See: job-system (view in online documentation for working links)
         /// </summary>
-        /// <param name="dependency">The job that must complete before this command builder is disposed.</param>
-        /// <param name="allowedDelay">Whether to block on this dependency before rendering the current frame or not.
-        ///    If the job is expected to complete during a single frame, leave at the default of \reflink{AllowedDelay.EndOfFrame}.
-        ///    But if the job is expected to take multiple frames to complete, you can set this to \reflink{AllowedDelay.Infinite}.</param>
+        /// <param name="dependency">必须在此命令构建器释放前完成的 Job。</param>
+        /// <param name="allowedDelay">是否在渲染当前帧前阻塞等待此依赖完成。
+        ///    如果 Job 预计在单帧内完成，保持默认的 \reflink{AllowedDelay.EndOfFrame}。
+        ///    但如果 Job 预计需要多帧完成，可以设置为 \reflink{AllowedDelay.Infinite}。</param>
         public void DisposeAfter(JobHandle dependency, AllowedDelay allowedDelay = AllowedDelay.EndOfFrame)
         {
             if (!gizmos.IsAllocated) throw new System.Exception("You cannot dispose an invalid command builder. Are you trying to dispose it twice?");
@@ -319,9 +319,9 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Discards the contents of this command builder without rendering anything.
-        /// If you are not going to draw anything (i.e. you do not call the <see cref="Dispose"/> method) then you must call this method to avoid
-        /// memory leaks.
+        /// 丢弃此命令构建器的内容而不渲染任何东西。
+        /// 如果你不打算绘制任何内容（即不调用 <see cref="Dispose"/> 方法），则必须调用此方法以避免
+        /// 内存泄漏。
         /// </summary>
         public void DiscardAndDispose()
         {
@@ -351,17 +351,17 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Pre-allocates the internal buffer to an additional size bytes.
-        /// This can give you a minor performance boost if you are drawing a lot of things.
+        /// 预分配内部缓冲区额外的字节数。
+        /// 如果你绘制大量内容，这可以提供轻微的性能提升。
         ///
-        /// Note: Only resizes the buffer for the current thread.
+        /// 注意：仅为当前线程调整缓冲区大小。
         /// </summary>
         public void Preallocate(int size)
         {
             Reserve(size);
         }
 
-        /// <summary>Internal rendering command</summary>
+        /// <summary>内部渲染命令</summary>
         [System.Flags]
         internal enum Command
         {
@@ -395,7 +395,7 @@ namespace VisualShape
             public float3 a, b, c;
         }
 
-        /// <summary>Holds rendering data for a line</summary>
+        /// <summary>存储线条的渲染数据</summary>
         internal struct LineData
         {
             public float3 a, b;
@@ -406,14 +406,14 @@ namespace VisualShape
             public Vector3 a, b;
         }
 
-        /// <summary>Holds rendering data for a circle</summary>
+        /// <summary>存储圆的渲染数据</summary>
         internal struct CircleXZData
         {
             public float3 center;
             public float radius, startAngle, endAngle;
         }
 
-        /// <summary>Holds rendering data for a circle</summary>
+        /// <summary>存储圆的渲染数据</summary>
         internal struct CircleData
         {
             public float3 center;
@@ -421,14 +421,14 @@ namespace VisualShape
             public float radius;
         }
 
-        /// <summary>Holds rendering data for a sphere</summary>
+        /// <summary>存储球体的渲染数据</summary>
         internal struct SphereData
         {
             public float3 center;
             public float radius;
         }
 
-        /// <summary>Holds rendering data for a box</summary>
+        /// <summary>存储方盒的渲染数据</summary>
         internal struct BoxData
         {
             public float3 center;
@@ -472,7 +472,7 @@ namespace VisualShape
             public int numCharacters;
         }
 
-        /// <summary>Ensures the buffer has room for at least N more bytes</summary>
+        /// <summary>确保缓冲区至少还有 N 字节的空间</summary>
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         private void Reserve(int additionalSpace)
         {
@@ -485,11 +485,11 @@ namespace VisualShape
                     if (threadIndex > 0 && uniqueID.isBuiltInCommandBuilder) throw new System.Exception("You should use a custom command builder when using the Unity Job System. Take a look at the documentation for more info.");
                     if (buffer == null) throw new System.Exception("CommandBuilder does not have a valid buffer. Is it properly initialized?");
 
-                    // Exploit the fact that right after this package has drawn gizmos the buffers will be empty
-                    // and the next task is that Unity will render its own internal gizmos.
-                    // We can therefore easily (and without a high performance cost)
-                    // trap accidental Draw.* calls from OnDrawGizmos functions
-                    // by doing this check when the first Reserve call is made.
+                    // 利用此包绘制 Gizmos 后缓冲区将为空的事实
+                    // 下一个任务是 Unity 将渲染其自身的内部 Gizmos。
+                    // 因此我们可以轻松地（且不会有太大性能开销）
+                    // 捕获来自 OnDrawGizmos 函数的意外 Draw.* 调用
+                    // 通过在第一次 Reserve 调用时进行此检查。
                     AssertNotRendering();
 #endif
 
@@ -501,8 +501,8 @@ namespace VisualShape
                 if (newLength > buffer->Capacity)
                 {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
-                    // This really should run every time we access the buffer... but that would be a bit slow
-                    // This code will catch the error eventually.
+                    // 理论上每次访问缓冲区都应执行此检查...但那样会有点慢
+                    // 此代码最终会捕获错误。
                     AssertBufferExists();
                     const int MAX_BUFFER_SIZE = 1024 * 1024 * 256; // 256 MB
                     if (buffer->Length * 2 > MAX_BUFFER_SIZE)
@@ -520,7 +520,7 @@ namespace VisualShape
         {
             if (!gizmos.IsAllocated || gizmos.Target == null || !(gizmos.Target as ShapeData).data.StillExists(uniqueID))
             {
-                // This command builder is invalid, clear all data on it to prevent it being used again
+                // 此命令构建器无效，清除所有数据以防止再次使用
                 this = default;
                 throw new System.Exception("This command builder no longer exists. Are you trying to draw to a command builder which has already been disposed?");
             }
@@ -529,11 +529,11 @@ namespace VisualShape
         [BurstDiscard]
         static void AssertNotRendering()
         {
-            // Some checking to see if drawing is being done from inside OnDrawGizmos
-            // This check is relatively fast (about 0.05 ms), but we still do it only every 128th frame for performance reasons
+            // 检查是否从 OnDrawGizmos 内部进行绘制
+            // 此检查相对较快（约 0.05 毫秒），但出于性能考虑仅每 128 帧执行一次
             if (!GizmoContext.drawingGizmos && !JobsUtility.IsExecutingJob && (Time.renderedFrameCount & 127) == 0)
             {
-                // Inspect the stack-trace to be able to provide more helpful error messages
+                // 检查堆栈跟踪以提供更有帮助的错误信息
                 var st = StackTraceUtility.ExtractStackTrace();
                 if (st.Contains("OnDrawGizmos"))
                 {
@@ -561,31 +561,31 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Converts a Color to a Color32.
-        /// This method is faster than Unity's native color conversion, especially when using Burst.
+        /// 将 Color 转换为 Color32。
+        /// 此方法比 Unity 的原生颜色转换更快，尤其在使用 Burst 时。
         /// </summary>
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         internal static unsafe uint ConvertColor(Color color)
         {
-            // If SSE2 is supported (which it is on essentially all X86 CPUs)
-            // then we can use a much faster conversion from Color to Color32.
-            // This will only be possible inside Burst.
+            // 如果支持 SSE2（基本上所有 X86 CPU 都支持）
+            // 则可以使用更快的 Color 到 Color32 转换。
+            // 这仅在 Burst 内部可行。
             if (Unity.Burst.Intrinsics.X86.Sse2.IsSse2Supported)
             {
-                // Convert from 0-1 float range to 0-255 integer range
+                // 从 0-1 浮点范围转换到 0-255 整数范围
                 var ci = (int4)(255 * new float4(color.r, color.g, color.b, color.a) + 0.5f);
                 var v32 = new Unity.Burst.Intrinsics.v128(ci.x, ci.y, ci.z, ci.w);
-                // Convert four 32-bit numbers to four 16-bit numbers
+                // 将四个 32 位数转换为四个 16 位数
                 var v16 = Unity.Burst.Intrinsics.X86.Sse2.packs_epi32(v32, v32);
-                // Convert four 16-bit numbers to four 8-bit numbers
+                // 将四个 16 位数转换为四个 8 位数
                 var v8 = Unity.Burst.Intrinsics.X86.Sse2.packus_epi16(v16, v16);
                 return v8.UInt0;
             }
             else
             {
-                // If we don't have SSE2 (most likely we are not running inside Burst),
-                // then we will do a manual conversion from Color to Color32.
-                // This is significantly faster than just casting to a Color32.
+                // 如果没有 SSE2（很可能不在 Burst 内运行），
+                // 则手动进行 Color 到 Color32 的转换。
+                // 这比直接转换为 Color32 快得多。
                 var r = (uint)Mathf.Clamp((int)(color.r * 255f + 0.5f), 0, 255);
                 var g = (uint)Mathf.Clamp((int)(color.g * 255f + 0.5f), 0, 255);
                 var b = (uint)Mathf.Clamp((int)(color.b * 255f + 0.5f), 0, 255);
@@ -599,8 +599,8 @@ namespace VisualShape
             int num = UnsafeUtility.SizeOf<T>();
             var buffer = this.buffer;
             var bufferSize = buffer->Length;
-            // We assume this because the Reserve function has already taken care of that.
-            // This removes a few branches from the assembly when running in burst.
+            // 我们假设这一点，因为 Reserve 函数已经处理了。
+            // 这在 Burst 运行时从汇编中移除了一些分支。
             Unity.Burst.CompilerServices.Hint.Assume(buffer->Ptr != null);
             Unity.Burst.CompilerServices.Hint.Assume(buffer->Ptr + bufferSize != null);
 
@@ -660,8 +660,8 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Scope that does nothing.
-        /// Used for optimization in standalone builds.
+        /// 不执行任何操作的作用域。
+        /// 用于独立构建中的优化。
         /// </summary>
         public struct ScopeEmpty : IDisposable
         {
@@ -687,18 +687,18 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Scope to draw multiple things with an implicit matrix transformation.
-        /// All coordinates for items drawn inside the scope will be multiplied by the matrix.
-        /// If WithMatrix scopes are nested then coordinates are multiplied by all nested matrices in order.
+        /// 使用隐式矩阵变换绘制多个内容的作用域。
+        /// 作用域内绘制的所有项的坐标将乘以该矩阵。
+        /// 如果 WithMatrix 作用域嵌套，则坐标按顺序乘以所有嵌套矩阵。
         ///
         /// <code>
         /// using (Draw.InLocalSpace(transform)) {
-        ///     // Draw a box at (0,0,0) relative to the current object
-        ///     // This means it will show up at the object's position
+        ///     // 在相对于当前物体的 (0,0,0) 处绘制方盒
+        ///     // 这意味着它将显示在物体的位置
         ///     Draw.WireBox(Vector3.zero, Vector3.one);
         /// }
         ///
-        /// // Equivalent code using the lower level WithMatrix scope
+        /// // 使用底层 WithMatrix 作用域的等效代码
         /// using (Draw.WithMatrix(transform.localToWorldMatrix)) {
         ///     Draw.WireBox(Vector3.zero, Vector3.one);
         /// }
@@ -710,7 +710,7 @@ namespace VisualShape
         public ScopeMatrix WithMatrix(Matrix4x4 matrix)
         {
             PushMatrix(matrix);
-            // TODO: Keep track of alive scopes and prevent dispose unless all scopes have been disposed
+            // TODO: 跟踪存活的作用域，除非所有作用域都已释放，否则阻止释放
             unsafe
             {
                 return new ScopeMatrix { builder = this };
@@ -718,18 +718,18 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Scope to draw multiple things with an implicit matrix transformation.
-        /// All coordinates for items drawn inside the scope will be multiplied by the matrix.
-        /// If WithMatrix scopes are nested then coordinates are multiplied by all nested matrices in order.
+        /// 使用隐式矩阵变换绘制多个内容的作用域。
+        /// 作用域内绘制的所有项的坐标将乘以该矩阵。
+        /// 如果 WithMatrix 作用域嵌套，则坐标按顺序乘以所有嵌套矩阵。
         ///
         /// <code>
         /// using (Draw.InLocalSpace(transform)) {
-        ///     // Draw a box at (0,0,0) relative to the current object
-        ///     // This means it will show up at the object's position
+        ///     // 在相对于当前物体的 (0,0,0) 处绘制方盒
+        ///     // 这意味着它将显示在物体的位置
         ///     Draw.WireBox(Vector3.zero, Vector3.one);
         /// }
         ///
-        /// // Equivalent code using the lower level WithMatrix scope
+        /// // 使用底层 WithMatrix 作用域的等效代码
         /// using (Draw.WithMatrix(transform.localToWorldMatrix)) {
         ///     Draw.WireBox(Vector3.zero, Vector3.one);
         /// }
@@ -741,7 +741,7 @@ namespace VisualShape
         public ScopeMatrix WithMatrix(float3x3 matrix)
         {
             PushMatrix(new float4x4(matrix, float3.zero));
-            // TODO: Keep track of alive scopes and prevent dispose unless all scopes have been disposed
+            // TODO: 跟踪存活的作用域，除非所有作用域都已释放，否则阻止释放
             unsafe
             {
                 return new ScopeMatrix { builder = this };
@@ -749,7 +749,7 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Scope to draw multiple things with the same color.
+        /// 使用相同颜色绘制多个内容的作用域。
         ///
         /// <code>
         /// void Update () {
@@ -760,8 +760,8 @@ namespace VisualShape
         /// }
         /// </code>
         ///
-        /// Any command that is passed an explicit color parameter will override this color.
-        /// If another color scope is nested inside this one then that scope will override this color.
+        /// 传入显式颜色参数的命令将覆盖此颜色。
+        /// 如果在此作用域内嵌套另一个颜色作用域，则该作用域将覆盖此颜色。
         /// </summary>
         [BurstDiscard]
         public ScopeColor WithColor(Color color)
@@ -774,10 +774,10 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Scope to draw multiple things for a longer period of time.
+        /// 使绘制内容持续更长时间的作用域。
         ///
-        /// Normally drawn items will only be rendered for a single frame.
-        /// Using a persist scope you can make the items be drawn for any amount of time.
+        /// 通常绘制的项仅渲染一帧。
+        /// 使用持续作用域可以使项绘制任意时长。
         ///
         /// <code>
         /// void Update () {
@@ -788,11 +788,11 @@ namespace VisualShape
         /// }
         /// </code>
         ///
-        /// Note: Outside of play mode the duration is measured against Unity's Time.realtimeSinceStartup.
+        /// 注意：在非播放模式下，持续时间以 Unity 的 Time.realtimeSinceStartup 衡量。
         ///
-        /// Warning: It is recommended not to use this inside a DrawGizmos callback since DrawGizmos is called every frame anyway.
+        /// 警告：不建议在 DrawGizmos 回调内使用，因为 DrawGizmos 每帧都会被调用。
         /// </summary>
-        /// <param name="duration">How long the drawn items should persist in seconds.</param>
+        /// <param name="duration">绘制项应持续的秒数。</param>
 
         [BurstDiscard]
         public ScopePersist WithDuration(float duration)
@@ -805,17 +805,17 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Scope to draw multiple things with a given line width.
+        /// 使用指定线宽绘制多个内容的作用域。
         ///
-        /// Note that the line join algorithm is a quite simple one optimized for speed. It normally looks good on a 2D plane, but if the polylines curve a lot in 3D space then
-        /// it can look odd from some angles.
+        /// 请注意，线条连接算法是一个为速度优化的简单算法。它通常在 2D 平面上看起来不错，但如果折线在 3D 空间中弯曲很大，
+        /// 从某些角度看可能会显得奇怪。
         ///
         /// [Open online documentation to see images]
         ///
-        /// In the picture the top row has automaticJoins enabled and in the bottom row it is disabled.
+        /// 图片中上排启用了 automaticJoins，下排则禁用。
         /// </summary>
-        /// <param name="pixels">Line width in pixels</param>
-        /// <param name="automaticJoins">If true then sequences of lines that are adjacent will be automatically joined at their vertices. This typically produces nicer polylines without weird gaps.</param>
+        /// <param name="pixels">线宽（像素）</param>
+        /// <param name="automaticJoins">如果为 true，相邻线段将在顶点处自动连接。通常可产生更美观的折线，避免奇怪的间隙。</param>
         [BurstDiscard]
         public ScopeLineWidth WithLineWidth(float pixels, bool automaticJoins = true)
         {
@@ -827,15 +827,15 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Scope to draw multiple things relative to a transform object.
-        /// All coordinates for items drawn inside the scope will be multiplied by the transform's localToWorldMatrix.
+        /// 相对于 Transform 对象绘制多个内容的作用域。
+        /// 作用域内绘制的所有项的坐标将乘以 transform 的 localToWorldMatrix。
         ///
         /// <code>
         /// void Update () {
         ///     using (Draw.InLocalSpace(transform)) {
-        ///         // Draw a box at (0,0,0) relative to the current object
-        ///         // This means it will show up at the object's position
-        ///         // The box is also rotated and scaled with the transform
+        ///         // 在相对于当前物体的 (0,0,0) 处绘制方盒
+        ///         // 这意味着它将显示在物体的位置
+        ///         // 方盒也会随 transform 旋转和缩放
         ///         Draw.WireBox(Vector3.zero, Vector3.one);
         ///     }
         /// }
@@ -850,13 +850,13 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Scope to draw multiple things in screen space of a camera.
-        /// If you draw 2D coordinates (i.e. (x,y,0)) they will be projected onto a plane approximately [2*near clip plane of the camera] world units in front of the camera (but guaranteed to be between the near and far planes).
+        /// 在相机屏幕空间中绘制多个内容的作用域。
+        /// 如果绘制 2D 坐标（即 (x,y,0)），它们将被投影到相机前方约 [2*近裁剪面] 世界单位的平面上（保证在近远平面之间）。
         ///
-        /// The lower left corner of the camera is (0,0,0) and the upper right is (camera.pixelWidth, camera.pixelHeight, 0)
+        /// 相机左下角为 (0,0,0)，右上角为 (camera.pixelWidth, camera.pixelHeight, 0)
         ///
-        /// Note: As a corollary, the centers of pixels are offset by 0.5. So for example the center of the top left pixel is at (0.5, 0.5, 0).
-        /// Therefore, if you want to draw 1 pixel wide lines in screen space, you may want to offset the coordinates by 0.5 pixels.
+        /// 注意：因此像素中心偏移 0.5。例如左上角像素的中心在 (0.5, 0.5, 0)。
+        /// 因此如果想在屏幕空间绘制 1 像素宽的线条，可能需要将坐标偏移 0.5 像素。
         ///
         /// See: <see cref="InLocalSpace"/>
         /// See: <see cref="WithMatrix"/>
@@ -868,8 +868,8 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Multiply all coordinates until the next PopMatrix with the given matrix.
-        /// This differs from <see cref="PushSetMatrix"/> in that this stacks with all previously pushed matrices while <see cref="PushSetMatrix"/> does not.
+        /// 将给定矩阵乘以所有坐标直到下一个 PopMatrix。
+        /// 与 <see cref="PushSetMatrix"/> 不同，此方法与所有先前推入的矩阵叠加，而 <see cref="PushSetMatrix"/> 不会。
         /// </summary>
         public void PushMatrix(Matrix4x4 matrix)
         {
@@ -879,8 +879,8 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Multiply all coordinates until the next PopMatrix with the given matrix.
-        /// This differs from <see cref="PushSetMatrix"/> in that this stacks with all previously pushed matrices while <see cref="PushSetMatrix"/> does not.
+        /// 将给定矩阵乘以所有坐标直到下一个 PopMatrix。
+        /// 与 <see cref="PushSetMatrix"/> 不同，此方法与所有先前推入的矩阵叠加，而 <see cref="PushSetMatrix"/> 不会。
         /// </summary>
         public void PushMatrix(float4x4 matrix)
         {
@@ -890,8 +890,8 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Multiply all coordinates until the next PopMatrix with the given matrix.
-        /// This differs from <see cref="PushMatrix"/> in that this sets the current matrix directly while <see cref="PushMatrix"/> stacks with all previously pushed matrices.
+        /// 将给定矩阵乘以所有坐标直到下一个 PopMatrix。
+        /// 与 <see cref="PushMatrix"/> 不同，此方法直接设置当前矩阵，而 <see cref="PushMatrix"/> 与所有先前推入的矩阵叠加。
         /// </summary>
         public void PushSetMatrix(Matrix4x4 matrix)
         {
@@ -901,8 +901,8 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Multiply all coordinates until the next PopMatrix with the given matrix.
-        /// This differs from <see cref="PushMatrix"/> in that this sets the current matrix directly while <see cref="PushMatrix"/> stacks with all previously pushed matrices.
+        /// 将给定矩阵乘以所有坐标直到下一个 PopMatrix。
+        /// 与 <see cref="PushMatrix"/> 不同，此方法直接设置当前矩阵，而 <see cref="PushMatrix"/> 与所有先前推入的矩阵叠加。
         /// </summary>
         public void PushSetMatrix(float4x4 matrix)
         {
@@ -911,7 +911,7 @@ namespace VisualShape
             Add(matrix);
         }
 
-        /// <summary>Pops a matrix from the stack</summary>
+        /// <summary>从栈中弹出矩阵</summary>
         public void PopMatrix()
         {
             Reserve(4);
@@ -919,9 +919,9 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws everything until the next PopColor with the given color.
-        /// Any command that is passed an explicit color parameter will override this color.
-        /// If another color scope is nested inside this one then that scope will override this color.
+        /// 使用给定颜色绘制直到下一个 PopColor。
+        /// 传入显式颜色参数的命令将覆盖此颜色。
+        /// 如果在此作用域内嵌套另一个颜色作用域，则该作用域将覆盖此颜色。
         /// </summary>
         public void PushColor(Color color)
         {
@@ -930,7 +930,7 @@ namespace VisualShape
             Add(ConvertColor(color));
         }
 
-        /// <summary>Pops a color from the stack</summary>
+        /// <summary>从栈中弹出颜色</summary>
         public void PopColor()
         {
             Reserve(4);
@@ -938,20 +938,20 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws everything until the next PopDuration for a number of seconds.
-        /// Warning: This is not recommended inside a DrawGizmos callback since DrawGizmos is called every frame anyway.
+        /// 绘制持续指定秒数直到下一个 PopDuration。
+        /// 警告：不建议在 DrawGizmos 回调内使用，因为 DrawGizmos 每帧都会被调用。
         /// </summary>
         public void PushDuration(float duration)
         {
             Reserve<PersistData>();
             Add(Command.PushPersist);
-            // We must use the BurstTime variable which is updated more rarely than Time.time.
-            // This is necessary because this code may be called from a burst job or from a different thread.
-            // Time.time can only be accessed in the main thread.
+            // 我们必须使用更新频率低于 Time.time 的 BurstTime 变量。
+            // 这是必要的，因为此代码可能从 Burst Job 或不同线程调用。
+            // Time.time 只能在主线程访问。
             Add(new PersistData { endTime = SharedShapeData.BurstTime.Data + duration });
         }
 
-        /// <summary>Pops a duration scope from the stack</summary>
+        /// <summary>从栈中弹出持续时间作用域</summary>
         public void PopDuration()
         {
             Reserve(4);
@@ -959,8 +959,8 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws everything until the next PopPersist for a number of seconds.
-        /// Warning: This is not recommended inside a DrawGizmos callback since DrawGizmos is called every frame anyway.
+        /// 绘制持续指定秒数直到下一个 PopPersist。
+        /// 警告：不建议在 DrawGizmos 回调内使用，因为 DrawGizmos 每帧都会被调用。
         ///
         /// Deprecated: Renamed to <see cref="PushDuration"/>
         /// </summary>
@@ -971,7 +971,7 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Pops a persist scope from the stack.
+        /// 从栈中弹出持久作用域。
         /// Deprecated: Renamed to <see cref="PopDuration"/>
         /// </summary>
         [System.Obsolete("Renamed to PopDuration for consistency")]
@@ -981,17 +981,17 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws all lines until the next PopLineWidth with a given line width in pixels.
+        /// 使用给定的像素线宽绘制所有线条直到下一个 PopLineWidth。
         ///
-        /// Note that the line join algorithm is a quite simple one optimized for speed. It normally looks good on a 2D plane, but if the polylines curve a lot in 3D space then
-        /// it can look odd from some angles.
+        /// 请注意，线条连接算法是一个为速度优化的简单算法。它通常在 2D 平面上看起来不错，但如果折线在 3D 空间中弯曲很大，
+        /// 从某些角度看可能会显得奇怪。
         ///
         /// [Open online documentation to see images]
         ///
-        /// In the picture the top row has automaticJoins enabled and in the bottom row it is disabled.
+        /// 图片中上排启用了 automaticJoins，下排则禁用。
         /// </summary>
-        /// <param name="pixels">Line width in pixels</param>
-        /// <param name="automaticJoins">If true then sequences of lines that are adjacent will be automatically joined at their vertices. This typically produces nicer polylines without weird gaps.</param>
+        /// <param name="pixels">线宽（像素）</param>
+        /// <param name="automaticJoins">如果为 true，相邻线段将在顶点处自动连接。通常可产生更美观的折线，避免奇怪的间隙。</param>
         public void PushLineWidth(float pixels, bool automaticJoins = true)
         {
             if (pixels < 0) throw new System.ArgumentOutOfRangeException("pixels", "Line width must be positive");
@@ -1001,7 +1001,7 @@ namespace VisualShape
             Add(new LineWidthData { pixels = pixels, automaticJoins = automaticJoins });
         }
 
-        /// <summary>Pops a line width scope from the stack</summary>
+        /// <summary>从栈中弹出线宽作用域</summary>
         public void PopLineWidth()
         {
             Reserve(4);
@@ -1009,7 +1009,7 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws a line between two points.
+        /// 在两点之间绘制线条。
         ///
         /// [Open online documentation to see images]
         ///
@@ -1027,7 +1027,7 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws a line between two points.
+        /// 在两点之间绘制线条。
         ///
         /// [Open online documentation to see images]
         ///
@@ -1043,9 +1043,9 @@ namespace VisualShape
             // Add(Command.Line);
             // Add(new LineDataV3 { a = a, b = b });
 
-            // The code below is equivalent to the commented out code above.
-            // But drawing lines is the most common operation so it needs to be really fast.
-            // Having this hardcoded improves line rendering performance by about 8%.
+            // 下面的代码等同于上面被注释掉的代码。
+            // 但绘制线条是最常见的操作，所以需要非常快。
+            // 硬编码可以将线条渲染性能提高约 8%。
             var bufferSize = BufferSize;
 
             unsafe
@@ -1064,7 +1064,7 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws a line between two points.
+        /// 在两点之间绘制线条。
         ///
         /// [Open online documentation to see images]
         ///
@@ -1081,9 +1081,9 @@ namespace VisualShape
             // Add(ConvertColor(color));
             // Add(new LineDataV3 { a = a, b = b });
 
-            // The code below is equivalent to the code which is commented out above.
-            // But drawing lines is the most common operation so it needs to be really fast
-            // Having this hardcoded improves line rendering performance by about 8%.
+            // 下面的代码等同于上面被注释掉的代码。
+            // 但绘制线条是最常见的操作，所以需要非常快
+            // 硬编码可以将线条渲染性能提高约 8%。
             var bufferSize = BufferSize;
 
             unsafe
@@ -1103,8 +1103,8 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws a ray starting at a point and going in the given direction.
-        /// The ray will end at origin + direction.
+        /// 从一个点开始沿给定方向绘制射线。
+        /// 射线将在 origin + direction 处结束。
         ///
         /// [Open online documentation to see images]
         ///
@@ -1118,7 +1118,7 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws a ray with a given length.
+        /// 绘制给定长度的射线。
         ///
         /// [Open online documentation to see images]
         ///
@@ -1132,10 +1132,10 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws an arc between two points.
+        /// 在两点之间绘制圆弧。
         ///
-        /// The rendered arc is the shortest arc between the two points.
-        /// The radius of the arc will be equal to the distance between center and start.
+        /// 渲染的弧是两点之间的最短弧。
+        /// 弧的半径等于圆心到起点的距离。
         ///
         /// [Open online documentation to see images]
         /// <code>
@@ -1148,9 +1148,9 @@ namespace VisualShape
         ///
         /// See: <see cref="CommandBuilder2D.Circle(float3,float,float,float)"/>
         /// </summary>
-        /// <param name="center">Center of the imaginary circle that the arc is part of.</param>
-        /// <param name="start">Starting point of the arc.</param>
-        /// <param name="end">End point of the arc.</param>
+        /// <param name="center">弧所属虚拟圆的圆心。</param>
+        /// <param name="start">弧的起点。</param>
+        /// <param name="end">弧的终点。</param>
         public void Arc(float3 center, float3 start, float3 end)
         {
             var d1 = start - center;
@@ -1168,9 +1168,9 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws a circle in the XZ plane.
+        /// 在 XZ 平面绘制圆。
         ///
-        /// You can draw an arc by supplying the startAngle and endAngle parameters.
+        /// 可以通过提供 startAngle 和 endAngle 参数来绘制圆弧。
         ///
         /// [Open online documentation to see images]
         ///
@@ -1178,10 +1178,10 @@ namespace VisualShape
         /// See: <see cref="CircleXY(float3,float,float,float)"/>
         /// See: <see cref="Arc(float3,float3,float3)"/>
         /// </summary>
-        /// <param name="center">Center of the circle or arc.</param>
-        /// <param name="radius">Radius of the circle or arc.</param>
-        /// <param name="startAngle">Starting angle in radians. 0 corrsponds to the positive X axis.</param>
-        /// <param name="endAngle">End angle in radians.</param>
+        /// <param name="center">圆或弧的中心。</param>
+        /// <param name="radius">圆或弧的半径。</param>
+        /// <param name="startAngle">起始角度（弧度）。0 对应正 X 轴。</param>
+        /// <param name="endAngle">结束角度（弧度）。</param>
         [System.Obsolete("Use Draw.xz.Circle instead")]
         public void CircleXZ(float3 center, float radius, float startAngle = 0f, float endAngle = 2 * Mathf.PI)
         {
@@ -1207,19 +1207,19 @@ namespace VisualShape
         internal static readonly float4x4 XZtoYZPlaneMatrix = float4x4.RotateZ(math.PI * 0.5f);
 
         /// <summary>
-        /// Draws a circle in the XY plane.
+        /// 在 XY 平面绘制圆。
         ///
-        /// You can draw an arc by supplying the startAngle and endAngle parameters.
+        /// 可以通过提供 startAngle 和 endAngle 参数来绘制圆弧。
         ///
         /// [Open online documentation to see images]
         ///
         /// See: <see cref="Circle(float3,float3,float)"/>
         /// See: <see cref="Arc(float3,float3,float3)"/>
         /// </summary>
-        /// <param name="center">Center of the circle or arc.</param>
-        /// <param name="radius">Radius of the circle or arc.</param>
-        /// <param name="startAngle">Starting angle in radians. 0 corrsponds to the positive X axis.</param>
-        /// <param name="endAngle">End angle in radians.</param>
+        /// <param name="center">圆或弧的中心。</param>
+        /// <param name="radius">圆或弧的半径。</param>
+        /// <param name="startAngle">起始角度（弧度）。0 对应正 X 轴。</param>
+        /// <param name="endAngle">结束角度（弧度）。</param>
         [System.Obsolete("Use Draw.xy.Circle instead")]
         public void CircleXY(float3 center, float radius, float startAngle = 0f, float endAngle = 2 * Mathf.PI)
         {
@@ -1229,11 +1229,11 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws a circle.
+        /// 绘制圆。
         ///
         /// [Open online documentation to see images]
         ///
-        /// Note: This overload does not allow you to draw an arc. For that purpose use <see cref="Arc"/>, <see cref="CircleXY"/> or <see cref="CircleXZ"/> instead.
+        /// 注意：此重载不支持绘制圆弧。请改用 <see cref="Arc"/>、<see cref="CircleXY"/> 或 <see cref="CircleXZ"/>。
         /// </summary>
         public void Circle(float3 center, float3 normal, float radius)
         {
@@ -1243,10 +1243,10 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws a solid arc between two points.
+        /// 在两点之间绘制实心圆弧。
         ///
-        /// The rendered arc is the shortest arc between the two points.
-        /// The radius of the arc will be equal to the distance between center and start.
+        /// 渲染的弧是两点之间的最短弧。
+        /// 弧的半径等于圆心到起点的距离。
         ///
         /// [Open online documentation to see images]
         /// <code>
@@ -1259,9 +1259,9 @@ namespace VisualShape
         ///
         /// See: <see cref="CommandBuilder2D.SolidCircle(float3,float,float,float)"/>
         /// </summary>
-        /// <param name="center">Center of the imaginary circle that the arc is part of.</param>
-        /// <param name="start">Starting point of the arc.</param>
-        /// <param name="end">End point of the arc.</param>
+        /// <param name="center">弧所属虚拟圆的圆心。</param>
+        /// <param name="start">弧的起点。</param>
+        /// <param name="end">弧的终点。</param>
         public void SolidArc(float3 center, float3 start, float3 end)
         {
             var d1 = start - center;
@@ -1279,9 +1279,9 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws a disc in the XZ plane.
+        /// 在 XZ 平面绘制圆盘。
         ///
-        /// You can draw an arc by supplying the startAngle and endAngle parameters.
+        /// 可以通过提供 startAngle 和 endAngle 参数来绘制圆弧。
         ///
         /// [Open online documentation to see images]
         ///
@@ -1289,10 +1289,10 @@ namespace VisualShape
         /// See: <see cref="CommandBuilder2D.SolidCircle(float3,float,float,float)"/>
         /// See: <see cref="SolidArc(float3,float3,float3)"/>
         /// </summary>
-        /// <param name="center">Center of the disc or solid arc.</param>
-        /// <param name="radius">Radius of the disc or solid arc.</param>
-        /// <param name="startAngle">Starting angle in radians. 0 corrsponds to the positive X axis.</param>
-        /// <param name="endAngle">End angle in radians.</param>
+        /// <param name="center">圆盘或实心弧的中心。</param>
+        /// <param name="radius">圆盘或实心弧的半径。</param>
+        /// <param name="startAngle">起始角度（弧度）。0 对应正 X 轴。</param>
+        /// <param name="endAngle">结束角度（弧度）。</param>
         [System.Obsolete("Use Draw.xz.SolidCircle instead")]
         public void SolidCircleXZ(float3 center, float radius, float startAngle = 0f, float endAngle = 2 * Mathf.PI)
         {
@@ -1315,9 +1315,9 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws a disc in the XY plane.
+        /// 在 XY 平面绘制圆盘。
         ///
-        /// You can draw an arc by supplying the startAngle and endAngle parameters.
+        /// 可以通过提供 startAngle 和 endAngle 参数来绘制圆弧。
         ///
         /// [Open online documentation to see images]
         ///
@@ -1325,10 +1325,10 @@ namespace VisualShape
         /// See: <see cref="CommandBuilder2D.SolidCircle(float3,float,float,float)"/>
         /// See: <see cref="SolidArc(float3,float3,float3)"/>
         /// </summary>
-        /// <param name="center">Center of the disc or solid arc.</param>
-        /// <param name="radius">Radius of the disc or solid arc.</param>
-        /// <param name="startAngle">Starting angle in radians. 0 corrsponds to the positive X axis.</param>
-        /// <param name="endAngle">End angle in radians.</param>
+        /// <param name="center">圆盘或实心弧的中心。</param>
+        /// <param name="radius">圆盘或实心弧的半径。</param>
+        /// <param name="startAngle">起始角度（弧度）。0 对应正 X 轴。</param>
+        /// <param name="endAngle">结束角度（弧度）。</param>
         [System.Obsolete("Use Draw.xy.SolidCircle instead")]
         public void SolidCircleXY(float3 center, float radius, float startAngle = 0f, float endAngle = 2 * Mathf.PI)
         {
@@ -1338,11 +1338,11 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws a disc.
+        /// 绘制圆盘。
         ///
         /// [Open online documentation to see images]
         ///
-        /// Note: This overload does not allow you to draw an arc. For that purpose use <see cref="SolidArc"/> or <see cref="CommandBuilder2D.SolidCircle(float3,float,float,float)"/> instead.
+        /// 注意：此重载不支持绘制圆弧。请改用 <see cref="SolidArc"/> 或 <see cref="CommandBuilder2D.SolidCircle(float3,float,float,float)"/>。
         /// </summary>
         public void SolidCircle(float3 center, float3 normal, float radius)
         {
@@ -1352,9 +1352,9 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws a circle outline around a sphere.
+        /// 在球体周围绘制圆形轮廓。
         ///
-        /// Visually, this is a circle that always faces the camera, and is resized automatically to fit the sphere.
+        /// 视觉上是一个始终面向相机的圆，并自动调整大小以适应球体。
         ///
         /// [Open online documentation to see images]
         /// </summary>
@@ -1366,11 +1366,11 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws a cylinder.
-        /// The cylinder's bottom circle will be centered at the bottom parameter and similarly for the top circle.
+        /// 绘制圆柱体。
+        /// 圆柱体的底部圆以 bottom 参数为中心，顶部圆类似。
         ///
         /// <code>
-        /// // Draw a tilted cylinder between the points (0,0,0) and (1,1,1) with a radius of 0.5
+        /// // 在点 (0,0,0) 和 (1,1,1) 之间绘制半径为 0.5 的倾斜圆柱体
         /// Draw.WireCylinder(Vector3.zero, Vector3.one, 0.5f, Color.black);
         /// </code>
         ///
@@ -1382,19 +1382,19 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws a cylinder.
+        /// 绘制圆柱体。
         ///
         /// <code>
-        /// // Draw a two meter tall cylinder at the world origin with a radius of 0.5
+        /// // 在世界原点绘制高 2 米、半径 0.5 的圆柱体
         /// Draw.WireCylinder(Vector3.zero, Vector3.up, 2, 0.5f, Color.black);
         /// </code>
         ///
         /// [Open online documentation to see images]
         /// </summary>
-        /// <param name="position">The center of the cylinder's "bottom" circle.</param>
-        /// <param name="up">The cylinder's main axis. Does not have to be normalized. If zero, nothing will be drawn.</param>
-        /// <param name="height">The length of the cylinder, as measured along it's main axis.</param>
-        /// <param name="radius">The radius of the cylinder.</param>
+        /// <param name="position">圆柱体"底部"圆的中心。</param>
+        /// <param name="up">圆柱体的主轴。不需要归一化。如果为零，则不绘制。</param>
+        /// <param name="height">沿主轴测量的圆柱体长度。</param>
+        /// <param name="radius">圆柱体的半径。</param>
         public void WireCylinder(float3 position, float3 up, float height, float radius)
         {
             up = math.normalizesafe(up);
@@ -1422,12 +1422,12 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Constructs an orthonormal basis from a single normal vector.
+        /// 从单个法向量构建正交基。
         ///
-        /// This is similar to math.orthonormal_basis, but it tries harder to be continuous in its input.
-        /// In contrast, math.orthonormal_basis has a tendency to jump around even with small changes to the normal.
+        /// 这类似于 math.orthonormal_basis，但更努力保持输入的连续性。
+        /// 相比之下，math.orthonormal_basis 即使法线微小变化也容易跳变。
         ///
-        /// It's not as fast as math.orthonormal_basis, though.
+        /// 不过速度不如 math.orthonormal_basis。
         /// </summary>
         static void OrthonormalBasis(float3 normal, out float3 basis1, out float3 basis2)
         {
@@ -1438,20 +1438,20 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws a capsule with a (start,end) parameterization.
+        /// 使用 (start,end) 参数化绘制胶囊体。
         ///
-        /// The behavior of this method matches common Unity APIs such as Physics.CheckCapsule.
+        /// 此方法的行为与常见的 Unity API（如 Physics.CheckCapsule）一致。
         ///
         /// <code>
-        /// // Draw a tilted capsule between the points (0,0,0) and (1,1,1) with a radius of 0.5
+        /// // 在点 (0,0,0) 和 (1,1,1) 之间绘制半径为 0.5 的倾斜胶囊体
         /// Draw.WireCapsule(Vector3.zero, Vector3.one, 0.5f, Color.black);
         /// </code>
         ///
         /// [Open online documentation to see images]
         /// </summary>
-        /// <param name="start">Center of the start hemisphere of the capsule.</param>
-        /// <param name="end">Center of the end hemisphere of the capsule.</param>
-        /// <param name="radius">Radius of the capsule.</param>
+        /// <param name="start">胶囊体起始半球的中心。</param>
+        /// <param name="end">胶囊体终止半球的中心。</param>
+        /// <param name="radius">胶囊体的半径。</param>
         public void WireCapsule(float3 start, float3 end, float radius)
         {
             var dir = end - start;
@@ -1459,8 +1459,8 @@ namespace VisualShape
 
             if (length < 0.0001)
             {
-                // The endpoints are the same, we can't draw a capsule from this because we don't know its orientation.
-                // Draw a sphere as a fallback
+                // 端点相同，无法绘制胶囊体因为不知道其方向。
+                // 回退绘制球体
                 WireSphere(start, radius);
             }
             else
@@ -1471,21 +1471,21 @@ namespace VisualShape
             }
         }
 
-        // TODO: Change to center, up, height parameterization
+        // TODO: 改为 center, up, height 参数化
         /// <summary>
-        /// Draws a capsule with a (position,direction/length) parameterization.
+        /// 使用 (position,direction/length) 参数化绘制胶囊体。
         ///
         /// <code>
-        /// // Draw a capsule that touches the y=0 plane, is 2 meters tall and has a radius of 0.5
+        /// // 绘制接触 y=0 平面的胶囊体，高 2 米，半径 0.5
         /// Draw.WireCapsule(Vector3.zero, Vector3.up, 2.0f, 0.5f, Color.black);
         /// </code>
         ///
         /// [Open online documentation to see images]
         /// </summary>
-        /// <param name="position">One endpoint of the capsule. This is at the edge of the capsule, not at the center of one of the hemispheres.</param>
-        /// <param name="direction">The main axis of the capsule. Does not have to be normalized. If zero, nothing will be drawn.</param>
-        /// <param name="length">Distance between the two endpoints of the capsule. The length will be clamped to be at least 2*radius.</param>
-        /// <param name="radius">The radius of the capsule.</param>
+        /// <param name="position">胶囊体的一个端点。位于胶囊体边缘，而非半球中心。</param>
+        /// <param name="direction">胶囊体的主轴。不需要归一化。如果为零，则不绘制。</param>
+        /// <param name="length">胶囊体两端点之间的距离。长度将被钳制为至少 2*radius。</param>
+        /// <param name="radius">胶囊体的半径。</param>
         public void WireCapsule(float3 position, float3 direction, float length, float radius)
         {
             direction = math.normalizesafe(direction);
@@ -1534,12 +1534,12 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws a wire sphere.
+        /// 绘制线框球体。
         ///
         /// [Open online documentation to see images]
         ///
         /// <code>
-        /// // Draw a wire sphere at the origin with a radius of 0.5
+        /// // 在原点绘制半径为 0.5 的线框球体
         /// Draw.WireSphere(Vector3.zero, 0.5f, Color.black);
         /// </code>
         ///
@@ -1554,16 +1554,16 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws lines through a sequence of points.
+        /// 通过一系列点绘制线条。
         ///
         /// [Open online documentation to see images]
         /// <code>
-        /// // Draw a square
+        /// // 绘制正方形
         /// Draw.Polyline(new [] { new Vector3(0, 0, 0), new Vector3(1, 0, 0), new Vector3(1, 1, 0), new Vector3(0, 1, 0) }, true);
         /// </code>
         /// </summary>
-        /// <param name="points">Sequence of points to draw lines through</param>
-        /// <param name="cycle">If true a line will be drawn from the last point in the sequence back to the first point.</param>
+        /// <param name="points">绘制线条经过的点序列</param>
+        /// <param name="cycle">如果为 true，将从序列最后一个点绘制线条回到第一个点。</param>
         [BurstDiscard]
         public void Polyline(List<Vector3> points, bool cycle = false)
         {
@@ -1575,16 +1575,16 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws lines through a sequence of points.
+        /// 通过一系列点绘制线条。
         ///
         /// [Open online documentation to see images]
         /// <code>
-        /// // Draw a square
+        /// // 绘制正方形
         /// Draw.Polyline(new [] { new Vector3(0, 0, 0), new Vector3(1, 0, 0), new Vector3(1, 1, 0), new Vector3(0, 1, 0) }, true);
         /// </code>
         /// </summary>
-        /// <param name="points">Sequence of points to draw lines through</param>
-        /// <param name="cycle">If true a line will be drawn from the last point in the sequence back to the first point.</param>
+        /// <param name="points">绘制线条经过的点序列</param>
+        /// <param name="cycle">如果为 true，将从序列最后一个点绘制线条回到第一个点。</param>
         public void Polyline<T>(T points, bool cycle = false) where T : IReadOnlyList<float3>
         {
             for (int i = 0; i < points.Count - 1; i++)
@@ -1595,16 +1595,16 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws lines through a sequence of points.
+        /// 通过一系列点绘制线条。
         ///
         /// [Open online documentation to see images]
         /// <code>
-        /// // Draw a square
+        /// // 绘制正方形
         /// Draw.Polyline(new [] { new Vector3(0, 0, 0), new Vector3(1, 0, 0), new Vector3(1, 1, 0), new Vector3(0, 1, 0) }, true);
         /// </code>
         /// </summary>
-        /// <param name="points">Sequence of points to draw lines through</param>
-        /// <param name="cycle">If true a line will be drawn from the last point in the sequence back to the first point.</param>
+        /// <param name="points">绘制线条经过的点序列</param>
+        /// <param name="cycle">如果为 true，将从序列最后一个点绘制线条回到第一个点。</param>
         [BurstDiscard]
         public void Polyline(Vector3[] points, bool cycle = false)
         {
@@ -1616,16 +1616,16 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws lines through a sequence of points.
+        /// 通过一系列点绘制线条。
         ///
         /// [Open online documentation to see images]
         /// <code>
-        /// // Draw a square
+        /// // 绘制正方形
         /// Draw.Polyline(new [] { new Vector3(0, 0, 0), new Vector3(1, 0, 0), new Vector3(1, 1, 0), new Vector3(0, 1, 0) }, true);
         /// </code>
         /// </summary>
-        /// <param name="points">Sequence of points to draw lines through</param>
-        /// <param name="cycle">If true a line will be drawn from the last point in the sequence back to the first point.</param>
+        /// <param name="points">绘制线条经过的点序列</param>
+        /// <param name="cycle">如果为 true，将从序列最后一个点绘制线条回到第一个点。</param>
         [BurstDiscard]
         public void Polyline(float3[] points, bool cycle = false)
         {
@@ -1637,16 +1637,16 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws lines through a sequence of points.
+        /// 通过一系列点绘制线条。
         ///
         /// [Open online documentation to see images]
         /// <code>
-        /// // Draw a square
+        /// // 绘制正方形
         /// Draw.Polyline(new [] { new Vector3(0, 0, 0), new Vector3(1, 0, 0), new Vector3(1, 1, 0), new Vector3(0, 1, 0) }, true);
         /// </code>
         /// </summary>
-        /// <param name="points">Sequence of points to draw lines through</param>
-        /// <param name="cycle">If true a line will be drawn from the last point in the sequence back to the first point.</param>
+        /// <param name="points">绘制线条经过的点序列</param>
+        /// <param name="cycle">如果为 true，将从序列最后一个点绘制线条回到第一个点。</param>
         public void Polyline(NativeArray<float3> points, bool cycle = false)
         {
             for (int i = 0; i < points.Length - 1; i++)
@@ -1656,26 +1656,26 @@ namespace VisualShape
             if (cycle && points.Length > 1) Line(points[points.Length - 1], points[0]);
         }
 
-        /// <summary>Determines the symbol to use for <see cref="PolylineWithSymbol"/></summary>
+        /// <summary>确定用于 <see cref="PolylineWithSymbol"/> 的符号</summary>
         public enum SymbolDecoration
         {
             /// <summary>
-            /// No symbol.
+            /// 无符号。
             ///
-            /// Space will still be reserved, but no symbol will be drawn.
-            /// Can be used to draw dashed lines.
+            /// 仍会保留空间，但不会绘制符号。
+            /// 可用于绘制虚线。
             ///
             /// [Open online documentation to see images]
             /// </summary>
             None,
             /// <summary>
-            /// An arrowhead symbol.
+            /// 箭头符号。
             ///
             /// [Open online documentation to see images]
             /// </summary>
             ArrowHead,
             /// <summary>
-            /// A circle symbol.
+            /// 圆形符号。
             ///
             /// [Open online documentation to see images]
             /// </summary>
@@ -1683,7 +1683,7 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws a dashed line between two points.
+        /// 在两点之间绘制虚线。
         ///
         /// <code>
         /// Draw.DashedPolyline(points, 0.1f, 0.1f, color);
@@ -1691,8 +1691,8 @@ namespace VisualShape
         ///
         /// [Open online documentation to see images]
         ///
-        /// Warning: An individual line segment is drawn for each dash. This means that performance may suffer if you make the dash + gap distance too small.
-        /// But for most use cases the performance is nothing to worry about.
+        /// 警告：每个虚线段都会绘制一个单独的线段。这意味着如果虚线+间隔距离太小，性能可能会下降。
+        /// 但对于大多数使用场景，性能无需担心。
         ///
         /// See: <see cref="DashedPolyline"/>
         /// See: <see cref="PolylineWithSymbol"/>
@@ -1705,7 +1705,7 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws a dashed line through a sequence of points.
+        /// 通过一系列点绘制虚线。
         ///
         /// <code>
         /// Draw.DashedPolyline(points, 0.1f, 0.1f, color);
@@ -1713,10 +1713,10 @@ namespace VisualShape
         ///
         /// [Open online documentation to see images]
         ///
-        /// Warning: An individual line segment is drawn for each dash. This means that performance may suffer if you make the dash + gap distance too small.
-        /// But for most use cases the performance is nothing to worry about.
+        /// 警告：每个虚线段都会绘制一个单独的线段。这意味着如果虚线+间隔距离太小，性能可能会下降。
+        /// 但对于大多数使用场景，性能无需担心。
         ///
-        /// If you have a different collection type, or you do not have the points in a collection at all, then you can use the <see cref="PolylineWithSymbol"/> struct directly.
+        /// 如果你使用不同的集合类型，或者没有将点放在集合中，可以直接使用 <see cref="PolylineWithSymbol"/> 结构体。
         ///
         /// <code>
         /// using (Draw.WithColor(color)) {
@@ -1742,7 +1742,7 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Helper for drawing a polyline with symbols at regular intervals.
+        /// 在固定间隔处绘制带符号折线的辅助工具。
         ///
         /// <code>
         /// var generator = new CommandBuilder.PolylineWithSymbol(CommandBuilder.SymbolDecoration.Circle, 0.2f, 0.0f, 0.47f);
@@ -1754,7 +1754,7 @@ namespace VisualShape
         ///
         /// [Open online documentation to see images]
         ///
-        /// You can also draw a dashed line using this struct, but for common cases you can use the <see cref="DashedPolyline"/> helper function instead.
+        /// 你也可以使用此结构体绘制虚线，但常见情况下可以改用 <see cref="DashedPolyline"/> 辅助函数。
         ///
         /// <code>
         /// using (Draw.WithColor(color)) {
@@ -1781,12 +1781,12 @@ namespace VisualShape
             readonly bool reverseSymbols;
             bool odd;
 
-            /// <summary>Create a new polyline with symbol generator.</summary>
-            /// <param name="symbol">The symbol to use</param>
-            /// <param name="symbolSize">The size of the symbol. In case of a circle, this is the diameter.</param>
-            /// <param name="symbolPadding">The padding on both sides of the symbol between the symbol and the line.</param>
-            /// <param name="symbolSpacing">The spacing between symbols. This is the distance between the centers of the symbols.</param>
-            /// <param name="reverseSymbols">If true, the symbols will be reversed. For cicles this has no effect, but arrowhead symbols will be reversed.</param>
+            /// <summary>创建新的带符号折线生成器。</summary>
+            /// <param name="symbol">使用的符号</param>
+            /// <param name="symbolSize">符号大小。对于圆形，这是直径。</param>
+            /// <param name="symbolPadding">符号两侧在符号与线条之间的间距。</param>
+            /// <param name="symbolSpacing">符号之间的间距。这是符号中心之间的距离。</param>
+            /// <param name="reverseSymbols">如果为 true，符号将被反转。对圆形无效，但箭头符号会被反转。</param>
             public PolylineWithSymbol(SymbolDecoration symbol, float symbolSize, float symbolPadding, float symbolSpacing, bool reverseSymbols = false)
             {
                 if (symbolSpacing <= math.FLT_MIN_NORMAL) throw new System.ArgumentOutOfRangeException(nameof(symbolSpacing), "Symbol spacing must be greater than zero");
@@ -1810,12 +1810,12 @@ namespace VisualShape
             }
 
             /// <summary>
-            /// Move to a new point.
+            /// 移动到新点。
             ///
-            /// This will draw the symbols and line segments between the previous point and the new point.
+            /// 这将在前一个点和新点之间绘制符号和线段。
             /// </summary>
-            /// <param name="draw">The command builder to draw to. You can use a built-in builder like \reflink{Draw.editor} or \reflink{Draw.ingame}, or use a custom one.</param>
-            /// <param name="next">The next point in the polyline to move to.</param>
+            /// <param name="draw">要绘制到的命令构建器。可以使用内置构建器如 \reflink{Draw.editor} 或 \reflink{Draw.ingame}，也可以使用自定义构建器。</param>
+            /// <param name="next">折线中要移动到的下一个点。</param>
             public void MoveTo(ref CommandBuilder draw, float3 next)
             {
                 if (offset == -1)
@@ -1876,12 +1876,12 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws the outline of a box which is axis-aligned.
+        /// 绘制轴对齐方盒的轮廓。
         ///
         /// [Open online documentation to see images]
         /// </summary>
-        /// <param name="center">Center of the box</param>
-        /// <param name="size">Width of the box along all dimensions</param>
+        /// <param name="center">方盒中心</param>
+        /// <param name="size">方盒沿各维度的宽度</param>
         public void WireBox(float3 center, float3 size)
         {
             Reserve<BoxData>();
@@ -1890,13 +1890,13 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws the outline of a box.
+        /// 绘制方盒的轮廓。
         ///
         /// [Open online documentation to see images]
         /// </summary>
-        /// <param name="center">Center of the box</param>
-        /// <param name="rotation">Rotation of the box</param>
-        /// <param name="size">Width of the box along all dimensions</param>
+        /// <param name="center">方盒中心</param>
+        /// <param name="rotation">方盒旋转</param>
+        /// <param name="size">方盒沿各维度的宽度</param>
         public void WireBox(float3 center, quaternion rotation, float3 size)
         {
             PushMatrix(float4x4.TRS(center, rotation, size));
@@ -1905,7 +1905,7 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws the outline of a box.
+        /// 绘制方盒的轮廓。
         ///
         /// [Open online documentation to see images]
         /// </summary>
@@ -1915,8 +1915,8 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws a wire mesh.
-        /// Every single edge of the mesh will be drawn using a <see cref="Line"/> command.
+        /// 绘制线框网格。
+        /// 网格的每条边都将使用 <see cref="Line"/> 命令绘制。
         ///
         /// <code>
         /// var go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
@@ -1929,14 +1929,14 @@ namespace VisualShape
         ///
         /// See: <see cref="SolidMesh(Mesh)"/>
         ///
-        /// Version: Supported in Unity 2020.1 or later.
+        /// 版本：需要 Unity 2020.1 或更高版本。
         /// </summary>
         public void WireMesh(Mesh mesh)
         {
             if (mesh == null) throw new System.ArgumentNullException();
 
-            // Use a burst compiled function to draw the lines
-            // This is significantly faster than pure C# (about 5x).
+            // 使用 Burst 编译的函数绘制线条
+            // 这比纯 C# 快很多（约 5 倍）。
             var meshDataArray = Mesh.AcquireReadOnlyMeshData(mesh);
             var meshData = meshDataArray[0];
 
@@ -1945,8 +1945,8 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws a wire mesh.
-        /// Every single edge of the mesh will be drawn using a <see cref="Line"/> command.
+        /// 绘制线框网格。
+        /// 网格的每条边都将使用 <see cref="Line"/> 命令绘制。
         ///
         /// <code>
         /// var go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
@@ -1959,7 +1959,7 @@ namespace VisualShape
         ///
         /// See: <see cref="SolidMesh(Mesh)"/>
         ///
-        /// Version: Supported in Unity 2020.1 or later.
+        /// 版本：需要 Unity 2020.1 或更高版本。
         /// </summary>
         public void WireMesh(NativeArray<float3> vertices, NativeArray<int> triangles)
         {
@@ -1980,8 +1980,8 @@ namespace VisualShape
             [BurstCompile]
             public static unsafe void WireMesh(float3* verts, int* indices, int vertexCount, int indexCount, ref CommandBuilder draw)
             {
-                // Ignore warning about NativeHashMap being obsolete in early versions of the collections package.
-                // It works just fine, and in later versions the NativeHashMap is not obsolete.
+                // 忽略 NativeHashMap 在早期 collections 包版本中被标记为过时的警告。
+                // 它工作正常，在后续版本中 NativeHashMap 不再过时。
 #pragma warning disable 618
                 var seenEdges = new NativeHashMap<int2, bool>(indexCount, Allocator.Temp);
 #pragma warning restore 618
@@ -1996,8 +1996,8 @@ namespace VisualShape
                     }
                     int v1, v2;
 
-                    // Draw each edge of the triangle.
-                    // Check so that we do not draw an edge twice.
+                    // 绘制三角形的每条边。
+                    // 检查以避免重复绘制边。
                     v1 = math.min(a, b);
                     v2 = math.max(a, b);
                     if (!seenEdges.ContainsKey(new int2(v1, v2)))
@@ -2050,8 +2050,8 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws a solid mesh.
-        /// The mesh will be drawn with a solid color.
+        /// 绘制实心网格。
+        /// 网格将以纯色绘制。
         ///
         /// <code>
         /// var go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
@@ -2062,8 +2062,8 @@ namespace VisualShape
         /// </code>
         /// [Open online documentation to see images]
         ///
-        /// Note: This method is not thread safe and must not be used from the Unity Job System.
-        /// TODO: Are matrices handled?
+        /// 注意：此方法非线程安全，不能在 Unity Job 系统中使用。
+        /// TODO: 矩阵是否被处理？
         ///
         /// See: <see cref="WireMesh(Mesh)"/>
         /// </summary>
@@ -2089,69 +2089,69 @@ namespace VisualShape
                 mesh = mesh,
                 temporary = temporary,
             });
-            // Internally we need to make sure to capture the current state
-            // (which includes the current matrix and color) so that it
-            // can be applied to the mesh.
+            // 内部需要确保捕获当前状态
+            // （包括当前矩阵和颜色）以便
+            // 将其应用于网格。
             Reserve(4);
             Add(Command.CaptureState);
         }
 
         /// <summary>
-        /// Draws a solid mesh with the given vertices.
+        /// 使用给定顶点绘制实心网格。
         ///
         /// [Open online documentation to see images]
         ///
-        /// Note: This method is not thread safe and must not be used from the Unity Job System.
-        /// TODO: Are matrices handled?
+        /// 注意：此方法非线程安全，不能在 Unity Job 系统中使用。
+        /// TODO: 矩阵是否被处理？
         /// </summary>
         [BurstDiscard]
         public void SolidMesh(List<Vector3> vertices, List<int> triangles, List<Color> colors)
         {
             if (vertices.Count != colors.Count) throw new System.ArgumentException("Number of colors must be the same as the number of vertices");
 
-            // TODO: Is this mesh getting recycled at all?
+            // TODO: 这个网格会被回收吗？
             var g = gizmos.Target as ShapeData;
             var mesh = g.GetMesh(vertices.Count);
 
-            // Set all data on the mesh
+            // 设置网格上的所有数据
             mesh.Clear();
             mesh.SetVertices(vertices);
             mesh.SetTriangles(triangles, 0);
             mesh.SetColors(colors);
-            // Upload all data
+            // 上传所有数据
             mesh.UploadMeshData(false);
             SolidMeshInternal(mesh, true);
         }
 
         /// <summary>
-        /// Draws a solid mesh with the given vertices.
+        /// 使用给定顶点绘制实心网格。
         ///
         /// [Open online documentation to see images]
         ///
-        /// Note: This method is not thread safe and must not be used from the Unity Job System.
-        /// TODO: Are matrices handled?
+        /// 注意：此方法非线程安全，不能在 Unity Job 系统中使用。
+        /// TODO: 矩阵是否被处理？
         /// </summary>
         [BurstDiscard]
         public void SolidMesh(Vector3[] vertices, int[] triangles, Color[] colors, int vertexCount, int indexCount)
         {
             if (vertices.Length != colors.Length) throw new System.ArgumentException("Number of colors must be the same as the number of vertices");
 
-            // TODO: Is this mesh getting recycled at all?
+            // TODO: 这个网格会被回收吗？
             var g = gizmos.Target as ShapeData;
             var mesh = g.GetMesh(vertices.Length);
 
-            // Set all data on the mesh
+            // 设置网格上的所有数据
             mesh.Clear();
             mesh.SetVertices(vertices, 0, vertexCount);
             mesh.SetTriangles(triangles, 0, indexCount, 0);
             mesh.SetColors(colors, 0, vertexCount);
-            // Upload all data
+            // 上传所有数据
             mesh.UploadMeshData(false);
             SolidMeshInternal(mesh, true);
         }
 
         /// <summary>
-        /// Draws a 3D cross.
+        /// 绘制 3D 十字。
         ///
         /// [Open online documentation to see images]
         /// </summary>
@@ -2164,7 +2164,7 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws a cross in the XZ plane.
+        /// 在 XZ 平面绘制十字。
         ///
         /// [Open online documentation to see images]
         /// </summary>
@@ -2177,7 +2177,7 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws a cross in the XY plane.
+        /// 在 XY 平面绘制十字。
         ///
         /// [Open online documentation to see images]
         /// </summary>
@@ -2189,7 +2189,7 @@ namespace VisualShape
             Line(position - new float3(0, size, 0), position + new float3(0, size, 0));
         }
 
-        /// <summary>Returns a point on a cubic bezier curve. t is clamped between 0 and 1</summary>
+        /// <summary>返回三次贝塞尔曲线上的点。t 被钳制在 0 和 1 之间</summary>
         public static float3 EvaluateCubicBezier(float3 p0, float3 p1, float3 p2, float3 p3, float t)
         {
             t = math.clamp(t, 0, 1);
@@ -2198,20 +2198,20 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws a cubic bezier curve.
+        /// 绘制三次贝塞尔曲线。
         ///
         /// [Open online documentation to see images]
         ///
         /// [Open online documentation to see images]
         ///
-        /// TODO: Currently uses a fixed resolution of 20 segments. Resolution should depend on the distance to the camera.
+        /// TODO: 目前使用固定的 20 段分辨率。分辨率应取决于到相机的距离。
         ///
         /// See: https://en.wikipedia.org/wiki/Bezier_curve
         /// </summary>
-        /// <param name="p0">Start point</param>
-        /// <param name="p1">First control point</param>
-        /// <param name="p2">Second control point</param>
-        /// <param name="p3">End point</param>
+        /// <param name="p0">起点</param>
+        /// <param name="p1">第一个控制点</param>
+        /// <param name="p2">第二个控制点</param>
+        /// <param name="p3">终点</param>
         public void Bezier(float3 p0, float3 p1, float3 p2, float3 p3)
         {
             float3 prev = p0;
@@ -2226,17 +2226,17 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws a smooth curve through a list of points.
+        /// 通过一组点绘制平滑曲线。
         ///
-        /// A catmull-rom spline is equivalent to a bezier curve with control points determined by an algorithm.
-        /// In fact, this package displays catmull-rom splines by first converting them to bezier curves.
+        /// Catmull-Rom 样条等价于由算法确定控制点的贝塞尔曲线。
+        /// 实际上，此包通过先将 Catmull-Rom 样条转换为贝塞尔曲线来显示。
         ///
         /// [Open online documentation to see images]
         ///
         /// See: https://en.wikipedia.org/wiki/Centripetal_Catmull%E2%80%93Rom_spline
         /// See: <see cref="CatmullRom(float3,float3,float3,float3)"/>
         /// </summary>
-        /// <param name="points">The curve will smoothly pass through each point in the list in order.</param>
+        /// <param name="points">曲线将按顺序平滑通过列表中的每个点。</param>
         public void CatmullRom(List<Vector3> points)
         {
             if (points.Count < 2) return;
@@ -2249,96 +2249,96 @@ namespace VisualShape
             {
                 // count >= 3
                 var count = points.Count;
-                // Draw first curve, this is special because the first two control points are the same
+                // 绘制第一条曲线，这很特殊因为前两个控制点相同
                 CatmullRom(points[0], points[0], points[1], points[2]);
                 for (int i = 0; i + 3 < count; i++)
                 {
                     CatmullRom(points[i], points[i + 1], points[i + 2], points[i + 3]);
                 }
-                // Draw last curve
+                // 绘制最后一条曲线
                 CatmullRom(points[count - 3], points[count - 2], points[count - 1], points[count - 1]);
             }
         }
 
         /// <summary>
-        /// Draws a centripetal catmull rom spline.
+        /// 绘制向心 Catmull-Rom 样条。
         ///
-        /// The curve starts at p1 and ends at p2.
+        /// 曲线从 p1 开始在 p2 结束。
         ///
         /// [Open online documentation to see images]
         /// [Open online documentation to see images]
         ///
         /// See: <see cref="CatmullRom(List<Vector3>)"/>
         /// </summary>
-        /// <param name="p0">First control point</param>
-        /// <param name="p1">Second control point. Start of the curve.</param>
-        /// <param name="p2">Third control point. End of the curve.</param>
-        /// <param name="p3">Fourth control point.</param>
+        /// <param name="p0">第一个控制点</param>
+        /// <param name="p1">第二个控制点。曲线起点。</param>
+        /// <param name="p2">第三个控制点。曲线终点。</param>
+        /// <param name="p3">第四个控制点。</param>
         public void CatmullRom(float3 p0, float3 p1, float3 p2, float3 p3)
         {
-            // References used:
+            // 使用的参考资料：
             // p.266 GemsV1
             //
-            // tension is often set to 0.5 but you can use any reasonable value:
+            // tension 通常设为 0.5 但可以使用任何合理值：
             // http://www.cs.cmu.edu/~462/projects/assn2/assn2/catmullRom.pdf
             //
-            // bias and tension controls:
+            // bias 和 tension 控制：
             // http://local.wasp.uwa.edu.au/~pbourke/miscellaneous/interpolation/
 
-            // We will convert the catmull rom spline to a bezier curve for simplicity.
-            // The end result of this will be a conversion matrix where we transform catmull rom control points
-            // into the equivalent bezier curve control points.
+            // 为简单起见，我们将 Catmull-Rom 样条转换为贝塞尔曲线。
+            // 最终结果是一个转换矩阵，将 Catmull-Rom 控制点
+            // 转换为等效的贝塞尔曲线控制点。
 
-            // Conversion matrix
+            // 转换矩阵
             // =================
 
-            // A centripetal catmull rom spline can be separated into the following terms:
+            // 向心 Catmull-Rom 样条可以分解为以下项：
             // 1 * p1 +
             // t * (-0.5 * p0 + 0.5*p2) +
             // t*t * (p0 - 2.5*p1  + 2.0*p2 + 0.5*t2) +
             // t*t*t * (-0.5*p0 + 1.5*p1 - 1.5*p2 + 0.5*p3)
             //
-            // Matrix form:
+            // 矩阵形式：
             // 1     t   t^2 t^3
             // {0, -1/2, 1, -1/2}
             // {1, 0, -5/2, 3/2}
             // {0, 1/2, 2, -3/2}
             // {0, 0, -1/2, 1/2}
 
-            // Transposed matrix:
+            // 转置矩阵：
             // M_1 = {{0, 1, 0, 0}, {-1/2, 0, 1/2, 0}, {1, -5/2, 2, -1/2}, {-1/2, 3/2, -3/2, 1/2}}
 
-            // A bezier spline can be separated into the following terms:
+            // 贝塞尔样条可以分解为以下项：
             // (-t^3 + 3 t^2 - 3 t + 1) * c0 +
             // (3t^3 - 6*t^2 + 3t) * c1 +
             // (3t^2 - 3t^3) * c2 +
             // t^3 * c3
             //
-            // Matrix form:
+            // 矩阵形式：
             // 1  t  t^2  t^3
             // {1, -3, 3, -1}
             // {0, 3, -6, 3}
             // {0, 0, 3, -3}
             // {0, 0, 0, 1}
 
-            // Transposed matrix:
+            // 转置矩阵：
             // M_2 = {{1, 0, 0, 0}, {-3, 3, 0, 0}, {3, -6, 3, 0}, {-1, 3, -3, 1}}
 
-            // Thus a bezier curve can be evaluated using the expression
+            // 因此贝塞尔曲线可以用以下表达式求值
             // output1 = T * M_1 * c
-            // where T = [1, t, t^2, t^3] and c being the control points c = [c0, c1, c2, c3]^T
+            // 其中 T = [1, t, t^2, t^3]，c 为控制点 c = [c0, c1, c2, c3]^T
             //
-            // and a catmull rom spline can be evaluated using
+            // Catmull-Rom 样条可以用以下方式求值
             //
             // output2 = T * M_2 * p
-            // where T = same as before and p = [p0, p1, p2, p3]^T
+            // 其中 T = 同上，p = [p0, p1, p2, p3]^T
             //
-            // We can solve for c in output1 = output2
+            // 我们可以在 output1 = output2 中求解 c
             // T * M_1 * c = T * M_2 * p
             // M_1 * c = M_2 * p
             // c = M_1^(-1) * M_2 * p
-            // Thus a conversion matrix from p to c is M_1^(-1) * M_2
-            // This can be calculated and the result is the following matrix:
+            // 因此从 p 到 c 的转换矩阵为 M_1^(-1) * M_2
+            // 计算后的结果为以下矩阵：
             //
             // {0, 1, 0, 0}
             // {-1/6, 1, 1/6, 0}
@@ -2346,20 +2346,20 @@ namespace VisualShape
             // {0, 0, 1, 0}
             // ------------------------------------------------------------------
             //
-            // Using this we can calculate c = M_1^(-1) * M_2 * p
+            // 使用此矩阵计算 c = M_1^(-1) * M_2 * p
             var c0 = p1;
             var c1 = (-p0 + 6 * p1 + 1 * p2) * (1 / 6.0f);
             var c2 = (p1 + 6 * p2 - p3) * (1 / 6.0f);
             var c3 = p2;
 
-            // And finally draw the bezier curve which is equivalent to the desired catmull-rom spline
+            // 最后绘制等效于所需 Catmull-Rom 样条的贝塞尔曲线
             Bezier(c0, c1, c2, c3);
         }
 
         /// <summary>
-        /// Draws an arrow between two points.
+        /// 在两点之间绘制箭头。
         ///
-        /// The size of the head defaults to 20% of the length of the arrow.
+        /// 箭头大小默认为箭头长度的 20%。
         ///
         /// [Open online documentation to see images]
         ///
@@ -2367,25 +2367,25 @@ namespace VisualShape
         /// See: <see cref="Arrow(float3,float3,float3,float)"/>
         /// See: <see cref="ArrowRelativeSizeHead"/>
         /// </summary>
-        /// <param name="from">Base of the arrow.</param>
-        /// <param name="to">Head of the arrow.</param>
+        /// <param name="from">箭头的底部。</param>
+        /// <param name="to">箭头的头部。</param>
         public void Arrow(float3 from, float3 to)
         {
             ArrowRelativeSizeHead(from, to, DEFAULT_UP, 0.2f);
         }
 
         /// <summary>
-        /// Draws an arrow between two points.
+        /// 在两点之间绘制箭头。
         ///
         /// [Open online documentation to see images]
         ///
         /// See: <see cref="ArrowRelativeSizeHead"/>
         /// See: <see cref="ArrowheadArc"/>
         /// </summary>
-        /// <param name="from">Base of the arrow.</param>
-        /// <param name="to">Head of the arrow.</param>
-        /// <param name="up">Up direction of the world, the arrowhead plane will be as perpendicular as possible to this direction. Defaults to Vector3.up.</param>
-        /// <param name="headSize">The size of the arrowhead in world units.</param>
+        /// <param name="from">箭头的底部。</param>
+        /// <param name="to">箭头的头部。</param>
+        /// <param name="up">世界的向上方向，箭头平面将尽可能垂直于此方向。默认为 Vector3.up。</param>
+        /// <param name="headSize">箭头在世界单位中的大小。</param>
         public void Arrow(float3 from, float3 to, float3 up, float headSize)
         {
             var length_sq = math.lengthsq(to - from);
@@ -2397,26 +2397,26 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws an arrow between two points with a head that varies with the length of the arrow.
+        /// 在两点之间绘制箭头，箭头大小随箭头长度变化。
         ///
         /// [Open online documentation to see images]
         ///
         /// See: <see cref="ArrowheadArc"/>
         /// See: <see cref="Arrow"/>
         /// </summary>
-        /// <param name="from">Base of the arrow.</param>
-        /// <param name="to">Head of the arrow.</param>
-        /// <param name="up">Up direction of the world, the arrowhead plane will be as perpendicular as possible to this direction.</param>
-        /// <param name="headFraction">The length of the arrowhead is the distance between from and to multiplied by this fraction. Should be between 0 and 1.</param>
+        /// <param name="from">箭头的底部。</param>
+        /// <param name="to">箭头的头部。</param>
+        /// <param name="up">世界的向上方向，箭头平面将尽可能垂直于此方向。</param>
+        /// <param name="headFraction">箭头长度为 from 到 to 距离乘以此分数。应在 0 和 1 之间。</param>
         public void ArrowRelativeSizeHead(float3 from, float3 to, float3 up, float headFraction)
         {
             Line(from, to);
             var dir = to - from;
 
             var normal = math.cross(dir, up);
-            // Pick a different up direction if the direction happened to be colinear with that one.
+            // 如果方向恰好与之共线则选择不同的上方向。
             if (math.all(normal == 0)) normal = math.cross(new float3(1, 0, 0), dir);
-            // Pick a different up direction if up=(1,0,0) and thus the above check would have generated a zero vector again
+            // 如果 up=(1,0,0) 则上面的检查会再次生成零向量，选择不同的上方向
             if (math.all(normal == 0)) normal = math.cross(new float3(0, 1, 0), dir);
             normal = math.normalizesafe(normal) * math.length(dir);
 
@@ -2425,7 +2425,7 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws an arrowhead at a point.
+        /// 在一个点处绘制箭头。
         ///
         /// <code>
         /// Draw.Arrowhead(Vector3.zero, Vector3.forward, 0.75f, color);
@@ -2435,16 +2435,16 @@ namespace VisualShape
         /// See: <see cref="Arrow"/>
         /// See: <see cref="ArrowRelativeSizeHead"/>
         /// </summary>
-        /// <param name="center">Center of the arrowhead.</param>
-        /// <param name="direction">Direction the arrow is pointing.</param>
-        /// <param name="radius">Distance from the center to each corner of the arrowhead.</param>
+        /// <param name="center">箭头中心。</param>
+        /// <param name="direction">箭头指向的方向。</param>
+        /// <param name="radius">从中心到箭头每个角的距离。</param>
         public void Arrowhead(float3 center, float3 direction, float radius)
         {
             Arrowhead(center, direction, DEFAULT_UP, radius);
         }
 
         /// <summary>
-        /// Draws an arrowhead at a point.
+        /// 在一个点处绘制箭头。
         ///
         /// <code>
         /// Draw.Arrowhead(Vector3.zero, Vector3.forward, 0.75f, color);
@@ -2454,10 +2454,10 @@ namespace VisualShape
         /// See: <see cref="Arrow"/>
         /// See: <see cref="ArrowRelativeSizeHead"/>
         /// </summary>
-        /// <param name="center">Center of the arrowhead.</param>
-        /// <param name="direction">Direction the arrow is pointing.</param>
-        /// <param name="up">Up direction of the world, the arrowhead plane will be as perpendicular as possible to this direction. Defaults to Vector3.up. Must be normalized.</param>
-        /// <param name="radius">Distance from the center to each corner of the arrowhead.</param>
+        /// <param name="center">箭头中心。</param>
+        /// <param name="direction">箭头指向的方向。</param>
+        /// <param name="up">世界的向上方向，箭头平面将尽可能垂直于此方向。默认为 Vector3.up。必须归一化。</param>
+        /// <param name="radius">从中心到箭头每个角的距离。</param>
         public void Arrowhead(float3 center, float3 direction, float3 up, float radius)
         {
             if (math.all(direction == 0)) return;
@@ -2476,20 +2476,20 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws an arrowhead centered around a circle.
+        /// 绘制以圆为中心的箭头。
         ///
-        /// This can be used to for example show the direction a character is moving in.
+        /// 这可以用于例如显示角色移动的方向。
         ///
         /// [Open online documentation to see images]
         ///
-        /// Note: In the image above the arrowhead is the only part that is drawn by this method. The cylinder is only included for context.
+        /// 注意：上图中箭头是此方法唯一绘制的部分。圆柱体仅用于提供上下文。
         ///
         /// See: <see cref="Arrow"/>
         /// </summary>
-        /// <param name="origin">Point around which the arc is centered</param>
-        /// <param name="direction">Direction the arrow is pointing</param>
-        /// <param name="offset">Distance from origin that the arrow starts.</param>
-        /// <param name="width">Width of the arrowhead in degrees (defaults to 60). Should be between 0 and 90.</param>
+        /// <param name="origin">弧线居中的点</param>
+        /// <param name="direction">箭头指向的方向</param>
+        /// <param name="offset">箭头从原点开始的距离。</param>
+        /// <param name="width">箭头宽度（度），默认 60。应在 0 和 90 之间。</param>
         public void ArrowheadArc(float3 origin, float3 direction, float offset, float width = 60)
         {
             if (!math.any(direction)) return;
@@ -2511,17 +2511,17 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws a grid of lines.
+        /// 绘制线条网格。
         ///
         /// <code>
         /// Draw.xz.WireGrid(Vector3.zero, new int2(3, 3), new float2(1, 1), color);
         /// </code>
         /// [Open online documentation to see images]
         /// </summary>
-        /// <param name="center">Center of the grid</param>
-        /// <param name="rotation">Rotation of the grid. The grid will be aligned to the X and Z axes of the rotation.</param>
-        /// <param name="cells">Number of cells of the grid. Should be greater than 0.</param>
-        /// <param name="totalSize">Total size of the grid along the X and Z axes.</param>
+        /// <param name="center">网格中心</param>
+        /// <param name="rotation">网格旋转。网格将对齐到旋转的 X 和 Z 轴。</param>
+        /// <param name="cells">网格单元数。应大于 0。</param>
+        /// <param name="totalSize">网格沿 X 和 Z 轴的总大小。</param>
         public void WireGrid(float3 center, quaternion rotation, int2 cells, float2 totalSize)
         {
             cells = math.max(cells, new int2(1, 1));
@@ -2534,7 +2534,7 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws a triangle outline.
+        /// 绘制三角形轮廓。
         ///
         /// <code>
         /// Draw.WireTriangle(new Vector3(-0.5f, 0, 0), new Vector3(0, 1, 0), new Vector3(0.5f, 0, 0), Color.black);
@@ -2545,9 +2545,9 @@ namespace VisualShape
         /// See: <see cref="WirePolygon"/>
         /// See: <see cref="SolidTriangle"/>
         /// </summary>
-        /// <param name="a">First corner of the triangle</param>
-        /// <param name="b">Second corner of the triangle</param>
-        /// <param name="c">Third corner of the triangle</param>
+        /// <param name="a">三角形第一个角</param>
+        /// <param name="b">三角形第二个角</param>
+        /// <param name="c">三角形第三个角</param>
         public void WireTriangle(float3 a, float3 b, float3 c)
         {
             Line(a, b);
@@ -2556,8 +2556,8 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws a rectangle outline.
-        /// The rectangle will be aligned to the X and Z axes.
+        /// 绘制矩形轮廓。
+        /// 矩形将对齐到 X 和 Z 轴。
         ///
         /// <code>
         /// Draw.xz.WireRectangle(new Vector3(0f, 0, 0), new Vector2(1, 1), Color.black);
@@ -2573,15 +2573,15 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws a rectangle outline.
-        /// The rectangle will be oriented along the rotation's X and Z axes.
+        /// 绘制矩形轮廓。
+        /// 矩形将沿旋转的 X 和 Z 轴方向排列。
         ///
         /// <code>
         /// Draw.WireRectangle(new Vector3(0f, 0, 0), Quaternion.identity, new Vector2(1, 1), Color.black);
         /// </code>
         /// [Open online documentation to see images]
         ///
-        /// This is identical to <see cref="Draw.WirePlane(float3,quaternion,float2)"/>, but this name is added for consistency.
+        /// 这与 <see cref="Draw.WirePlane(float3,quaternion,float2)"/> 相同，但为了一致性添加了此名称。
         ///
         /// See: <see cref="WirePolygon"/>
         /// </summary>
@@ -2591,9 +2591,9 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws a rectangle outline.
-        /// The rectangle corners are assumed to be in XY space.
-        /// This is particularly useful when combined with <see cref="InScreenSpace"/>.
+        /// 绘制矩形轮廓。
+        /// 假定矩形角点在 XY 空间中。
+        /// 与 <see cref="InScreenSpace"/> 结合使用时特别有用。
         ///
         /// <code>
         /// using (Draw.InScreenSpace(Camera.main)) {
@@ -2614,63 +2614,63 @@ namespace VisualShape
 
 
         /// <summary>
-        /// Draws a triangle outline.
+        /// 绘制三角形轮廓。
         ///
         /// <code>
         /// Draw.WireTriangle(Vector3.zero, Quaternion.identity, 0.5f, color);
         /// </code>
         /// [Open online documentation to see images]
         ///
-        /// Note: This is a convenience wrapper for <see cref="WirePolygon(float3,int,quaternion,float)"/>
+        /// 注意：这是 <see cref="WirePolygon(float3,int,quaternion,float)"/> 的便捷封装
         ///
         /// See: <see cref="WireTriangle(float3,float3,float3)"/>
         /// </summary>
-        /// <param name="center">Center of the triangle.</param>
-        /// <param name="rotation">Rotation of the triangle. The first vertex will be radius units in front of center as seen from the rotation's point of view.</param>
-        /// <param name="radius">Distance from the center to each vertex.</param>
+        /// <param name="center">三角形中心。</param>
+        /// <param name="rotation">三角形旋转。从旋转角度看，第一个顶点将在中心前方 radius 个单位处。</param>
+        /// <param name="radius">从中心到每个顶点的距离。</param>
         public void WireTriangle(float3 center, quaternion rotation, float radius)
         {
             WirePolygon(center, 3, rotation, radius);
         }
 
         /// <summary>
-        /// Draws a pentagon outline.
+        /// 绘制五边形轮廓。
         ///
         /// <code>
         /// Draw.WirePentagon(Vector3.zero, Quaternion.identity, 0.5f, color);
         /// </code>
         /// [Open online documentation to see images]
         ///
-        /// Note: This is a convenience wrapper for <see cref="WirePolygon(float3,int,quaternion,float)"/>
+        /// 注意：这是 <see cref="WirePolygon(float3,int,quaternion,float)"/> 的便捷封装
         /// </summary>
-        /// <param name="center">Center of the polygon.</param>
-        /// <param name="rotation">Rotation of the polygon. The first vertex will be radius units in front of center as seen from the rotation's point of view.</param>
-        /// <param name="radius">Distance from the center to each vertex.</param>
+        /// <param name="center">多边形中心。</param>
+        /// <param name="rotation">多边形旋转。从旋转角度看，第一个顶点将在中心前方 radius 个单位处。</param>
+        /// <param name="radius">从中心到每个顶点的距离。</param>
         public void WirePentagon(float3 center, quaternion rotation, float radius)
         {
             WirePolygon(center, 5, rotation, radius);
         }
 
         /// <summary>
-        /// Draws a hexagon outline.
+        /// 绘制六边形轮廓。
         ///
         /// <code>
         /// Draw.WireHexagon(Vector3.zero, Quaternion.identity, 0.5f, color);
         /// </code>
         /// [Open online documentation to see images]
         ///
-        /// Note: This is a convenience wrapper for <see cref="WirePolygon(float3,int,quaternion,float)"/>
+        /// 注意：这是 <see cref="WirePolygon(float3,int,quaternion,float)"/> 的便捷封装
         /// </summary>
-        /// <param name="center">Center of the polygon.</param>
-        /// <param name="rotation">Rotation of the polygon. The first vertex will be radius units in front of center as seen from the rotation's point of view.</param>
-        /// <param name="radius">Distance from the center to each vertex.</param>
+        /// <param name="center">多边形中心。</param>
+        /// <param name="rotation">多边形旋转。从旋转角度看，第一个顶点将在中心前方 radius 个单位处。</param>
+        /// <param name="radius">从中心到每个顶点的距离。</param>
         public void WireHexagon(float3 center, quaternion rotation, float radius)
         {
             WirePolygon(center, 6, rotation, radius);
         }
 
         /// <summary>
-        /// Draws a regular polygon outline.
+        /// 绘制正多边形轮廓。
         ///
         /// <code>
         /// Draw.WirePolygon(new Vector3(-0.5f, 0, +0.5f), 3, Quaternion.identity, 0.4f, color);
@@ -2684,10 +2684,10 @@ namespace VisualShape
         /// See: <see cref="WirePentagon"/>
         /// See: <see cref="WireHexagon"/>
         /// </summary>
-        /// <param name="center">Center of the polygon.</param>
-        /// <param name="vertices">Number of corners (and sides) of the polygon.</param>
-        /// <param name="rotation">Rotation of the polygon. The first vertex will be radius units in front of center as seen from the rotation's point of view.</param>
-        /// <param name="radius">Distance from the center to each vertex.</param>
+        /// <param name="center">多边形中心。</param>
+        /// <param name="vertices">多边形的角（和边）数。</param>
+        /// <param name="rotation">多边形旋转。从旋转角度看，第一个顶点将在中心前方 radius 个单位处。</param>
+        /// <param name="radius">从中心到每个顶点的距离。</param>
         public void WirePolygon(float3 center, int vertices, quaternion rotation, float radius)
         {
             PushMatrix(float4x4.TRS(center, rotation, new float3(radius, radius, radius)));
@@ -2703,11 +2703,11 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws a solid rectangle.
-        /// The rectangle corners are assumed to be in XY space.
-        /// This is particularly useful when combined with <see cref="InScreenSpace"/>.
+        /// 绘制实心矩形。
+        /// 假定矩形角点在 XY 空间中。
+        /// 与 <see cref="InScreenSpace"/> 结合使用时特别有用。
         ///
-        /// Behind the scenes this is implemented using <see cref="SolidPlane"/>.
+        /// 底层使用 <see cref="SolidPlane"/> 实现。
         ///
         /// <code>
         /// using (Draw.InScreenSpace(Camera.main)) {
@@ -2727,16 +2727,16 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws a solid plane.
+        /// 绘制实心平面。
         ///
         /// <code>
         /// Draw.SolidPlane(new float3(0, 0, 0), new float3(0, 1, 0), 1.0f, color);
         /// </code>
         /// [Open online documentation to see images]
         /// </summary>
-        /// <param name="center">Center of the visualized plane.</param>
-        /// <param name="normal">Direction perpendicular to the plane. If this is (0,0,0) then nothing will be rendered.</param>
-        /// <param name="size">Width and height of the visualized plane.</param>
+        /// <param name="center">可视化平面的中心。</param>
+        /// <param name="normal">垂直于平面的方向。如果为 (0,0,0) 则不会渲染。</param>
+        /// <param name="size">可视化平面的宽度和高度。</param>
         public void SolidPlane(float3 center, float3 normal, float2 size)
         {
             if (math.any(normal))
@@ -2746,17 +2746,17 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws a solid plane.
+        /// 绘制实心平面。
         ///
-        /// The plane will lie in the XZ plane with respect to the rotation.
+        /// 平面将相对于旋转位于 XZ 平面中。
         ///
         /// <code>
         /// Draw.SolidPlane(new float3(0, 0, 0), new float3(0, 1, 0), 1.0f, color);
         /// </code>
         /// [Open online documentation to see images]
         /// </summary>
-        /// <param name="center">Center of the visualized plane.</param>
-        /// <param name="size">Width and height of the visualized plane.</param>
+        /// <param name="center">可视化平面的中心。</param>
+        /// <param name="size">可视化平面的宽度和高度。</param>
         public void SolidPlane(float3 center, quaternion rotation, float2 size)
         {
             PushMatrix(float4x4.TRS(center, rotation, new float3(size.x, 0, size.y)));
@@ -2766,7 +2766,7 @@ namespace VisualShape
             PopMatrix();
         }
 
-        /// <summary>Returns an arbitrary vector which is orthogonal to the given one</summary>
+        /// <summary>返回与给定向量正交的任意向量</summary>
         private static float3 calculateTangent(float3 normal)
         {
             var tangent = math.cross(new float3(0, 1, 0), normal);
@@ -2776,16 +2776,16 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws a wire plane.
+        /// 绘制线框平面。
         ///
         /// <code>
         /// Draw.WirePlane(new float3(0, 0, 0), new float3(0, 1, 0), 1.0f, color);
         /// </code>
         /// [Open online documentation to see images]
         /// </summary>
-        /// <param name="center">Center of the visualized plane.</param>
-        /// <param name="normal">Direction perpendicular to the plane. If this is (0,0,0) then nothing will be rendered.</param>
-        /// <param name="size">Width and height of the visualized plane.</param>
+        /// <param name="center">可视化平面的中心。</param>
+        /// <param name="normal">垂直于平面的方向。如果为 (0,0,0) 则不会渲染。</param>
+        /// <param name="size">可视化平面的宽度和高度。</param>
         public void WirePlane(float3 center, float3 normal, float2 size)
         {
             if (math.any(normal))
@@ -2795,18 +2795,18 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws a wire plane.
+        /// 绘制线框平面。
         ///
-        /// This is identical to <see cref="WireRectangle(float3,quaternion,float2)"/>, but it is included for consistency.
+        /// 这与 <see cref="WireRectangle(float3,quaternion,float2)"/> 相同，为一致性而包含。
         ///
         /// <code>
         /// Draw.WirePlane(new float3(0, 0, 0), new float3(0, 1, 0), 1.0f, color);
         /// </code>
         /// [Open online documentation to see images]
         /// </summary>
-        /// <param name="center">Center of the visualized plane.</param>
-        /// <param name="rotation">Rotation of the plane. The plane will lie in the XZ plane with respect to the rotation.</param>
-        /// <param name="size">Width and height of the visualized plane.</param>
+        /// <param name="center">可视化平面的中心。</param>
+        /// <param name="rotation">Rotation of the plane. 平面将相对于旋转位于 XZ 平面中。</param>
+        /// <param name="size">可视化平面的宽度和高度。</param>
         public void WirePlane(float3 center, quaternion rotation, float2 size)
         {
             Reserve<PlaneData>();
@@ -2815,16 +2815,16 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws a plane and a visualization of its normal.
+        /// 绘制平面及其法线的可视化。
         ///
         /// <code>
         /// Draw.PlaneWithNormal(new float3(0, 0, 0), new float3(0, 1, 0), 1.0f, color);
         /// </code>
         /// [Open online documentation to see images]
         /// </summary>
-        /// <param name="center">Center of the visualized plane.</param>
-        /// <param name="normal">Direction perpendicular to the plane. If this is (0,0,0) then nothing will be rendered.</param>
-        /// <param name="size">Width and height of the visualized plane.</param>
+        /// <param name="center">可视化平面的中心。</param>
+        /// <param name="normal">垂直于平面的方向。如果为 (0,0,0) 则不会渲染。</param>
+        /// <param name="size">可视化平面的宽度和高度。</param>
         public void PlaneWithNormal(float3 center, float3 normal, float2 size)
         {
             if (math.any(normal))
@@ -2834,16 +2834,16 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws a plane and a visualization of its normal.
+        /// 绘制平面及其法线的可视化。
         ///
         /// <code>
         /// Draw.PlaneWithNormal(new float3(0, 0, 0), new float3(0, 1, 0), 1.0f, color);
         /// </code>
         /// [Open online documentation to see images]
         /// </summary>
-        /// <param name="center">Center of the visualized plane.</param>
-        /// <param name="rotation">Rotation of the plane. The plane will lie in the XZ plane with respect to the rotation.</param>
-        /// <param name="size">Width and height of the visualized plane.</param>
+        /// <param name="center">可视化平面的中心。</param>
+        /// <param name="rotation">Rotation of the plane. 平面将相对于旋转位于 XZ 平面中。</param>
+        /// <param name="size">可视化平面的宽度和高度。</param>
         public void PlaneWithNormal(float3 center, quaternion rotation, float2 size)
         {
             SolidPlane(center, rotation, size);
@@ -2852,21 +2852,21 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws a solid triangle.
+        /// 绘制实心三角形。
         ///
         /// <code>
         /// Draw.xy.SolidTriangle(new float2(-0.43f, -0.25f), new float2(0, 0.5f), new float2(0.43f, -0.25f), color);
         /// </code>
         /// [Open online documentation to see images]
         ///
-        /// Note: If you are going to be drawing lots of triangles it's better to use <see cref="Draw.SolidMesh"/> instead as it will be more efficient.
+        /// 注意：如果要绘制大量三角形，最好使用 <see cref="Draw.SolidMesh"/>，效率更高。
         ///
         /// See: <see cref="Draw.SolidMesh"/>
         /// See: <see cref="Draw.WireTriangle"/>
         /// </summary>
-        /// <param name="a">First corner of the triangle.</param>
-        /// <param name="b">Second corner of the triangle.</param>
-        /// <param name="c">Third corner of the triangle.</param>
+        /// <param name="a">三角形第一个角。</param>
+        /// <param name="b">三角形第二个角。</param>
+        /// <param name="c">三角形第三个角。</param>
         public void SolidTriangle(float3 a, float3 b, float3 c)
         {
             Reserve<TriangleData>();
@@ -2875,15 +2875,15 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws a solid box.
+        /// 绘制实心方盒。
         ///
         /// <code>
         /// Draw.SolidBox(new float3(0, 0, 0), new float3(1, 1, 1), color);
         /// </code>
         /// [Open online documentation to see images]
         /// </summary>
-        /// <param name="center">Center of the box</param>
-        /// <param name="size">Width of the box along all dimensions</param>
+        /// <param name="center">方盒中心</param>
+        /// <param name="size">方盒沿各维度的宽度</param>
         public void SolidBox(float3 center, float3 size)
         {
             Reserve<BoxData>();
@@ -2892,30 +2892,30 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws a solid box.
+        /// 绘制实心方盒。
         ///
         /// <code>
         /// Draw.SolidBox(new float3(0, 0, 0), new float3(1, 1, 1), color);
         /// </code>
         /// [Open online documentation to see images]
         /// </summary>
-        /// <param name="bounds">Bounding box of the box</param>
+        /// <param name="bounds">方盒的包围盒</param>
         public void SolidBox(Bounds bounds)
         {
             SolidBox(bounds.center, bounds.size);
         }
 
         /// <summary>
-        /// Draws a solid box.
+        /// 绘制实心方盒。
         ///
         /// <code>
         /// Draw.SolidBox(new float3(0, 0, 0), new float3(1, 1, 1), color);
         /// </code>
         /// [Open online documentation to see images]
         /// </summary>
-        /// <param name="center">Center of the box</param>
-        /// <param name="rotation">Rotation of the box</param>
-        /// <param name="size">Width of the box along all dimensions</param>
+        /// <param name="center">方盒中心</param>
+        /// <param name="rotation">方盒旋转</param>
+        /// <param name="size">方盒沿各维度的宽度</param>
         public void SolidBox(float3 center, quaternion rotation, float3 size)
         {
             PushMatrix(float4x4.TRS(center, rotation, size));
@@ -2924,7 +2924,7 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws a label in 3D space.
+        /// 在 3D 空间中绘制标签。
         ///
         /// The default alignment is <see cref="VisualShape.LabelAlignment.MiddleLeft"/>.
         ///
@@ -2935,19 +2935,19 @@ namespace VisualShape
         ///
         /// See: Label3D(float3,quaternion,string,float,LabelAlignment)
         ///
-        /// Note: Only ASCII is supported since the built-in font texture only includes ASCII. Other characters will be rendered as question marks (?).
+        /// 注意：仅支持 ASCII，因为内置字体纹理仅包含 ASCII。其他字符将渲染为问号 (?)。
         /// </summary>
-        /// <param name="position">Position in 3D space.</param>
-        /// <param name="rotation">Rotation in 3D space.</param>
-        /// <param name="text">Text to display.</param>
-        /// <param name="size">World size of the text. For large sizes an SDF (signed distance field) font is used and for small sizes a normal font texture is used.</param>
+        /// <param name="position">3D 空间中的位置。</param>
+        /// <param name="rotation">3D 空间中的旋转。</param>
+        /// <param name="text">要显示的文本。</param>
+        /// <param name="size">文本的世界大小。对于大尺寸使用 SDF（有符号距离场）字体，小尺寸使用普通字体纹理。</param>
         public void Label3D(float3 position, quaternion rotation, string text, float size)
         {
             Label3D(position, rotation, text, size, LabelAlignment.MiddleLeft);
         }
 
         /// <summary>
-        /// Draws a label in 3D space.
+        /// 在 3D 空间中绘制标签。
         ///
         /// <code>
         /// Draw.Label3D(new float3(0.2f, -1f, 0.2f), Quaternion.Euler(45, -110, -90), "Label", 1, LabelAlignment.Center, color);
@@ -2956,15 +2956,15 @@ namespace VisualShape
         ///
         /// See: Label3D(float3,quaternion,string,float)
         ///
-        /// Note: Only ASCII is supported since the built-in font texture only includes ASCII. Other characters will be rendered as question marks (?).
+        /// 注意：仅支持 ASCII，因为内置字体纹理仅包含 ASCII。其他字符将渲染为问号 (?)。
         ///
-        /// Note: This method cannot be used in burst since managed strings are not suppported in burst. However, you can use the separate Label3D overload which takes a FixedString.
+        /// 注意：此方法不能在 Burst 中使用，因为 Burst 不支持托管字符串。但可以使用接受 FixedString 的 Label3D 重载。
         /// </summary>
-        /// <param name="position">Position in 3D space.</param>
-        /// <param name="rotation">Rotation in 3D space.</param>
-        /// <param name="text">Text to display.</param>
-        /// <param name="size">World size of the text. For large sizes an SDF (signed distance field) font is used and for small sizes a normal font texture is used.</param>
-        /// <param name="alignment">How to align the text relative to the given position.</param>
+        /// <param name="position">3D 空间中的位置。</param>
+        /// <param name="rotation">3D 空间中的旋转。</param>
+        /// <param name="text">要显示的文本。</param>
+        /// <param name="size">文本的世界大小。对于大尺寸使用 SDF（有符号距离场）字体，小尺寸使用普通字体纹理。</param>
+        /// <param name="alignment">文本相对于给定位置的对齐方式。</param>
         public void Label3D(float3 position, quaternion rotation, string text, float size, LabelAlignment alignment)
         {
             AssertBufferExists();
@@ -2983,7 +2983,7 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws a label in 3D space aligned with the camera.
+        /// 在 3D 空间中绘制与相机对齐的标签。
         ///
         /// The default alignment is <see cref="VisualShape.LabelAlignment.MiddleLeft"/>.
         ///
@@ -2994,18 +2994,18 @@ namespace VisualShape
         ///
         /// See: Label2D(float3,string,float,LabelAlignment)
         ///
-        /// Note: Only ASCII is supported since the built-in font texture only includes ASCII. Other characters will be rendered as question marks (?).
+        /// 注意：仅支持 ASCII，因为内置字体纹理仅包含 ASCII。其他字符将渲染为问号 (?)。
         /// </summary>
-        /// <param name="position">Position in 3D space.</param>
-        /// <param name="text">Text to display.</param>
-        /// <param name="sizeInPixels">Size of the text in screen pixels. For large sizes an SDF (signed distance field) font is used and for small sizes a normal font texture is used.</param>
+        /// <param name="position">3D 空间中的位置。</param>
+        /// <param name="text">要显示的文本。</param>
+        /// <param name="sizeInPixels">文本的屏幕像素大小。对于大尺寸使用 SDF（有符号距离场）字体，小尺寸使用普通字体纹理。</param>
         public void Label2D(float3 position, string text, float sizeInPixels = 14)
         {
             Label2D(position, text, sizeInPixels, LabelAlignment.MiddleLeft);
         }
 
         /// <summary>
-        /// Draws a label in 3D space aligned with the camera.
+        /// 在 3D 空间中绘制与相机对齐的标签。
         ///
         /// <code>
         /// Draw.Label2D(Vector3.zero, "Label", 48, LabelAlignment.Center, color);
@@ -3014,14 +3014,14 @@ namespace VisualShape
         ///
         /// See: Label2D(float3,string,float)
         ///
-        /// Note: Only ASCII is supported since the built-in font texture only includes ASCII. Other characters will be rendered as question marks (?).
+        /// 注意：仅支持 ASCII，因为内置字体纹理仅包含 ASCII。其他字符将渲染为问号 (?)。
         ///
-        /// Note: This method cannot be used in burst since managed strings are not suppported in burst. However, you can use the separate Label2D overload which takes a FixedString.
+        /// 注意：此方法不能在 Burst 中使用，因为 Burst 不支持托管字符串。但可以使用接受 FixedString 的 Label2D 重载。
         /// </summary>
-        /// <param name="position">Position in 3D space.</param>
-        /// <param name="text">Text to display.</param>
-        /// <param name="sizeInPixels">Size of the text in screen pixels. For large sizes an SDF (signed distance field) font is used and for small sizes a normal font texture is used.</param>
-        /// <param name="alignment">How to align the text relative to the given position.</param>
+        /// <param name="position">3D 空间中的位置。</param>
+        /// <param name="text">要显示的文本。</param>
+        /// <param name="sizeInPixels">文本的屏幕像素大小。对于大尺寸使用 SDF（有符号距离场）字体，小尺寸使用普通字体纹理。</param>
+        /// <param name="alignment">文本相对于给定位置的对齐方式。</param>
         public void Label2D(float3 position, string text, float sizeInPixels, LabelAlignment alignment)
         {
             AssertBufferExists();
@@ -3041,10 +3041,10 @@ namespace VisualShape
 
         #region Label2DFixedString
         /// <summary>
-        /// Draws a label in 3D space aligned with the camera.
+        /// 在 3D 空间中绘制与相机对齐的标签。
         ///
         /// <code>
-        /// // This part can be inside a burst job
+        /// // 这部分可以在 Burst Job 内部
         /// for (int i = 0; i < 10; i++) {
         ///     Unity.Collections.FixedString32Bytes text = $"X = {i}";
         ///     builder.Label2D(new float3(i, 0, 0), ref text, 12, LabelAlignment.Center);
@@ -3054,13 +3054,13 @@ namespace VisualShape
         ///
         /// See: Label2D(float3,string,float)
         ///
-        /// Note: Only ASCII is supported since the built-in font texture only includes ASCII. Other characters will be rendered as question marks (?).
+        /// 注意：仅支持 ASCII，因为内置字体纹理仅包含 ASCII。其他字符将渲染为问号 (?)。
         ///
-        /// Note: This method requires the Unity.Collections package version 0.8 or later.
+        /// 注意：此方法需要 Unity.Collections 包版本 0.8 或更高。
         /// </summary>
-        /// <param name="position">Position in 3D space.</param>
-        /// <param name="text">Text to display.</param>
-        /// <param name="sizeInPixels">Size of the text in screen pixels. For large sizes an SDF (signed distance field) font is used and for small sizes a normal font texture is used.</param>
+        /// <param name="position">3D 空间中的位置。</param>
+        /// <param name="text">要显示的文本。</param>
+        /// <param name="sizeInPixels">文本的屏幕像素大小。对于大尺寸使用 SDF（有符号距离场）字体，小尺寸使用普通字体纹理。</param>
         public void Label2D(float3 position, ref FixedString32Bytes text, float sizeInPixels = 14)
         {
             Label2D(position, ref text, sizeInPixels, LabelAlignment.MiddleLeft);
@@ -3085,10 +3085,10 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws a label in 3D space aligned with the camera.
+        /// 在 3D 空间中绘制与相机对齐的标签。
         ///
         /// <code>
-        /// // This part can be inside a burst job
+        /// // 这部分可以在 Burst Job 内部
         /// for (int i = 0; i < 10; i++) {
         ///     Unity.Collections.FixedString32Bytes text = $"X = {i}";
         ///     builder.Label2D(new float3(i, 0, 0), ref text, 12, LabelAlignment.Center);
@@ -3098,14 +3098,14 @@ namespace VisualShape
         ///
         /// See: Label2D(float3,string,float)
         ///
-        /// Note: Only ASCII is supported since the built-in font texture only includes ASCII. Other characters will be rendered as question marks (?).
+        /// 注意：仅支持 ASCII，因为内置字体纹理仅包含 ASCII。其他字符将渲染为问号 (?)。
         ///
-        /// Note: This method requires the Unity.Collections package version 0.8 or later.
+        /// 注意：此方法需要 Unity.Collections 包版本 0.8 或更高。
         /// </summary>
-        /// <param name="position">Position in 3D space.</param>
-        /// <param name="text">Text to display.</param>
-        /// <param name="sizeInPixels">Size of the text in screen pixels. For large sizes an SDF (signed distance field) font is used and for small sizes a normal font texture is used.</param>
-        /// <param name="alignment">How to align the text relative to the given position.</param>
+        /// <param name="position">3D 空间中的位置。</param>
+        /// <param name="text">要显示的文本。</param>
+        /// <param name="sizeInPixels">文本的屏幕像素大小。对于大尺寸使用 SDF（有符号距离场）字体，小尺寸使用普通字体纹理。</param>
+        /// <param name="alignment">文本相对于给定位置的对齐方式。</param>
         public void Label2D(float3 position, ref FixedString32Bytes text, float sizeInPixels, LabelAlignment alignment)
         {
             unsafe
@@ -3166,10 +3166,10 @@ namespace VisualShape
 
         #region Label3DFixedString
         /// <summary>
-        /// Draws a label in 3D space.
+        /// 在 3D 空间中绘制标签。
         ///
         /// <code>
-        /// // This part can be inside a burst job
+        /// // 这部分可以在 Burst Job 内部
         /// for (int i = 0; i < 10; i++) {
         ///     Unity.Collections.FixedString32Bytes text = $"X = {i}";
         ///     builder.Label3D(new float3(i, 0, 0), quaternion.identity, ref text, 1, LabelAlignment.Center);
@@ -3179,14 +3179,14 @@ namespace VisualShape
         ///
         /// See: Label3D(float3,quaternion,string,float)
         ///
-        /// Note: Only ASCII is supported since the built-in font texture only includes ASCII. Other characters will be rendered as question marks (?).
+        /// 注意：仅支持 ASCII，因为内置字体纹理仅包含 ASCII。其他字符将渲染为问号 (?)。
         ///
-        /// Note: This method requires the Unity.Collections package version 0.8 or later.
+        /// 注意：此方法需要 Unity.Collections 包版本 0.8 或更高。
         /// </summary>
-        /// <param name="position">Position in 3D space.</param>
-        /// <param name="rotation">Rotation in 3D space.</param>
-        /// <param name="text">Text to display.</param>
-        /// <param name="size">World size of the text. For large sizes an SDF (signed distance field) font is used and for small sizes a normal font texture is used.</param>
+        /// <param name="position">3D 空间中的位置。</param>
+        /// <param name="rotation">3D 空间中的旋转。</param>
+        /// <param name="text">要显示的文本。</param>
+        /// <param name="size">文本的世界大小。对于大尺寸使用 SDF（有符号距离场）字体，小尺寸使用普通字体纹理。</param>
         public void Label3D(float3 position, quaternion rotation, ref FixedString32Bytes text, float size)
         {
             Label3D(position, rotation, ref text, size, LabelAlignment.MiddleLeft);
@@ -3211,10 +3211,10 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Draws a label in 3D space.
+        /// 在 3D 空间中绘制标签。
         ///
         /// <code>
-        /// // This part can be inside a burst job
+        /// // 这部分可以在 Burst Job 内部
         /// for (int i = 0; i < 10; i++) {
         ///     Unity.Collections.FixedString32Bytes text = $"X = {i}";
         ///     builder.Label3D(new float3(i, 0, 0), quaternion.identity, ref text, 1, LabelAlignment.Center);
@@ -3224,15 +3224,15 @@ namespace VisualShape
         ///
         /// See: Label3D(float3,quaternion,string,float)
         ///
-        /// Note: Only ASCII is supported since the built-in font texture only includes ASCII. Other characters will be rendered as question marks (?).
+        /// 注意：仅支持 ASCII，因为内置字体纹理仅包含 ASCII。其他字符将渲染为问号 (?)。
         ///
-        /// Note: This method requires the Unity.Collections package version 0.8 or later.
+        /// 注意：此方法需要 Unity.Collections 包版本 0.8 或更高。
         /// </summary>
-        /// <param name="position">Position in 3D space.</param>
-        /// <param name="rotation">Rotation in 3D space.</param>
-        /// <param name="text">Text to display.</param>
-        /// <param name="size">World size of the text. For large sizes an SDF (signed distance field) font is used and for small sizes a normal font texture is used.</param>
-        /// <param name="alignment">How to align the text relative to the given position.</param>
+        /// <param name="position">3D 空间中的位置。</param>
+        /// <param name="rotation">3D 空间中的旋转。</param>
+        /// <param name="text">要显示的文本。</param>
+        /// <param name="size">文本的世界大小。对于大尺寸使用 SDF（有符号距离场）字体，小尺寸使用普通字体纹理。</param>
+        /// <param name="alignment">文本相对于给定位置的对齐方式。</param>
         public void Label3D(float3 position, quaternion rotation, ref FixedString32Bytes text, float size, LabelAlignment alignment)
         {
             unsafe

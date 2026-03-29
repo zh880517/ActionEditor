@@ -3,7 +3,7 @@ using UnityEditor;
 using UnityEngine;
 
 namespace VisualShape {
-	/// <summary>Helper for adding project settings</summary>
+	/// <summary>用于添加项目设置的工具类</summary>
 	static class VisualShapeSettingsRegister {
 		const string PROVIDER_PATH = "Project/VisualShape";
 		const string SETTINGS_LABEL = "VisualShape";

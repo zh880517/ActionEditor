@@ -5,14 +5,14 @@ using System.Collections.Generic;
 
 namespace VisualShape
 {
-    /// <summary>Various high-level utilities that are useful when drawing things</summary>
+    /// <summary>绘制时常用的各种高级工具方法</summary>
     public static class ShapeUtilities
     {
         private static List<Component> componentBuffer = new List<Component>();
 
         /// <summary>
-        /// Bounding box of a GameObject.
-        /// The bounding box is calculated based on the colliders and renderers on this object and all its children.
+        /// GameObject 的包围盒。
+        /// 包围盒基于此对象及其所有子对象的碰撞体和渲染器计算。
         /// </summary>
         public static Bounds BoundsFrom(GameObject gameObject)
         {
@@ -20,8 +20,8 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// Bounding box of a Transform.
-        /// The bounding box is calculated based on the colliders and renderers on this object and all its children.
+        /// Transform 的包围盒。
+        /// 包围盒基于此对象及其所有子对象的碰撞体和渲染器计算。
         /// </summary>
         public static Bounds BoundsFrom(Transform transform)
         {
@@ -41,7 +41,7 @@ namespace VisualShape
             return bounds;
         }
 
-        /// <summary>Bounding box which contains all points in the list.</summary>
+        /// <summary>包含列表中所有点的包围盒。</summary>
         public static Bounds BoundsFrom(List<Vector3> points)
         {
             if (points.Count == 0) throw new System.ArgumentException("At least 1 point is required");
@@ -52,10 +52,10 @@ namespace VisualShape
                 mn = Vector3.Min(mn, points[i]);
                 mx = Vector3.Max(mx, points[i]);
             }
-            return new Bounds((mx + mn) * 0.5f, (mx - mn) * 0.5f);
+            return new Bounds((mx + mn) * 0.5f, mx - mn);
         }
 
-        /// <summary>Bounding box which contains all points in the array.</summary>
+        /// <summary>包含数组中所有点的包围盒。</summary>
         public static Bounds BoundsFrom(Vector3[] points)
         {
             if (points.Length == 0) throw new System.ArgumentException("At least 1 point is required");
@@ -66,10 +66,10 @@ namespace VisualShape
                 mn = Vector3.Min(mn, points[i]);
                 mx = Vector3.Max(mx, points[i]);
             }
-            return new Bounds((mx + mn) * 0.5f, (mx - mn) * 0.5f);
+            return new Bounds((mx + mn) * 0.5f, mx - mn);
         }
 
-        /// <summary>Bounding box which contains all points in the array.</summary>
+        /// <summary>包含数组中所有点的包围盒。</summary>
         public static Bounds BoundsFrom(NativeArray<float3> points)
         {
             if (points.Length == 0) throw new System.ArgumentException("At least 1 point is required");
@@ -80,7 +80,7 @@ namespace VisualShape
                 mn = math.min(mn, points[i]);
                 mx = math.max(mx, points[i]);
             }
-            return new Bounds((mx + mn) * 0.5f, (mx - mn) * 0.5f);
+            return new Bounds((mx + mn) * 0.5f, mx - mn);
         }
     }
 }

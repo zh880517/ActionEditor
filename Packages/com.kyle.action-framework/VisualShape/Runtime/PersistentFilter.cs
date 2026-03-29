@@ -23,7 +23,7 @@ namespace VisualShape
 
             unsafe
             {
-                // Store in local variables for performance (makes it possible to use registers for a lot of fields)
+                // 存储在局部变量中以提升性能（使许多字段可以使用寄存器）
                 var bufferPersist = *buffer;
 
                 long writeOffset = 0;

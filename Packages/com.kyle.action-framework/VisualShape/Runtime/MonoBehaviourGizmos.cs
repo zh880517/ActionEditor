@@ -3,11 +3,11 @@ using UnityEngine;
 namespace VisualShape
 {
     /// <summary>
-    /// Inherit from this class to draw gizmos.
+    /// 继承此类以绘制 Gizmos。
     /// </summary>
     public abstract class MonoBehaviourGizmos : MonoBehaviour, IDrawGizmos
     {
-        public MonoBehaviourGizmos()
+        void Awake()
         {
 #if UNITY_EDITOR
             ShapeManager.Register(this);
@@ -15,9 +15,9 @@ namespace VisualShape
         }
 
         /// <summary>
-        /// An empty OnDrawGizmosSelected method.
-        /// Only objects with an OnDrawGizmos/OnDrawGizmosSelected method will show up in Unity's menu for enabling/disabling
-        /// the gizmos per object type (upper right corner of the scene view).
+        /// 空的 OnDrawGizmosSelected 方法。
+        /// 只有拥有 OnDrawGizmos/OnDrawGizmosSelected 方法的对象才会在 Unity 的 Gizmos 启用/禁用菜单中显示
+        /// （场景视图右上角）。
         /// </summary>
         void OnDrawGizmosSelected()
         {
