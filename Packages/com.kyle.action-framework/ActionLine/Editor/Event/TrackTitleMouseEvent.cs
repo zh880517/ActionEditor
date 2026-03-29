@@ -8,7 +8,7 @@ namespace ActionLine.EditorView
         public EventModifiers Modifiers { get; private set; }
         public int Button { get; private set; }
         public int Index { get; private set; }
-        public Vector2 MousePositon { get; private set; }
+        public Vector2 MousePosition { get; private set; }
         public bool ShiftKey => (Modifiers & EventModifiers.Shift) != 0;
 
         public bool CtrlKey => (Modifiers & EventModifiers.Control) != 0;
@@ -40,7 +40,7 @@ namespace ActionLine.EditorView
             var evt = GetPooled();
             evt.Button = button;
             evt.Index = index;
-            evt.MousePositon = mousePosition;
+            evt.MousePosition = mousePosition;
             evt.Modifiers = modifiers;
             return evt;
         }

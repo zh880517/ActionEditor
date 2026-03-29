@@ -8,6 +8,7 @@ namespace ActionLine.EditorView
     {
         private readonly VisualElement colorElement = new VisualElement();
         private readonly Label nameLabel = new Label();
+        private VisualElement customElement;
         public int Index;
         public int StartFrame;
         public int EndFrame;
@@ -87,12 +88,16 @@ namespace ActionLine.EditorView
             nameLabel.text = name;
         }
 
-        public void SetCustomElement(VisualElement customElement)
+        public void SetCustomElement(VisualElement element)
         {
-            if (customElement != null)
+            if (customElement == element)
+                return;
+            customElement?.RemoveFromHierarchy();
+            customElement = element;
+            if (element != null)
             {
-                Add(customElement);
-                customElement.StretchToParentSize();
+                Add(element);
+                element.StretchToParentSize();
             }
         }
 

@@ -93,6 +93,7 @@ namespace ActionLine.EditorView
             }
             var titleView = trackTitles[index];
             dragLine.style.top = titleView.layout.yMax;
+            dragLine.style.display = DisplayStyle.Flex;
         }
         public void HideDragLine()
         {

@@ -46,7 +46,7 @@ namespace ActionLine.EditorView
                     isDragging = true;
                     foreach (var item in context.SelectedClips)
                     {
-                        if (!item.IsInherit)
+                        if (item.IsInherit)
                             continue;
                         context.RegisterUndo("Move Clip", item.Clip);
                     }
@@ -60,7 +60,7 @@ namespace ActionLine.EditorView
                     int maxCount = context.Target.FrameCount;
                     foreach (var item in context.SelectedClips)
                     {
-                        if (!item.IsInherit)
+                        if (item.IsInherit)
                             continue;
                         var clip = item.Clip;
                         int endFrame = clip.StartFrame + clip.Length;
@@ -90,6 +90,7 @@ namespace ActionLine.EditorView
 
         private void OnMouseUp(ClipMouseUpEvent evt)
         {
+            isStart = false;
             if(isDragging)
             {
                 isDragging = false;

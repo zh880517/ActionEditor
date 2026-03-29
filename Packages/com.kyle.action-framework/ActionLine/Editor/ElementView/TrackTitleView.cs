@@ -74,6 +74,10 @@ namespace ActionLine.EditorView
 
         public void SetCustomElement(VisualElement element)
         {
+            if (custom == element)
+                return;
+            custom?.RemoveFromHierarchy();
+            custom = element;
             if (element != null)
                 customArea.Add(element);
         }

@@ -28,13 +28,13 @@ namespace ActionLine.EditorView
             return clip;
         }
 
-        public static ActionLineCopyDate Copy(ActionLineEditorContext context, bool addToClipBoard = true)
+        public static ActionLineCopyData Copy(ActionLineEditorContext context, bool addToClipBoard = true)
         {
-            if (context.SelectedClips.Count == 0 || context.SelectedTracks.Count == 0)
+            if (context.SelectedClips.Count == 0 && context.SelectedTracks.Count == 0)
             {
                 return null;
             }
-            ActionLineCopyDate copyData = new ActionLineCopyDate();
+            ActionLineCopyData copyData = new ActionLineCopyData();
             copyData.AssetType = MonoScript.FromScriptableObject(context.Target);
             indexsCache.Clear();
             for (int i = 0; i < context.SelectedClips.Count; i++)
@@ -75,7 +75,7 @@ namespace ActionLine.EditorView
             return copyData;
         }
 
-        public static void Paste(ActionLineEditorContext context, ActionLineCopyDate copyData)
+        public static void Paste(ActionLineEditorContext context, ActionLineCopyData copyData)
         {
             if (copyData == null)
                 return;
@@ -125,7 +125,7 @@ namespace ActionLine.EditorView
             Paste(context, copyData);
         }
 
-        public static void Dumplicate(ActionLineEditorContext context)
+        public static void Duplicate(ActionLineEditorContext context)
         {
             var copyData = Copy(context, false);
             if(copyData != null)
@@ -136,7 +136,7 @@ namespace ActionLine.EditorView
 
         public static void DeleteSelectedClips(ActionLineEditorContext context, bool clip, bool track)
         {
-            if (context.SelectedClips.Count == 0 || context.SelectedTracks.Count == 0)
+            if (context.SelectedClips.Count == 0 && context.SelectedTracks.Count == 0)
                 return;
             indexsCache.Clear();
             foreach(var clipData in context.SelectedClips)

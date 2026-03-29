@@ -21,7 +21,7 @@ namespace ActionLine.EditorView
 
         public override void Execute(ActionModeType mode)
         {
-            ActionLineEditorUtil.Dumplicate(Context);
+            ActionLineEditorUtil.Duplicate(Context);
         }
     }
 }

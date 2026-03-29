@@ -44,6 +44,7 @@ namespace ActionLine.EditorView
         {
             if (visableCount == count)
                 return;
+            visableCount = count;
             EnsureCapacity(count);
             for (int i = count; i < propertyViews.Count; i++)
             {

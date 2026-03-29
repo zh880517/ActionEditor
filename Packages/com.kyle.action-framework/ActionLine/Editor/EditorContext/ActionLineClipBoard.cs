@@ -12,7 +12,7 @@ namespace ActionLine.EditorView
     }
 
     [System.Serializable]
-    public class ActionLineCopyDate
+    public class ActionLineCopyData
     {
         public MonoScript AssetType;
         public List<ActionClipCopyData> Clips = new List<ActionClipCopyData>();
@@ -21,26 +21,26 @@ namespace ActionLine.EditorView
     public class ActionLineClipBoard : ScriptableSingleton<ActionLineClipBoard>
     {
         [SerializeField]
-        private List<ActionLineCopyDate> dates = new List<ActionLineCopyDate>();
+        private List<ActionLineCopyData> datas = new List<ActionLineCopyData>();
 
-        public static void AddCopyData(ActionLineCopyDate data)
+        public static void AddCopyData(ActionLineCopyData data)
         {
             if(data == null || data.Clips.Count == 0 || data.AssetType == null)
                 return;
-            instance.dates.RemoveAll(it => it.AssetType == data.AssetType);
-            instance.dates.Add(data);
+            instance.datas.RemoveAll(it => it.AssetType == data.AssetType);
+            instance.datas.Add(data);
         }
 
-        public static ActionLineCopyDate GetCopyData(MonoScript type)
+        public static ActionLineCopyData GetCopyData(MonoScript type)
         {
             if (type == null)
                 return null;
-            return instance.dates.Find(it => it.AssetType == type);
+            return instance.datas.Find(it => it.AssetType == type);
         }
 
         public static bool HasCopyData(MonoScript type)
         {
-            return instance.dates.Exists(it => it.AssetType == type);
+            return instance.datas.Exists(it => it.AssetType == type);
         }
     }
 }

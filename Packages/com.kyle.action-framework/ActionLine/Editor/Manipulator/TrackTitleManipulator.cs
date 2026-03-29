@@ -46,7 +46,7 @@ namespace ActionLine.EditorView
                 {
                     if(!context.SelectedTracks.Exists(it=>it.IsInherit))
                     {
-                        int index = context.View.Title.Group.GetTrackIndexByMousePosition(evt.MousePositon);
+                        int index = context.View.Title.Group.GetTrackIndexByMousePosition(evt.MousePosition);
                         context.View.Title.Group.ShowDragLineAfter(index);
                     }
                 }
@@ -62,7 +62,7 @@ namespace ActionLine.EditorView
                 {
                     if (!context.SelectedTracks.Exists(it => it.IsInherit))
                     {
-                        int index = context.View.Title.Group.GetTrackIndexByMousePosition(evt.MousePositon);
+                        int index = context.View.Title.Group.GetTrackIndexByMousePosition(evt.MousePosition);
                         List<int> trackIndexs = new List<int>();
                         foreach (var item in context.SelectedTracks)
                         {
