@@ -66,6 +66,7 @@ namespace EasyConfig.Editor
                             if (!ExportFilter.CheckSheetName(reader.Name))
                                 continue;
                             sheets.Add(reader.Name);
+                            hasExportSheets.Add(reader.Name);
                             EditorUtility.DisplayProgressBar("读取Excel", file, (float)++step / files.Length);
 
                             SheetData sheetData = ReadSheet(reader);
@@ -110,8 +111,8 @@ namespace EasyConfig.Editor
                 var excel = CacheData.Excels[i];
                 if (!excels.Contains(excel.Name))
                 {
-                    --i;
                     CacheData.Excels.RemoveAt(i);
+                    --i;
                     foreach (var sheet in excel.Sheets)
                     {
                         if (!hasExportSheets.Contains(sheet))

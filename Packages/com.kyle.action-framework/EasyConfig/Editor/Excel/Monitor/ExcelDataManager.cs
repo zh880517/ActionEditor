@@ -67,6 +67,7 @@ namespace EasyConfig.Editor
 
         private void OnEnable()
         {
+            if (string.IsNullOrEmpty(ExcelPath)) return;
             watcher = new FileSystemWatcher(ExcelPath, "*.xlsx");
             watcher.NotifyFilter = NotifyFilters.LastWrite;
             watcher.Changed += OnFileChange;

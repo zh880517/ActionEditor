@@ -66,6 +66,7 @@ namespace EasyConfig
                         break;
                 }
             }
+            importedAsset.Clear();
         }
     }
 }

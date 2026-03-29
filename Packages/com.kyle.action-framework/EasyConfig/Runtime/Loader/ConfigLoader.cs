@@ -39,7 +39,6 @@ namespace EasyConfig
                 datas[name] = tData;
                 return tData;
             }
-            datas.Add(name, default);
             return default;
         }
 

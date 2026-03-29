@@ -103,6 +103,8 @@ namespace EasyConfig.Editor
 
         internal override void ReadFromFile(string filePath)
         {
+            items.Clear();
+            searchList = null;
             string json = System.IO.File.ReadAllText(filePath);
             var sheet = JsonUtility.FromJson<SheetData>(json);
             IColumnReader reader = ColumnReaderUtil.ToRead<TItem>();
