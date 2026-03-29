@@ -154,6 +154,8 @@ namespace Flow.EditorView
 
         protected virtual FlowGraphView CreateGraphView(FlowGraph graph)
         {
+            if (graph is FlowSubGraph subGraph)
+                return new FlowSubGraphView(subGraph);
             return new FlowGraphView(graph);
         }
 

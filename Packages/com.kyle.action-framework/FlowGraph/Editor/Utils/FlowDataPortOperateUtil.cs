@@ -36,6 +36,7 @@ namespace Flow.EditorView
                 EdgeID = id,
             };
             SetNodeSlotID(output, ouputFieldName, edge.EdgeID);
+            SetInputNodeSlotID(input, inputFieldName, edge.EdgeID);
             graph.DataEdges.Add(edge);
             return edge.EdgeID;
         }
@@ -59,13 +60,31 @@ namespace Flow.EditorView
                     graph.DataEdges.RemoveAt(i);
                     i--;
                     SetNodeSlotID(e.Output, e.OutputSlot, 0);
+                    SetInputNodeSlotID(input, inputFieldName, 0);
                     continue;
                 }
             }
         }
 
+        /// <summary>
+        /// 设置输入侧节点的EdgeID（仅对SubGraphNode生效）
+        /// </summary>
+        private static void SetInputNodeSlotID(FlowNode input, string fieldName, ulong id)
+        {
+            if (input is SubGraphNode subNode)
+            {
+                subNode.SetInputEdgeID(fieldName, id);
+            }
+        }
+
         public static void SetNodeSlotID(FlowNode output, string name, ulong id)
         {
+            // SubGraphNode的端口使用GUID作为name，存储在专用列表中
+            if (output is SubGraphNode subNode)
+            {
+                subNode.SetOutputEdgeID(name, id);
+                return;
+            }
             var typeInfo = FlowNodeTypeUtil.GetNodeTypeInfo(output.GetType());
             var field = typeInfo.OutputFields.FirstOrDefault(f => f.Name == name);
             if (field != null)
@@ -104,6 +123,12 @@ namespace Flow.EditorView
             for (int i = edges.Count - 1; i >= 0; i--)
             {
                 var e = edges[i];
+                // FlowSubGraph中端口贴边连线的DataEdge有一端为null，跳过这些
+                bool isSubGraphPortEdge = (e.Output == null && !string.IsNullOrEmpty(e.OutputSlot))
+                    || (e.Input == null && !string.IsNullOrEmpty(e.InputSlot));
+                if (isSubGraphPortEdge)
+                    continue;
+
                 if (e.Input == null || e.Output == null
                     || !nodes.Contains(e.Input) || !nodes.Contains(e.Output))
                 {
@@ -114,6 +139,13 @@ namespace Flow.EditorView
                     edges.RemoveAt(i);
                     continue;
                 }
+
+                // SubGraphNode的端口是动态的，跳过常规验证
+                bool isSpecialInput = e.Input is SubGraphNode;
+                bool isSpecialOutput = e.Output is SubGraphNode;
+                if (isSpecialInput || isSpecialOutput)
+                    continue;
+
                 var inputTypeInfo = FlowNodeTypeUtil.GetNodeTypeInfo(e.Input.GetType());
                 var inputField = inputTypeInfo.InputFields.FirstOrDefault(f => f.Name == e.InputSlot || f.OldName == e.InputSlot);
                 if (inputField == null)

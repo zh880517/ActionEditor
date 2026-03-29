@@ -48,7 +48,7 @@ namespace Flow.EditorView
         public MonoScript Script;
         public Type NodeType;
         public FieldInfo ValueField;
-        public Type DataType => ValueField.FieldType;
+        public Type DataType => ValueField?.FieldType;
         public string ShowName;
         public bool HasInput;
         public NodeOutputType OutputType = NodeOutputType.None;
@@ -130,6 +130,10 @@ namespace Flow.EditorView
         {
             if (!nodeType.IsSubclassOf(typeof(FlowNode)))
                 return null;
+
+            // SubGraphNode不继承TFlowNode<T>，特殊处理
+            if (nodeType == typeof(SubGraphNode))
+                return BuildSubGraphNodeInfo(nodeType);
             var dataType = GetGenericParam(nodeType, typeof(TFlowNode<>));
             if (dataType == null)
             {
@@ -192,5 +196,20 @@ namespace Flow.EditorView
         {
             return GetGenericParam(type, genericType) != null;
         }
+
+        private static FlowNodeTypeInfo BuildSubGraphNodeInfo(Type nodeType)
+        {
+            // SubGraphNode: 有Flow输入+输出，数据端口由SubGraph资产动态决定
+            var typeInfo = new FlowNodeTypeInfo();
+            typeInfo.Script = MonoScriptUtil.GetMonoScript(nodeType);
+            typeInfo.NodeType = nodeType;
+            typeInfo.ValueField = null;
+            typeInfo.ShowName = "子图";
+            typeInfo.HasInput = true;
+            typeInfo.OutputType = NodeOutputType.Normal;
+            // 数据端口在SubGraphNodeView中动态创建，此处不填充
+            return typeInfo;
+        }
+
     }
 }

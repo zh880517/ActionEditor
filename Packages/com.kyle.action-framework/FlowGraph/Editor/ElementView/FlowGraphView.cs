@@ -13,7 +13,7 @@ namespace Flow.EditorView
         public FlowGraphEditorData EditorData { get; set; }
         public FlowGraph Graph { get; private set; }
         public Vector2 MouseLocalPosition { get; private set; }
-        private readonly List<FlowNodeView> nodeViews = new List<FlowNodeView>();
+        private readonly List<FlowNodeViewWrapper> nodeViews = new List<FlowNodeViewWrapper>();
         private readonly FlowTypeCreateWindow flowTypeSelect;
         private MiniMap miniMap;
         public FlowGraphView(FlowGraph graph)
@@ -78,8 +78,28 @@ namespace Flow.EditorView
             return
                 ports
                     .ToList()
-                    .Where(endPort => endPort.direction != startPort.direction && endPort.node != startPort.node)
+                    .Where(endPort => endPort.direction != startPort.direction
+                        && endPort.node != startPort.node
+                        && IsPortCompatible(startPort, endPort))
                     .ToList();
+        }
+
+        private static bool IsPortCompatible(Port a, Port b)
+        {
+            // Flow端口只能和Flow端口连接
+            if (a is FlowPort && b is FlowPort)
+                return true;
+            // 数据端口兼容性：typeof(object)视为通配类型
+            if (a is FlowDataPort && b is FlowDataPort)
+            {
+                if (a.portType == typeof(object) || b.portType == typeof(object))
+                    return true;
+                // 常规类型兼容：输入端口类型可赋值自输出端口类型
+                var inputPort = a.direction == Direction.Input ? a : b;
+                var outputPort = a.direction == Direction.Output ? a : b;
+                return inputPort.portType.IsAssignableFrom(outputPort.portType);
+            }
+            return false;
         }
 
         public void ShowNodeCreate(FlowTypeCreateData data)
@@ -99,16 +119,16 @@ namespace Flow.EditorView
             //移除多余的节点
             for (int i = nodeViews.Count - 1; i >= 0; i--)
             {
-                var nodeView = nodeViews[i];
-                if (!Graph.Nodes.Contains(nodeView.Node))
+                var wrapper = nodeViews[i];
+                if (!Graph.Nodes.Contains(wrapper.Node))
                 {
-                    nodeView.DisconnectAll();
+                    wrapper.DisconnectAll();
                     nodeViews.RemoveAt(i);
-                    RemoveElement(nodeView);
+                    RemoveElement(wrapper.View);
                 }
                 else
                 {
-                    nodeView.Refresh();
+                    wrapper.Refresh();
                 }
             }
             //添加新的节点
@@ -116,9 +136,9 @@ namespace Flow.EditorView
             {
                 if (!nodeViews.Any(n => n.Node == node))
                 {
-                    var nodeView = new FlowNodeView(node);
-                    nodeViews.Add(nodeView);
-                    AddElement(nodeView);
+                    var wrapper = CreateNodeViewWrapper(node);
+                    nodeViews.Add(wrapper);
+                    AddElement(wrapper.View);
                 }
             }
             //移除多余的连线
@@ -225,7 +245,7 @@ namespace Flow.EditorView
                     case SelectionType.Node:
                         var nodeView = nodeViews.Find(n => n.Node == item.Node);
                         if (nodeView != null)
-                            AddToSelection(nodeView);
+                            AddToSelection(nodeView.View);
                         break;
                     case SelectionType.Edge:
                         var edgeView = edges.ToList().Find(e =>
@@ -299,10 +319,9 @@ namespace Flow.EditorView
             {
                 changes.elementsToRemove.RemoveAll(it =>
                 {
-                    if (it is FlowNodeView nodeView)
-                    {
-                        return !Graph.CheckDelete(nodeView.Node);
-                    }
+                    var node = GetNodeFromElement(it);
+                    if (node != null)
+                        return !Graph.CheckDelete(node);
                     return false;
                 });
                 if (changes.elementsToRemove.Count > 0)
@@ -326,14 +345,20 @@ namespace Flow.EditorView
                                     FlowPortOperateUtil.DisconnectFlowPort(output.Owner, output.Index);
                                 }
                                 break;
-                            case FlowNodeView nodeView:
-                                OnNodeDelete(nodeView.Node);
-                                nodeView.DisconnectAll();
-                                nodeViews.Remove(nodeView);
-                                FlowPortOperateUtil.OnNodeRemove(nodeView.Node);
-                                FlowDataPortOperateUtil.OnNodeRemove(nodeView.Node);
-                                Graph.Nodes.Remove(nodeView.Node);
-                                Undo.DestroyObjectImmediate(nodeView.Node);
+                            default:
+                                {
+                                    var wrapper = nodeViews.Find(w => w.View == ele);
+                                    if (wrapper != null)
+                                    {
+                                        OnNodeDelete(wrapper.Node);
+                                        wrapper.DisconnectAll();
+                                        nodeViews.Remove(wrapper);
+                                        FlowPortOperateUtil.OnNodeRemove(wrapper.Node);
+                                        FlowDataPortOperateUtil.OnNodeRemove(wrapper.Node);
+                                        Graph.Nodes.Remove(wrapper.Node);
+                                        Undo.DestroyObjectImmediate(wrapper.Node);
+                                    }
+                                }
                                 break;
                         }
                     }
@@ -394,8 +419,10 @@ namespace Flow.EditorView
             {
                 switch (item)
                 {
-                    case FlowNodeView nodeView:
-                        EditorData.Selections.Add(new SelectionData { Type = SelectionType.Node, Node = nodeView.Node });
+                    case Node nodeElement:
+                        var wrapper = nodeViews.Find(w => w.View == nodeElement);
+                        if (wrapper != null)
+                            EditorData.Selections.Add(new SelectionData { Type = SelectionType.Node, Node = wrapper.Node });
                         break;
                     case FlowEdgeView edgeView:
                         if (edgeView.EdgeID != 0)
@@ -443,7 +470,7 @@ namespace Flow.EditorView
                 ClearSelection();
                 foreach (var nodeView in nodeViews)
                 {
-                    AddToSelection(nodeView);
+                    AddToSelection(nodeView.View);
                 }
                 evt.StopPropagation();
             }
@@ -538,17 +565,17 @@ namespace Flow.EditorView
             Dictionary<FlowNode, string> nodeGUIDs = new Dictionary<FlowNode, string>();
             foreach (var e in elements)
             {
-                if (e is FlowNodeView nodeView)
+                var node = GetNodeFromElement(e);
+                if (node != null)
                 {
-                    var node = nodeView.Node;
-                    if (node .IsDefine<IFlowEntry>())
+                    if (node.IsDefine<IFlowEntry>())
                         continue;
                     var nodeData = new FlowNodeCopy
                     {
                         GUID = System.Guid.NewGuid().ToString(),
                         NodeScript = MonoScript.FromScriptableObject(node),
                         Position = node.Position.position - MouseLocalPosition,
-                        JsonData = JsonUtility.ToJson(nodeView.Node)
+                        JsonData = JsonUtility.ToJson(node)
                     };
                     nodeGUIDs[node] = nodeData.GUID;
                     data.Nodes.Add(nodeData);
@@ -600,9 +627,9 @@ namespace Flow.EditorView
                 node.Position.position = position;
                 Undo.RegisterCreatedObjectUndo(node, "paste node");
                 nodeDict[nodeData.GUID] = node;
-                var nodeView = new FlowNodeView(node);
-                nodeViews.Add(nodeView);
-                AddElement(nodeView);
+                var pasteWrapper = CreateNodeViewWrapper(node);
+                nodeViews.Add(pasteWrapper);
+                AddElement(pasteWrapper.View);
             }
             foreach (var edgeData in copyData.Edges)
             {
@@ -628,9 +655,10 @@ namespace Flow.EditorView
         {
             base.BuildContextualMenu(evt);
             evt.menu.AppendAction("Search Select", OnContextMenuNodeSearch, DropdownMenuAction.AlwaysEnabled);
-            if(evt.target is FlowNodeView view)
+            var targetNode = GetNodeFromElement(evt.target as GraphElement);
+            if(targetNode != null)
             {
-                evt.menu.AppendAction("Select Same Type Node", (a)=>OnSelectSameTypeNode(view.Node.GetType()), DropdownMenuAction.AlwaysEnabled);
+                evt.menu.AppendAction("Select Same Type Node", (a)=>OnSelectSameTypeNode(targetNode.GetType()), DropdownMenuAction.AlwaysEnabled);
             }
             evt.menu.AppendSeparator();
             if(miniMap == null || miniMap.style.display == DisplayStyle.None)
@@ -656,6 +684,27 @@ namespace Flow.EditorView
                 }
             }
             RefreshSelection();
+        }
+
+        /// <summary>
+        /// 根据FlowNode类型创建对应的视图包装器
+        /// </summary>
+        protected virtual FlowNodeViewWrapper CreateNodeViewWrapper(FlowNode node)
+        {
+            if (node is SubGraphNode subNode)
+                return new FlowNodeViewWrapper(new SubGraphNodeView(subNode));
+            return new FlowNodeViewWrapper(new FlowNodeView(node));
+        }
+
+        /// <summary>
+        /// 从GraphElement中提取FlowNode（支持所有节点视图类型）
+        /// </summary>
+        protected FlowNode GetNodeFromElement(GraphElement element)
+        {
+            if (element == null)
+                return null;
+            var wrapper = nodeViews.Find(w => w.View == element);
+            return wrapper?.Node;
         }
     }
 }

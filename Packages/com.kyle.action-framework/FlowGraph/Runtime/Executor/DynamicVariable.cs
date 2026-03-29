@@ -6,6 +6,7 @@ namespace Flow
     public class DynamicVariable
     {
         public virtual void Recyle() { }
+        public virtual DynamicVariable Clone() { return this; }
 
         private static readonly List<IList> pools = new List<IList>();
         internal static void OnPoolCreate(IList list)
@@ -30,6 +31,13 @@ namespace Flow
         {
             Value = default;
             pool?.Add(this);
+        }
+
+        public override DynamicVariable Clone()
+        {
+            var clone = Get();
+            clone.Value = Value;
+            return clone;
         }
 
         public static TDynamicVariable<T> Get()

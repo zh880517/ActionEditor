@@ -3,7 +3,7 @@ namespace Flow
 {
     public class FlowGraphRuntimeContext
     {
-        protected readonly Dictionary<ulong, DynamicVariable> variables = new Dictionary<ulong, DynamicVariable>();
+        internal readonly Dictionary<ulong, DynamicVariable> variables = new Dictionary<ulong, DynamicVariable>();
         protected readonly HashSet<int> cachedDataNodeIndexs = new HashSet<int>();
         protected FlowGraphRuntimeData runtimeData;
         protected int currentNodeIndex = -1;
@@ -25,7 +25,7 @@ namespace Flow
             NodeContext = context;
         }
 
-        public bool TryGetInputValue<T>(int nodeID, int paramId, ref T value)
+        public virtual bool TryGetInputValue<T>(int nodeID, int paramId, ref T value)
         {
             ulong key = ((ulong)nodeID << 32) | (uint)paramId;
             if(runtimeData.InputKeyToEdgeID.TryGetValue(key, out ulong edgeID))
@@ -42,7 +42,7 @@ namespace Flow
             return false;
         }
 
-        public void SetOutputValue<T>(OutputData<T> data, T value)
+        public virtual void SetOutputValue<T>(OutputData<T> data, T value)
         {
             // Key为0表示没有使用该输出
             if (data.Key == 0)
