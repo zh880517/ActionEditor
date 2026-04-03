@@ -31,7 +31,7 @@ namespace Flow.EditorView
         {
             Node = node;
             SubGraph = subGraph;
-            title = "输出";
+            title = "输出参数";
             base.SetPosition(node.Position);
 
             // 隐藏默认输出容器

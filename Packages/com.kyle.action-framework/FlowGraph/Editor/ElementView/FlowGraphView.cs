@@ -90,13 +90,19 @@ namespace Flow.EditorView
             if (a is FlowPort && b is FlowPort)
                 return true;
             // 数据端口兼容性：typeof(object)视为通配类型
-            if (a is FlowDataPort && b is FlowDataPort)
+            if (a is FlowDataPort da && b is FlowDataPort db)
             {
-                if (a.portType == typeof(object) || b.portType == typeof(object))
+                // 禁止子图输入节点的端口与子图输出节点的端口直接相连
+                bool aIsIOPort = da.Owner is SubGraphInputNode || da.Owner is SubGraphOutputNode;
+                bool bIsIOPort = db.Owner is SubGraphInputNode || db.Owner is SubGraphOutputNode;
+                if (aIsIOPort && bIsIOPort)
+                    return false;
+
+                if (da.portType == typeof(object) || db.portType == typeof(object))
                     return true;
                 // 常规类型兼容：输入端口类型可赋值自输出端口类型
-                var inputPort = a.direction == Direction.Input ? a : b;
-                var outputPort = a.direction == Direction.Output ? a : b;
+                var inputPort = da.direction == Direction.Input ? da : db;
+                var outputPort = da.direction == Direction.Output ? da : db;
                 return inputPort.portType.IsAssignableFrom(outputPort.portType);
             }
             return false;
@@ -393,6 +399,9 @@ namespace Flow.EditorView
                         flowEdge.EdgeID = id;
                     }
                 }
+                // 清空列表，防止框架在回调返回后再次 AddElement 造成重复边
+                // 边的创建由随后的 Refresh() 统一处理
+                changes.edgesToCreate.Clear();
                 needRefresh = true;
             }
             if (needRefresh)

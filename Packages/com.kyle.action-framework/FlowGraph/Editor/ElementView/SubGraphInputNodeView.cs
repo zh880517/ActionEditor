@@ -31,7 +31,7 @@ namespace Flow.EditorView
         {
             Node = node;
             SubGraph = subGraph;
-            title = "输入";
+            title = "输入参数";
             base.SetPosition(node.Position);
 
             // 隐藏默认输入容器
