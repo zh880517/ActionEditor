@@ -163,6 +163,14 @@ namespace Flow.EditorView
                         i--;
                         continue;
                     }
+                    else if (edge.output?.panel == null || edge.input?.panel == null)
+                    {
+                        // 端口已从视图树中移除（如重建端口后），移除边以便重新创建
+                        RemoveEdge(edge);
+                        edgeList.RemoveAt(i);
+                        i--;
+                        continue;
+                    }
                     else
                     {
                         connectedDataEdges.Add(edge.EdgeID);

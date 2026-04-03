@@ -44,6 +44,53 @@ namespace EasyConfig
             return cachedComponentTypes;
         }
 
+        private static Dictionary<string, List<Type>> CollectGroupedComponentTypes()
+        {
+            var result = new Dictionary<string, List<Type>>();
+
+            foreach (var type in CollectComponentTypes())
+            {
+                var groupAttr = type.GetCustomAttribute<GroupAttribute>();
+                if (groupAttr == null)
+                    continue;
+
+                if (!result.TryGetValue(groupAttr.Name, out var list))
+                {
+                    list = new List<Type>();
+                    result[groupAttr.Name] = list;
+                }
+                list.Add(type);
+            }
+
+            return result;
+        }
+
+        private static HashSet<string> GetAllowedGroups(Type entityConfigType)
+        {
+            var tagAttr = entityConfigType.GetCustomAttribute<EntityTagAttribute>();
+            if (tagAttr == null)
+                return null;
+
+            var allowed = new HashSet<string>();
+            foreach (var groupType in tagAttr.GroupTypes)
+            {
+                var groupAttr = groupType.GetCustomAttribute<GroupAttribute>();
+                if (groupAttr != null)
+                    allowed.Add(groupAttr.Name);
+                else
+                    allowed.Add(DeriveGroupName(groupType));
+            }
+            return allowed;
+        }
+
+        private static string DeriveGroupName(Type groupType)
+        {
+            var name = groupType.Name;
+            if (name.EndsWith("Group", StringComparison.Ordinal))
+                name = name.Substring(0, name.Length - 5);
+            return name;
+        }
+
         public override VisualElement CreateInspectorGUI()
         {
             entityConfig = (EntityConfig)target;
@@ -122,54 +169,158 @@ namespace EasyConfig
         private VisualElement CreateComponentElement(ConfigComponent component, int index)
         {
             var container = new VisualElement();
-            container.style.position = Position.Relative;
             container.style.marginBottom = 2;
 
-            // 使用 Foldout 展示组件
+            var displayName = GetComponentDisplayName(component);
             var foldout = new Foldout();
-            foldout.text = ObjectNames.NicifyVariableName(component.GetType().Name);
+            foldout.text = displayName;
             foldout.value = true;
 
-            // 组件属性编辑器（展开在 Foldout 内，不带自身 Foldout）
+            var enableToggle = new Toggle();
+            enableToggle.value = component.Enable;
+            enableToggle.style.marginRight = 2;
+            enableToggle.RegisterValueChangedCallback(evt =>
+            {
+                component.Enable = evt.newValue;
+                Undo.RegisterCompleteObjectUndo(component, $"Toggle {displayName} {(component.Enable ? "Enable" : "Disable")}");
+                EditorUtility.SetDirty(target);
+            });
+
+            var toggleRow = foldout.Q<Toggle>();
+            toggleRow.style.borderTopWidth = 1;
+            toggleRow.style.borderTopColor = new Color(0.5f, 0.5f, 0.5f, 0.5f);
+            toggleRow.style.paddingTop = 2;
+            toggleRow.style.backgroundColor = new Color(0.5f, 0.5f, 0.5f, 0.2f);
+
+            var menuButton = new Button(() => ShowComponentMenu(component, index));
+            menuButton.text = "";
+            var menuIcon = new Image { image = EditorGUIUtility.IconContent("_Menu").image };
+            menuIcon.style.width = 16;
+            menuIcon.style.height = 16;
+            menuButton.Add(menuIcon);
+            menuButton.style.width = 20;
+            menuButton.style.height = 20;
+            menuButton.style.paddingLeft = 0;
+            menuButton.style.paddingRight = 0;
+            menuButton.style.paddingTop = 0;
+            menuButton.style.paddingBottom = 0;
+            menuButton.style.marginLeft = StyleKeyword.Auto;
+            menuButton.style.backgroundColor = Color.clear;
+            menuButton.style.borderLeftWidth = 0;
+            menuButton.style.borderRightWidth = 0;
+            menuButton.style.borderTopWidth = 0;
+            menuButton.style.borderBottomWidth = 0;
+            // hover/active 时显示边框
+            menuButton.RegisterCallback<MouseEnterEvent>(_ =>
+            {
+                menuButton.style.backgroundColor = new Color(0.5f, 0.5f, 0.5f, 0.2f);
+            });
+            menuButton.RegisterCallback<MouseLeaveEvent>(_ =>
+            {
+                menuButton.style.backgroundColor = Color.clear;
+            });
+
+            // Foldout -> Toggle -> VisualElement(含Label) 结构
+            // 找到 Toggle 下直接包含 Label 的 VisualElement，在其前插入 enableToggle
+            var lable = toggleRow.Q<Label>();
+            lable.style.paddingLeft = 5;
+            lable.parent.Insert(lable.parent.IndexOf(lable), enableToggle);
+            toggleRow.Add(menuButton);
+
             var propertyElement = new StructedPropertyElement(component.GetType(), expandedInParent: true);
             propertyElement.SetValue(component);
             foldout.Add(propertyElement);
 
-            // 移除按钮（绝对定位在右上角）
-            int idx = index;
-            var removeButton = new Button(() => RemoveComponent(idx));
-            removeButton.text = "✕";
-            removeButton.style.position = Position.Absolute;
-            removeButton.style.right = 2;
-            removeButton.style.top = 2;
-            removeButton.style.width = 18;
-            removeButton.style.height = 16;
-            removeButton.style.fontSize = 10;
-            removeButton.style.unityTextAlign = TextAnchor.MiddleCenter;
-            removeButton.style.paddingLeft = 0;
-            removeButton.style.paddingRight = 0;
-            removeButton.style.paddingTop = 0;
-            removeButton.style.paddingBottom = 0;
-
             container.Add(foldout);
-            container.Add(removeButton);
 
             return container;
         }
 
-        private void ShowAddComponentMenu()
+        private static string GetComponentDisplayName(ConfigComponent component)
         {
-            var types = CollectComponentTypes();
-            var menu = new GenericMenu();
+            var type = component.GetType();
+            var aliasAttr = type.GetCustomAttribute<AliasAttribute>();
+            if (aliasAttr != null)
+                return aliasAttr.Name;
+            return ObjectNames.NicifyVariableName(type.Name);
+        }
 
-            foreach (var type in types)
+        private void ShowComponentMenu(ConfigComponent component, int index)
+        {
+            var menu = new GenericMenu();
+            var idx = index;
+
+            menu.AddItem(new GUIContent("Copy"), false, () => CopyComponent(component));
+            menu.AddItem(new GUIContent("Paste"), false, () => { });
+
+            // 收集 ContextMenu 标记的方法
+            var contextMethods = GetContextMenuMethods(component.GetType());
+            if (contextMethods.Count > 0)
             {
-                string displayName = ObjectNames.NicifyVariableName(type.Name);
-                var t = type;
-                menu.AddItem(new GUIContent(displayName), false, () => AddComponent(t));
+                menu.AddSeparator("");
+                foreach (var (label, method) in contextMethods)
+                {
+                    var m = method;
+                    menu.AddItem(new GUIContent(label), false, () => m.Invoke(component, null));
+                }
             }
 
-            if (types.Count == 0)
+            menu.AddSeparator("");
+            menu.AddItem(new GUIContent("Remove"), false, () => RemoveComponent(idx));
+            menu.ShowAsContext();
+        }
+
+        private static List<(string label, MethodInfo method)> GetContextMenuMethods(Type type)
+        {
+            var result = new List<(string, MethodInfo)>();
+            foreach (var method in type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+            {
+                var attr = method.GetCustomAttribute<ContextMenu>();
+                if (attr == null) continue;
+                if (method.GetParameters().Length != 0) continue;
+                result.Add((attr.menuItem, method));
+            }
+            return result;
+        }
+
+        private void CopyComponent(ConfigComponent component)
+        {
+            var json = JsonUtility.ToJson(component);
+            EditorGUIUtility.systemCopyBuffer = json;
+        }
+
+        private void ShowAddComponentMenu()
+        {
+            var groupedTypes = CollectGroupedComponentTypes();
+            var allowedGroups = GetAllowedGroups(entityConfig.GetType());
+            var menu = new GenericMenu();
+
+            if (allowedGroups == null)
+            {
+                menu.AddDisabledItem(new GUIContent("No EntityTagAttribute - cannot add components"));
+            }
+            else
+            {
+                bool hasAny = false;
+                foreach (var kvp in groupedTypes)
+                {
+                    if (!allowedGroups.Contains(kvp.Key))
+                        continue;
+
+                    hasAny = true;
+                    foreach (var type in kvp.Value)
+                    {
+                        string displayName = $"{kvp.Key}/{ObjectNames.NicifyVariableName(type.Name)}";
+                        var t = type;
+                        menu.AddItem(new GUIContent(displayName), false, () => AddComponent(t));
+                    }
+                }
+
+                if (!hasAny)
+                    menu.AddDisabledItem(new GUIContent("No allowed components"));
+            }
+
+            if (groupedTypes.Count == 0)
                 menu.AddDisabledItem(new GUIContent("No ConfigComponent types found"));
 
             menu.ShowAsContext();

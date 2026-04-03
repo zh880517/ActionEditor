@@ -3,13 +3,16 @@ namespace EasyConfig
 {
     public abstract class ConfigComponent : ScriptableObject
     {
+        [HiddenInPropertyEditor]
+        public bool Enable;
         public abstract IConfigComponent Export();
 
     }
 
-    public class TConfigComponent<T> : ConfigComponent where T : IConfigComponent
+    public class TConfigComponent<T> : ConfigComponent where T : IConfigComponent, new ()
     {
-        public T config;
+        [ExpandedInParent]
+        public T config = new T();
 
         public override IConfigComponent Export()
         {

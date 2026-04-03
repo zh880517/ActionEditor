@@ -5,7 +5,6 @@ namespace EasyConfig
 {
     public class EntityConfig : CollectableScriptableObject
     {
-        public bool Enable;
         [SerializeField]
         private List<ConfigComponent> components = new List<ConfigComponent>();
         public IReadOnlyList<ConfigComponent> Components => components;

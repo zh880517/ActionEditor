@@ -134,6 +134,11 @@ namespace Flow.EditorView
             // SubGraphNode不继承TFlowNode<T>，特殊处理
             if (nodeType == typeof(SubGraphNode))
                 return BuildSubGraphNodeInfo(nodeType);
+            // SubGraphInputNode/SubGraphOutputNode也特殊处理
+            if (nodeType == typeof(SubGraphInputNode))
+                return BuildSubGraphIONodeInfo(nodeType, "输入", false);
+            if (nodeType == typeof(SubGraphOutputNode))
+                return BuildSubGraphIONodeInfo(nodeType, "输出", false);
             var dataType = GetGenericParam(nodeType, typeof(TFlowNode<>));
             if (dataType == null)
             {
@@ -208,6 +213,19 @@ namespace Flow.EditorView
             typeInfo.HasInput = true;
             typeInfo.OutputType = NodeOutputType.Normal;
             // 数据端口在SubGraphNodeView中动态创建，此处不填充
+            return typeInfo;
+        }
+
+        private static FlowNodeTypeInfo BuildSubGraphIONodeInfo(Type nodeType, string showName, bool hasInput)
+        {
+            var typeInfo = new FlowNodeTypeInfo();
+            typeInfo.Script = MonoScriptUtil.GetMonoScript(nodeType);
+            typeInfo.NodeType = nodeType;
+            typeInfo.ValueField = null;
+            typeInfo.ShowName = showName;
+            typeInfo.HasInput = hasInput;
+            typeInfo.OutputType = NodeOutputType.None;
+            // 数据端口在对应的NodeView中动态创建
             return typeInfo;
         }
 

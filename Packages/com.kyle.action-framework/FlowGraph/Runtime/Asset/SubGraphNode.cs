@@ -42,16 +42,22 @@ namespace Flow
                     if (edge.EdgeID != 0)
                         data.OutputPortEdgeIDs[edge.PortGUID] = edge.EdgeID;
                 }
-                // 收集子图内部端口连线的EdgeID（端口贴边连线存储在FlowSubGraph上）
-                foreach (var pe in SubGraph.InputPortEdges)
+                // 收集子图内部端口连线的EdgeID（从InputNode/OutputNode读取）
+                if (SubGraph.InputNode != null)
                 {
-                    if (pe.EdgeID != 0)
-                        data.InputPortSubEdgeIDs[pe.PortGUID] = pe.EdgeID;
+                    foreach (var pe in SubGraph.InputNode.PortEdges)
+                    {
+                        if (pe.EdgeID != 0)
+                            data.InputPortSubEdgeIDs[pe.PortGUID] = pe.EdgeID;
+                    }
                 }
-                foreach (var pe in SubGraph.OutputPortEdges)
+                if (SubGraph.OutputNode != null)
                 {
-                    if (pe.EdgeID != 0)
-                        data.OutputPortSubEdgeIDs[pe.PortGUID] = pe.EdgeID;
+                    foreach (var pe in SubGraph.OutputNode.PortEdges)
+                    {
+                        if (pe.EdgeID != 0)
+                            data.OutputPortSubEdgeIDs[pe.PortGUID] = pe.EdgeID;
+                    }
                 }
             }
             return data;

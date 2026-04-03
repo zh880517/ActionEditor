@@ -67,13 +67,17 @@ namespace Flow.EditorView
         }
 
         /// <summary>
-        /// 设置输入侧节点的EdgeID（仅对SubGraphNode生效）
+        /// 设置输入侧节点的EdgeID（对SubGraphNode和SubGraphOutputNode生效）
         /// </summary>
         private static void SetInputNodeSlotID(FlowNode input, string fieldName, ulong id)
         {
             if (input is SubGraphNode subNode)
             {
                 subNode.SetInputEdgeID(fieldName, id);
+            }
+            else if (input is SubGraphOutputNode outputNode)
+            {
+                outputNode.SetPortEdgeID(fieldName, id);
             }
         }
 
@@ -83,6 +87,12 @@ namespace Flow.EditorView
             if (output is SubGraphNode subNode)
             {
                 subNode.SetOutputEdgeID(name, id);
+                return;
+            }
+            // SubGraphInputNode的端口使用GUID作为name
+            if (output is SubGraphInputNode inputNode)
+            {
+                inputNode.SetPortEdgeID(name, id);
                 return;
             }
             var typeInfo = FlowNodeTypeUtil.GetNodeTypeInfo(output.GetType());
@@ -123,12 +133,6 @@ namespace Flow.EditorView
             for (int i = edges.Count - 1; i >= 0; i--)
             {
                 var e = edges[i];
-                // FlowSubGraph中端口贴边连线的DataEdge有一端为null，跳过这些
-                bool isSubGraphPortEdge = (e.Output == null && !string.IsNullOrEmpty(e.OutputSlot))
-                    || (e.Input == null && !string.IsNullOrEmpty(e.InputSlot));
-                if (isSubGraphPortEdge)
-                    continue;
-
                 if (e.Input == null || e.Output == null
                     || !nodes.Contains(e.Input) || !nodes.Contains(e.Output))
                 {
@@ -140,9 +144,9 @@ namespace Flow.EditorView
                     continue;
                 }
 
-                // SubGraphNode的端口是动态的，跳过常规验证
-                bool isSpecialInput = e.Input is SubGraphNode;
-                bool isSpecialOutput = e.Output is SubGraphNode;
+                // 动态端口节点跳过常规验证
+                bool isSpecialInput = e.Input is SubGraphNode || e.Input is SubGraphOutputNode;
+                bool isSpecialOutput = e.Output is SubGraphNode || e.Output is SubGraphInputNode;
                 if (isSpecialInput || isSpecialOutput)
                     continue;
 
