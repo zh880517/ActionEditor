@@ -17,22 +17,39 @@ namespace Flow.EditorView
                 nodeTypes = new Dictionary<string, List<Type>>();
                 foreach (var type in TypeCollector<FlowNode>.Types)
                 {
-                    var dataType = type.GetGenericParam(typeof(TFlowNode<>));
-                    if (dataType == null)
-                        continue;
-                    string dataTypeTag = GetTypeTag(dataType);
-                    if (dataTypeTag != null)
-                    {
+                    if (type.IsAbstract) continue;
 
-                        if (!nodeTypes.TryGetValue(dataTypeTag, out var list))
-                        {
-                            list = new List<Type>();
-                            nodeTypes.Add(dataTypeTag, list);
-                        }
-                        list.Add(type);
+                    // 原有路径：TFlowNode<T> 派生类，Tag 来自 T 实现的接口上的 [FlowTagAttribute]
+                    var dataType = type.GetGenericParam(typeof(TFlowNode<>));
+                    if (dataType != null)
+                    {
+                        string dataTypeTag = GetTypeTag(dataType);
+                        if (dataTypeTag != null)
+                            AddToNodeTypes(nodeTypes, dataTypeTag, type);
+                        continue;
+                    }
+
+                    // 新增路径：TSubGraphNode<TData, TGraph> 派生类，Tag 来自 TData 实现的接口上的 [FlowTagAttribute]
+                    var tSubDataType = type.GetGenericParam(typeof(TSubGraphNode<,>), 0);
+                    if (tSubDataType != null)
+                    {
+                        string tag = GetTypeTag(tSubDataType);
+                        if (tag != null)
+                            AddToNodeTypes(nodeTypes, tag, type);
                     }
                 }
             }
+        }
+
+        private static void AddToNodeTypes(Dictionary<string, List<Type>> dict, string tag, Type type)
+        {
+            if (!dict.TryGetValue(tag, out var list))
+            {
+                list = new List<Type>();
+                dict.Add(tag, list);
+            }
+            if (!list.Contains(type))
+                list.Add(type);
         }
 
         private static void InitDataTypes()

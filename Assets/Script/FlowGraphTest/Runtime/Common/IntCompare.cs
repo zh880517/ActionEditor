@@ -1,4 +1,4 @@
-﻿using Flow;
+using Flow;
 using UnityEngine;
 
 public enum CompareType
@@ -26,4 +26,6 @@ public struct IntCompare : ICommonConditionable
     public CompareType Compare;
     [Inputable]
     public int B;
+    [Inputable]
+    public float Test;
 }

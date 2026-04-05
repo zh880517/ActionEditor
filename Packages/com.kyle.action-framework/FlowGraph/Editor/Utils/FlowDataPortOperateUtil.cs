@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 
 namespace Flow.EditorView
 {
@@ -144,44 +145,99 @@ namespace Flow.EditorView
                     continue;
                 }
 
-                // 动态端口节点跳过常规验证
-                bool isSpecialInput = e.Input is SubGraphNode || e.Input is SubGraphOutputNode;
-                bool isSpecialOutput = e.Output is SubGraphNode || e.Output is SubGraphInputNode;
-                if (isSpecialInput || isSpecialOutput)
+                // 验证端口 slot 有效性并获取类型
+                var outputType = ResolveOutputSlotType(e.Output, e.OutputSlot);
+                if (outputType == null)
+                {
+                    if (e.Output)
+                        SetNodeSlotID(e.Output, e.OutputSlot, 0);
+                    edges.RemoveAt(i);
                     continue;
+                }
 
-                var inputTypeInfo = FlowNodeTypeUtil.GetNodeTypeInfo(e.Input.GetType());
-                var inputField = inputTypeInfo.InputFields.FirstOrDefault(f => f.Name == e.InputSlot || f.OldName == e.InputSlot);
-                if (inputField == null)
+                var inputType = ResolveInputSlotType(e.Input, e.InputSlot);
+                if (inputType == null)
                 {
                     if (e.Output)
-                    {
                         SetNodeSlotID(e.Output, e.OutputSlot, 0);
-                    }
                     edges.RemoveAt(i);
                     continue;
                 }
-                var outputTypeInfo = FlowNodeTypeUtil.GetNodeTypeInfo(e.Output.GetType());
-                var outField = outputTypeInfo.OutputFields.FirstOrDefault(f => f.Name == e.OutputSlot || f.OldName == e.OutputSlot);
-                if (outField == null || !inputField.FieldType.IsAssignableFrom(outField.DataType))
+
+                // 类型匹配检查（两端均为具体类型时才检查）
+                if (outputType != typeof(object) && inputType != typeof(object))
                 {
-                    if (e.Output)
+                    if (!inputType.IsAssignableFrom(outputType))
                     {
-                        SetNodeSlotID(e.Output, e.OutputSlot, 0);
+                        if (e.Output)
+                            SetNodeSlotID(e.Output, e.OutputSlot, 0);
+                        edges.RemoveAt(i);
+                        continue;
                     }
-                    edges.RemoveAt(i);
-                    continue;
                 }
-                if (inputField.OldName == e.InputSlot)
+
+                // 非 SubGraph 节点：处理字段重命名修复
+                if (!(e.Output is SubGraphNode || e.Output is SubGraphInputNode)
+                    && !(e.Input is SubGraphNode || e.Input is SubGraphOutputNode))
                 {
-                    e.InputSlot = inputField.Name;
-                }
-                if (outField.OldName == e.OutputSlot)
-                {
-                    e.OutputSlot = outField.Name;
+                    var inputTypeInfo = FlowNodeTypeUtil.GetNodeTypeInfo(e.Input.GetType());
+                    var inputField = inputTypeInfo.InputFields.FirstOrDefault(f => f.Name == e.InputSlot || f.OldName == e.InputSlot);
+                    var outputTypeInfo = FlowNodeTypeUtil.GetNodeTypeInfo(e.Output.GetType());
+                    var outField = outputTypeInfo.OutputFields.FirstOrDefault(f => f.Name == e.OutputSlot || f.OldName == e.OutputSlot);
+                    if (inputField != null && inputField.OldName == e.InputSlot)
+                        e.InputSlot = inputField.Name;
+                    if (outField != null && outField.OldName == e.OutputSlot)
+                        e.OutputSlot = outField.Name;
                 }
             }
         }
 
+        /// <summary>
+        /// 验证 OutputSlot 是否有效，返回对应数据类型；无效返回 null，SubGraph 动态端口返回 typeof(object)
+        /// </summary>
+        private static Type ResolveOutputSlotType(FlowNode output, string slot)
+        {
+            // SubGraphNode：输出端口 GUID 来自其引用的 SubGraph.OutputPorts
+            if (output is SubGraphNode subOut)
+            {
+                if (subOut.SubGraph == null) return null;
+                return subOut.SubGraph.OutputPorts.Exists(p => p.GUID == slot) ? typeof(object) : null;
+            }
+            // SubGraphInputNode：输出端口 GUID 来自所在子图的 InputPorts（数据从此流出到子图内部）
+            if (output is SubGraphInputNode)
+            {
+                var subGraph = output.Graph as FlowSubGraph;
+                if (subGraph == null) return null;
+                return subGraph.InputPorts.Exists(p => p.GUID == slot) ? typeof(object) : null;
+            }
+            var typeInfo = FlowNodeTypeUtil.GetNodeTypeInfo(output.GetType());
+            if (typeInfo == null) return null;
+            var field = typeInfo.OutputFields.FirstOrDefault(f => f.Name == slot || f.OldName == slot);
+            return field?.DataType;
+        }
+
+        /// <summary>
+        /// 验证 InputSlot 是否有效，返回对应数据类型；无效返回 null，SubGraph 动态端口返回 typeof(object)
+        /// </summary>
+        private static Type ResolveInputSlotType(FlowNode input, string slot)
+        {
+            // SubGraphNode：输入端口 GUID 来自其引用的 SubGraph.InputPorts
+            if (input is SubGraphNode subIn)
+            {
+                if (subIn.SubGraph == null) return null;
+                return subIn.SubGraph.InputPorts.Exists(p => p.GUID == slot) ? typeof(object) : null;
+            }
+            // SubGraphOutputNode：输入端口 GUID 来自所在子图的 OutputPorts（数据从子图内部流入此节点）
+            if (input is SubGraphOutputNode)
+            {
+                var subGraph = input.Graph as FlowSubGraph;
+                if (subGraph == null) return null;
+                return subGraph.OutputPorts.Exists(p => p.GUID == slot) ? typeof(object) : null;
+            }
+            var typeInfo = FlowNodeTypeUtil.GetNodeTypeInfo(input.GetType());
+            if (typeInfo == null) return null;
+            var field = typeInfo.InputFields.FirstOrDefault(f => f.Name == slot || f.OldName == slot);
+            return field?.FieldType;
+        }
     }
 }

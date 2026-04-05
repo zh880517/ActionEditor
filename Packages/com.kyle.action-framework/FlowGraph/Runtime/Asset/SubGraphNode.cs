@@ -12,6 +12,7 @@ namespace Flow
 
     public class SubGraphNode : FlowNode
     {
+        [HideInInspector]
         public FlowSubGraph SubGraph;
 
         [HideInInspector]

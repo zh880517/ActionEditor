@@ -99,23 +99,25 @@ namespace Flow.EditorView
             // 更新标题
             title = string.IsNullOrEmpty(Node.SubGraph.name) ? "子图" : Node.SubGraph.name;
 
-            // 创建输入数据端口（对应SubGraph的InputPorts）
+            // 创建输入数据端口（对应SubGraph的InputPorts），类型为object时跳过
             foreach (var port in Node.SubGraph.InputPorts)
             {
                 var resolvedType = ResolveInputPortType(port.GUID);
+                if (resolvedType == typeof(object)) continue;
                 var dataPort = new FlowDataPort(true, resolvedType);
                 dataPort.portName = port.Name;
                 dataPort.Owner = Node;
-                dataPort.FieldName = port.GUID; // 使用GUID作为FieldName
+                dataPort.FieldName = port.GUID;
                 inputContainer.Add(dataPort);
                 inputDataPorts[port.GUID] = dataPort;
                 ports.Add(new PortUnit { GUID = port.GUID, IsInput = true, IsFlowPort = false, Port = dataPort });
             }
 
-            // 创建输出数据端口（对应SubGraph的OutputPorts）
+            // 创建输出数据端口（对应SubGraph的OutputPorts），类型为object时跳过
             foreach (var port in Node.SubGraph.OutputPorts)
             {
                 var resolvedType = ResolveOutputPortType(port.GUID);
+                if (resolvedType == typeof(object)) continue;
                 var dataPort = new FlowDataPort(false, resolvedType);
                 dataPort.portName = port.Name;
                 dataPort.Owner = Node;
@@ -129,41 +131,16 @@ namespace Flow.EditorView
         }
 
         /// <summary>
-        /// 根据已有连接推断输入端口类型，未连接时返回typeof(object)
+        /// 通过子图内部连接推断输入端口的实际类型。
+        /// InputPorts 对应 SubGraphInputNode 的输出端口，类型由其下游连接推断。
         /// </summary>
         private Type ResolveInputPortType(string portGUID)
         {
-            if (Node.Graph == null) return typeof(object);
-            foreach (var edge in Node.Graph.DataEdges)
+            var subGraph = Node.SubGraph;
+            if (subGraph?.InputNode == null) return typeof(object);
+            foreach (var edge in subGraph.DataEdges)
             {
-                if (edge.Input == Node && edge.InputSlot == portGUID)
-                {
-                    // 找到连接的输出端口，获取其类型
-                    var outputTypeInfo = FlowNodeTypeUtil.GetNodeTypeInfo(edge.Output.GetType());
-                    if (outputTypeInfo != null)
-                    {
-                        foreach (var field in outputTypeInfo.OutputFields)
-                        {
-                            if (field.Name == edge.OutputSlot)
-                                return field.DataType;
-                        }
-                    }
-                    // 如果对端也是SubGraphNode，检查其端口类型
-                    if (edge.Output is SubGraphNode otherSub && otherSub.SubGraph != null)
-                    {
-                        return typeof(object); // 递归情况暂不处理
-                    }
-                }
-            }
-            return typeof(object);
-        }
-
-        private Type ResolveOutputPortType(string portGUID)
-        {
-            if (Node.Graph == null) return typeof(object);
-            foreach (var edge in Node.Graph.DataEdges)
-            {
-                if (edge.Output == Node && edge.OutputSlot == portGUID)
+                if (edge.Output == subGraph.InputNode && edge.OutputSlot == portGUID)
                 {
                     var inputTypeInfo = FlowNodeTypeUtil.GetNodeTypeInfo(edge.Input.GetType());
                     if (inputTypeInfo != null)
@@ -174,23 +151,45 @@ namespace Flow.EditorView
                                 return field.FieldType;
                         }
                     }
-                    if (edge.Input is SubGraphNode)
+                }
+            }
+            return typeof(object);
+        }
+
+        /// <summary>
+        /// 通过子图内部连接推断输出端口的实际类型。
+        /// OutputPorts 对应 SubGraphOutputNode 的输入端口，类型由其上游连接推断。
+        /// </summary>
+        private Type ResolveOutputPortType(string portGUID)
+        {
+            var subGraph = Node.SubGraph;
+            if (subGraph?.OutputNode == null) return typeof(object);
+            foreach (var edge in subGraph.DataEdges)
+            {
+                if (edge.Input == subGraph.OutputNode && edge.InputSlot == portGUID)
+                {
+                    var outputTypeInfo = FlowNodeTypeUtil.GetNodeTypeInfo(edge.Output.GetType());
+                    if (outputTypeInfo != null)
                     {
-                        return typeof(object);
+                        foreach (var field in outputTypeInfo.OutputFields)
+                        {
+                            if (field.Name == edge.OutputSlot)
+                                return field.DataType;
+                        }
                     }
                 }
             }
             return typeof(object);
         }
 
-        public void Refresh()
+        public virtual void Refresh()
         {
             SetPosition(Node.Position);
             subGraphField.SetValueWithoutNotify(Node.SubGraph);
             RebuildDataPorts();
         }
 
-        public void DisconnectAll()
+        public virtual void DisconnectAll()
         {
             foreach (var unit in ports)
             {
@@ -208,7 +207,7 @@ namespace Flow.EditorView
             return null;
         }
 
-        public FlowNodePort GetDataPort(bool isInput, string fieldName)
+        public virtual FlowNodePort GetDataPort(bool isInput, string fieldName)
         {
             if (isInput)
             {

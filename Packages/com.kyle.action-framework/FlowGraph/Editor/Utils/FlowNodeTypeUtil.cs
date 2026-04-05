@@ -131,14 +131,18 @@ namespace Flow.EditorView
             if (!nodeType.IsSubclassOf(typeof(FlowNode)))
                 return null;
 
-            // SubGraphNode不继承TFlowNode<T>，特殊处理
-            if (nodeType == typeof(SubGraphNode))
-                return BuildSubGraphNodeInfo(nodeType);
             // SubGraphInputNode/SubGraphOutputNode也特殊处理
             if (nodeType == typeof(SubGraphInputNode))
                 return BuildSubGraphIONodeInfo(nodeType, "输入", false);
             if (nodeType == typeof(SubGraphOutputNode))
                 return BuildSubGraphIONodeInfo(nodeType, "输出", false);
+            // TSubGraphNode<TData, TGraph>：继承自 SubGraphNode，有 TData 泛型参数，含静态端口
+            var tDataType = nodeType.GetGenericParam(typeof(TSubGraphNode<,>), 0);
+            if (tDataType != null)
+                return BuildTSubGraphNodeInfo(nodeType, tDataType);
+            // SubGraphNode 本身（无泛型参数）
+            if (typeof(SubGraphNode).IsAssignableFrom(nodeType))
+                return BuildSubGraphNodeInfo(nodeType);
             var dataType = GetGenericParam(nodeType, typeof(TFlowNode<>));
             if (dataType == null)
             {
@@ -197,6 +201,17 @@ namespace Flow.EditorView
             return null;
         }
 
+        public static Type GetGenericParam(this Type type, Type genericType, int paramIndex)
+        {
+            while (type != null && type != typeof(object))
+            {
+                if (type.IsGenericType && type.GetGenericTypeDefinition() == genericType)
+                    return type.GetGenericArguments()[paramIndex];
+                type = type.BaseType;
+            }
+            return null;
+        }
+
         public static bool IsGenericTypeOf(this Type type, Type genericType)
         {
             return GetGenericParam(type, genericType) != null;
@@ -213,6 +228,21 @@ namespace Flow.EditorView
             typeInfo.HasInput = true;
             typeInfo.OutputType = NodeOutputType.Normal;
             // 数据端口在SubGraphNodeView中动态创建，此处不填充
+            return typeInfo;
+        }
+
+        private static FlowNodeTypeInfo BuildTSubGraphNodeInfo(Type nodeType, Type dataType)
+        {
+            var typeInfo = new FlowNodeTypeInfo();
+            typeInfo.Script = MonoScriptUtil.GetMonoScript(nodeType);
+            typeInfo.NodeType = nodeType;
+            typeInfo.ValueField = nodeType.GetField("Value");
+            var alias = dataType.GetCustomAttribute<AliasAttribute>();
+            typeInfo.ShowName = alias != null ? alias.Name : ObjectNames.NicifyVariableName(nodeType.Name);
+            typeInfo.HasInput = true;
+            typeInfo.OutputType = NodeOutputType.Normal;
+            if (typeInfo.ValueField != null)
+                CollectDataPortFields(typeInfo.ValueField, typeInfo);
             return typeInfo;
         }
 

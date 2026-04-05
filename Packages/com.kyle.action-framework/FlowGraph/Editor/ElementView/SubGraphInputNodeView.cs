@@ -109,6 +109,30 @@ namespace Flow.EditorView
             }
         }
 
+        /// <summary>
+        /// 根据子图内部已有连接推断输入参数端口类型。
+        /// 若此端口的输出边连接到了子图内某节点的静态输入字段，则返回该字段的类型；否则返回 typeof(object)。
+        /// </summary>
+        private Type ResolvePortType(string portGUID)
+        {
+            foreach (var edge in SubGraph.DataEdges)
+            {
+                if (edge.Output == Node && edge.OutputSlot == portGUID)
+                {
+                    var inputTypeInfo = FlowNodeTypeUtil.GetNodeTypeInfo(edge.Input.GetType());
+                    if (inputTypeInfo != null)
+                    {
+                        foreach (var field in inputTypeInfo.InputFields)
+                        {
+                            if (field.Name == edge.InputSlot)
+                                return field.FieldType;
+                        }
+                    }
+                }
+            }
+            return typeof(object);
+        }
+
         public void RebuildPorts()
         {
             // 清除旧端口
@@ -122,8 +146,9 @@ namespace Flow.EditorView
             // 创建端口
             foreach (var port in SubGraph.InputPorts)
             {
-                // 输出数据端口（数据从输入节点流出）
-                var dataPort = new FlowDataPort(false, typeof(object));
+                // 输出数据端口（数据从输入节点流出），类型从已有连接推断
+                var resolvedType = ResolvePortType(port.GUID);
+                var dataPort = new FlowDataPort(false, resolvedType);
                 dataPort.portName = "";
                 dataPort.Owner = Node;
                 dataPort.FieldName = port.GUID;
