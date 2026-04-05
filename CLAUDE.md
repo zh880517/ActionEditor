@@ -53,3 +53,4 @@ Used by all other subsystems:
 - **Assembly Definition files** (`.asmdef`): 7 assemblies enforce module boundaries. Editor assemblies only compile in Unity Editor; Runtime assemblies compile for all platforms.
 - **Type discovery**: `TypeCollection` uses reflection at startup to find all types decorated with framework attributes.
 - **Object pooling**: `Recycle/` namespace provides pooling utilities used throughout runtime code.
+- **UIToolkit event propagation**: In UIToolkit-based editors, use custom `EventBase<T>` events (sent via `SendEvent`) to communicate from child `VisualElement` to parent. Do **not** use C# `Action` callbacks or `delegate` fields passed through constructors for this purpose, unless there is a specific reason (e.g. the receiver is not in the visual tree). Define a dedicated event class per interaction (e.g. `DataChangedEvent`, `DeleteRequestEvent`).
