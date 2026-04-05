@@ -709,12 +709,7 @@ namespace Flow.EditorView
         protected virtual FlowNodeViewWrapper CreateNodeViewWrapper(FlowNode node)
         {
             if (node is SubGraphNode subNode)
-            {
-                var tDataType = node.GetType().GetGenericParam(typeof(TSubGraphNode<,>), 0);
-                if (tDataType != null)
-                    return new FlowNodeViewWrapper(new TSubGraphNodeView(subNode));
                 return new FlowNodeViewWrapper(new SubGraphNodeView(subNode));
-            }
             return new FlowNodeViewWrapper(new FlowNodeView(node));
         }
 

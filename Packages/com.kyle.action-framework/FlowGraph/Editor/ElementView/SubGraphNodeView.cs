@@ -1,3 +1,4 @@
+using PropertyEditor;
 using System;
 using System.Collections.Generic;
 using UnityEditor;
@@ -11,7 +12,7 @@ namespace Flow.EditorView
     /// <summary>
     /// SubGraphNode在父图编辑器中的视图。
     /// 动态根据SubGraph的InputPorts/OutputPorts生成数据端口。
-    /// 端口类型未连接时为typeof(object)，连接后从对端推断。
+    /// 若节点为 TSubGraphNode&lt;TData, TGraph&gt;，额外渲染 TData 的静态数据端口和属性编辑字段。
     /// </summary>
     public class SubGraphNodeView : Node
     {
@@ -19,7 +20,7 @@ namespace Flow.EditorView
 
         private readonly List<PortUnit> ports = new List<PortUnit>();
 
-        // portGUID -> FlowDataPort
+        // portGUID -> FlowDataPort（动态端口）
         private readonly Dictionary<string, FlowDataPort> inputDataPorts = new Dictionary<string, FlowDataPort>();
         private readonly Dictionary<string, FlowDataPort> outputDataPorts = new Dictionary<string, FlowDataPort>();
 
@@ -28,6 +29,12 @@ namespace Flow.EditorView
         private VisualElement dynamicPortsRow;
         private VisualElement dynamicInputContainer;
         private VisualElement dynamicOutputContainer;
+
+        // 静态端口（TData 定义，仅 TSubGraphNode<TData,TGraph> 时有效）
+        private FlowNodeTypeInfo staticTypeInfo;
+        private StructedPropertyElement propertyEditor;
+        private readonly List<StrctedFieldElement> staticInputFields = new List<StrctedFieldElement>();
+        private readonly List<FlowNodePort> staticPorts = new List<FlowNodePort>();
 
         struct PortUnit
         {
@@ -65,6 +72,15 @@ namespace Flow.EditorView
             subGraphField.RegisterValueChangedCallback(OnSubGraphChanged);
             extensionContainer.Add(subGraphField);
 
+            // TSubGraphNode<TData,TGraph>：构建静态端口和属性编辑器
+            staticTypeInfo = FlowNodeTypeUtil.GetNodeTypeInfo(node.GetType());
+            if (staticTypeInfo?.ValueField != null)
+            {
+                title = staticTypeInfo.ShowName;
+                BuildStaticOutputPorts();
+                BuildPropertyEditor();
+            }
+
             // 动态数据端口区域：行容器（左侧输入列 + 右侧输出列），位于 subGraphField 下方
             dynamicPortsRow = new VisualElement();
             dynamicPortsRow.style.flexDirection = FlexDirection.Row;
@@ -89,6 +105,56 @@ namespace Flow.EditorView
             RebuildDataPorts();
 
             RefreshExpandedState();
+        }
+
+        private void BuildStaticOutputPorts()
+        {
+            foreach (var field in staticTypeInfo.OutputFields)
+            {
+                var port = new FlowDataPort(false, field.DataType);
+                port.portName = field.ShowName;
+                port.Owner = Node;
+                port.FieldName = field.Name;
+                outputContainer.Insert(1, port);
+                staticPorts.Add(port);
+            }
+        }
+
+        private void BuildPropertyEditor()
+        {
+            propertyEditor = PropertyElementFactory.CreateByType(Node.GetType(), true) as StructedPropertyElement;
+            propertyEditor.SetValue(Node);
+            propertyEditor.SetLableWidth(50);
+            propertyEditor.style.minWidth = 120;
+            extensionContainer.Insert(0, propertyEditor);
+
+            foreach (var field in staticTypeInfo.InputFields)
+            {
+                var element = propertyEditor.FindByPath(field.Path);
+                if (element != null)
+                {
+                    staticInputFields.Add(element);
+                    var port = new FlowDataPort(true, field.FieldType);
+                    port.portName = element.DisplayName;
+                    port.Owner = Node;
+                    port.FieldName = field.Name;
+                    element.Element.SetLable(null, null);
+                    element.Insert(0, port);
+                    staticPorts.Add(port);
+                }
+            }
+
+            RefreshStaticDataPorts();
+        }
+
+        private void RefreshStaticDataPorts()
+        {
+            if (Node.Graph == null) return;
+            foreach (var item in staticInputFields)
+            {
+                bool hasConnection = Node.Graph.DataEdges.Exists(e => e.Input == Node && e.InputSlot == item.FieldName);
+                item.Element.style.display = hasConnection ? DisplayStyle.None : DisplayStyle.Flex;
+            }
         }
 
         private void OnSubGraphChanged(ChangeEvent<UnityEngine.Object> evt)
@@ -122,8 +188,9 @@ namespace Flow.EditorView
                 return;
             }
 
-            // 更新标题
-            title = string.IsNullOrEmpty(Node.SubGraph.name) ? "子图" : Node.SubGraph.name;
+            // 更新标题（普通 SubGraphNode 用资产名；TSubGraphNode 已在构造时设置 staticTypeInfo.ShowName）
+            if (staticTypeInfo?.ValueField == null)
+                title = string.IsNullOrEmpty(Node.SubGraph.name) ? "子图" : Node.SubGraph.name;
 
             bool hasDynamicPorts = false;
 
@@ -218,15 +285,17 @@ namespace Flow.EditorView
         {
             SetPosition(Node.Position);
             subGraphField.SetValueWithoutNotify(Node.SubGraph);
+            propertyEditor?.SetValue(Node);
+            RefreshStaticDataPorts();
             RebuildDataPorts();
         }
 
         public virtual void DisconnectAll()
         {
             foreach (var unit in ports)
-            {
                 unit.Port.DisconnectAll();
-            }
+            foreach (var port in staticPorts)
+                port.DisconnectAll();
         }
 
         public FlowNodePort GetFlowPort(bool isInput, int index)
@@ -241,6 +310,15 @@ namespace Flow.EditorView
 
         public virtual FlowNodePort GetDataPort(bool isInput, string fieldName)
         {
+            // 先查静态端口
+            foreach (var port in staticPorts)
+            {
+                if (port is FlowDataPort dp
+                    && dp.direction == (isInput ? Direction.Input : Direction.Output)
+                    && dp.FieldName == fieldName)
+                    return dp;
+            }
+            // 再查动态端口
             if (isInput)
             {
                 inputDataPorts.TryGetValue(fieldName, out var port);
