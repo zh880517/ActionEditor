@@ -24,6 +24,10 @@ namespace Flow.EditorView
         private readonly Dictionary<string, FlowDataPort> outputDataPorts = new Dictionary<string, FlowDataPort>();
 
         private ObjectField subGraphField;
+        // 动态数据端口区域容器（放在 extensionContainer 中 subGraphField 的下方）
+        private VisualElement dynamicPortsRow;
+        private VisualElement dynamicInputContainer;
+        private VisualElement dynamicOutputContainer;
 
         struct PortUnit
         {
@@ -53,12 +57,33 @@ namespace Flow.EditorView
             outputContainer.Add(outputPort);
             ports.Add(new PortUnit { IsInput = false, IsFlowPort = true, Port = outputPort });
 
-            // SubGraph引用字段
+            // SubGraph引用字段 - objectType 使用 TGraph（若为 TSubGraphNode<TData, TGraph> 子类）
             subGraphField = new ObjectField("子图资产");
-            subGraphField.objectType = typeof(FlowSubGraph);
+            var tGraphType = node.GetType().GetGenericParam(typeof(TSubGraphNode<,>), 1);
+            subGraphField.objectType = tGraphType ?? typeof(FlowSubGraph);
             subGraphField.value = node.SubGraph;
             subGraphField.RegisterValueChangedCallback(OnSubGraphChanged);
             extensionContainer.Add(subGraphField);
+
+            // 动态数据端口区域：行容器（左侧输入列 + 右侧输出列），位于 subGraphField 下方
+            dynamicPortsRow = new VisualElement();
+            dynamicPortsRow.style.flexDirection = FlexDirection.Row;
+            dynamicPortsRow.style.justifyContent = Justify.SpaceBetween;
+
+            dynamicInputContainer = new VisualElement();
+            dynamicInputContainer.style.flexDirection = FlexDirection.Column;
+            dynamicInputContainer.style.marginLeft = -10f;
+            dynamicInputContainer.style.paddingLeft = 10f;
+
+            dynamicOutputContainer = new VisualElement();
+            dynamicOutputContainer.style.flexDirection = FlexDirection.Column;
+            dynamicOutputContainer.style.alignItems = Align.FlexEnd;
+            dynamicOutputContainer.style.marginRight = -10f;
+            dynamicOutputContainer.style.paddingRight = 10f;
+
+            dynamicPortsRow.Add(dynamicInputContainer);
+            dynamicPortsRow.Add(dynamicOutputContainer);
+            extensionContainer.Add(dynamicPortsRow);
 
             // 根据SubGraph生成动态数据端口
             RebuildDataPorts();
@@ -92,12 +117,15 @@ namespace Flow.EditorView
 
             if (Node.SubGraph == null)
             {
+                dynamicPortsRow.style.display = DisplayStyle.None;
                 RefreshPorts();
                 return;
             }
 
             // 更新标题
             title = string.IsNullOrEmpty(Node.SubGraph.name) ? "子图" : Node.SubGraph.name;
+
+            bool hasDynamicPorts = false;
 
             // 创建输入数据端口（对应SubGraph的InputPorts），类型为object时跳过
             foreach (var port in Node.SubGraph.InputPorts)
@@ -108,9 +136,10 @@ namespace Flow.EditorView
                 dataPort.portName = port.Name;
                 dataPort.Owner = Node;
                 dataPort.FieldName = port.GUID;
-                inputContainer.Add(dataPort);
+                dynamicInputContainer.Add(dataPort);
                 inputDataPorts[port.GUID] = dataPort;
                 ports.Add(new PortUnit { GUID = port.GUID, IsInput = true, IsFlowPort = false, Port = dataPort });
+                hasDynamicPorts = true;
             }
 
             // 创建输出数据端口（对应SubGraph的OutputPorts），类型为object时跳过
@@ -122,10 +151,13 @@ namespace Flow.EditorView
                 dataPort.portName = port.Name;
                 dataPort.Owner = Node;
                 dataPort.FieldName = port.GUID;
-                outputContainer.Add(dataPort);
+                dynamicOutputContainer.Add(dataPort);
                 outputDataPorts[port.GUID] = dataPort;
                 ports.Add(new PortUnit { GUID = port.GUID, IsInput = false, IsFlowPort = false, Port = dataPort });
+                hasDynamicPorts = true;
             }
+
+            dynamicPortsRow.style.display = hasDynamicPorts ? DisplayStyle.Flex : DisplayStyle.None;
 
             RefreshPorts();
         }
