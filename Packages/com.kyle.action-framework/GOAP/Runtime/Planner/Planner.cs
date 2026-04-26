@@ -98,8 +98,8 @@ namespace GOAP
             int unmet = 0;
             for (int i = 0; i < needed.Count; i++)
             {
-                var (key, value) = needed.GetEntry(i);
-                if (!current.TryGet(key, out var val) || val != value)
+                var (key, value, op, _) = needed.GetFullEntry(i);
+                if (!current.TryGet(key, out var val) || !WorldState.CompareValues(val, op, value))
                     unmet++;
             }
             return unmet;
@@ -124,9 +124,21 @@ namespace GOAP
         {
             for (int i = 0; i < requiredState.Count; i++)
             {
-                var (key, value) = requiredState.GetEntry(i);
-                if (action.Effects.TryGet(key, out var effectVal) && effectVal == value)
-                    return true;
+                var (reqKey, reqValue, reqOp, _) = requiredState.GetFullEntry(i);
+
+                for (int j = 0; j < action.Effects.Count; j++)
+                {
+                    var (effKey, effValue, _, effMode) = action.Effects.GetFullEntry(j);
+                    if (effKey != reqKey) continue;
+
+                    // Add 效果：同 key 即视为相关（乐观）
+                    if (effMode == EffectMode.Add)
+                        return true;
+
+                    // Assign 效果：检查赋值后是否满足条件
+                    if (WorldState.CompareValues(effValue, reqOp, reqValue))
+                        return true;
+                }
             }
             return false;
         }
@@ -138,9 +150,22 @@ namespace GOAP
 
             for (int i = 0; i < action.Effects.Count; i++)
             {
-                var (key, value) = action.Effects.GetEntry(i);
-                if (child.TryGet(key, out var val) && val == value)
-                    child.Remove(key);
+                var (effKey, effValue, _, effMode) = action.Effects.GetFullEntry(i);
+
+                if (!child.TryGetFull(effKey, out var condValue, out var condOp, out _))
+                    continue;
+
+                if (effMode == EffectMode.Add)
+                {
+                    // 增减效果：乐观移除条件，运行时由 PlanExecutor 验证
+                    child.Remove(effKey);
+                }
+                else
+                {
+                    // 赋值效果：判断赋值后是否满足条件
+                    if (WorldState.CompareValues(effValue, condOp, condValue))
+                        child.Remove(effKey);
+                }
             }
             child.Apply(action.Preconditions);
             return child;
@@ -200,7 +225,7 @@ namespace GOAP
             {
                 if (ReferenceEquals(x, y)) return true;
                 if (x == null || y == null) return false;
-                return x.Satisfies(y) && y.Satisfies(x);
+                return x.ExactEquals(y);
             }
 
             public int GetHashCode(WorldState obj) => obj.ComputeHash();

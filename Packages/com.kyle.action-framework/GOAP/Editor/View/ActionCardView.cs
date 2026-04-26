@@ -64,7 +64,7 @@ namespace GOAP.EditorView
 
             // 前置条件折叠组
             var precondFoldout = new Foldout { text = "▼ 前置条件", value = _data.FoldoutPreconditions };
-            precondFoldout.Add(new WorldStateListView(_data.Preconditions, _boolKeyType, _intKeyType));
+            precondFoldout.Add(new WorldStateListView(_data.Preconditions, _boolKeyType, _intKeyType, WorldStateListMode.Condition));
             precondFoldout.RegisterValueChangedCallback(e =>
             {
                 _data.FoldoutPreconditions = e.newValue;
@@ -74,7 +74,7 @@ namespace GOAP.EditorView
 
             // 效果折叠组
             var effectFoldout = new Foldout { text = "▼ 效果", value = _data.FoldoutEffects };
-            effectFoldout.Add(new WorldStateListView(_data.Effects, _boolKeyType, _intKeyType));
+            effectFoldout.Add(new WorldStateListView(_data.Effects, _boolKeyType, _intKeyType, WorldStateListMode.Effect));
             effectFoldout.RegisterValueChangedCallback(e =>
             {
                 _data.FoldoutEffects = e.newValue;

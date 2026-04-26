@@ -4,22 +4,35 @@ using UnityEngine.UIElements;
 
 namespace GOAP.EditorView
 {
+    public enum WorldStateListMode
+    {
+        Condition,
+        Effect
+    }
+
     // WorldState 键值对列表编辑器
-    // 每行：ValueType 下拉（Bool/Int）+ Key 枚举下拉 + Value 控件 + 删除按钮
-    // boolKeyType / intKeyType 由 ConfigAsset 子类提供，用于枚举 Key 选项
+    // Condition 模式：显示比较运算符下拉（用于 Preconditions / DesiredState）
+    // Effect 模式：显示效果模式下拉（用于 Effects）
     // 数据变更时向上发送 DataChangedEvent
     public class WorldStateListView : VisualElement
     {
+        private static readonly string[] OpLabels = { "==", "!=", ">", "<", ">=", "<=" };
+        private static readonly string[] BoolOpLabels = { "==", "!=" };
+        private static readonly string[] ModeLabels = { "Assign", "Add" };
+
         private readonly List<WorldStateEntry> _entries;
         private readonly Type _boolKeyType;
         private readonly Type _intKeyType;
+        private readonly WorldStateListMode _mode;
         private readonly VisualElement _listContainer;
 
-        public WorldStateListView(List<WorldStateEntry> entries, Type boolKeyType, Type intKeyType)
+        public WorldStateListView(List<WorldStateEntry> entries, Type boolKeyType, Type intKeyType,
+            WorldStateListMode mode = WorldStateListMode.Condition)
         {
             _entries = entries;
             _boolKeyType = boolKeyType;
             _intKeyType = intKeyType;
+            _mode = mode;
 
             style.paddingLeft = 4;
 
@@ -33,7 +46,6 @@ namespace GOAP.EditorView
             Refresh();
         }
 
-        // 重新绘制列表（数据变更后调用）
         public void Refresh()
         {
             _listContainer.Clear();
@@ -55,15 +67,20 @@ namespace GOAP.EditorView
             var typeDropdown = new DropdownField(typeChoices, currentTypeIndex);
             typeDropdown.style.width = 50;
 
-            // Key 枚举下拉容器（根据 ValueType 填充对应枚举）
+            // Key 枚举下拉容器
             var keyContainer = new VisualElement();
             keyContainer.style.width = 130;
+
+            // 运算符 / 模式下拉容器
+            var opContainer = new VisualElement();
+            opContainer.style.width = 55;
 
             // Value 控件容器
             var valueContainer = new VisualElement();
             valueContainer.style.flexGrow = 1;
 
             BuildKeyControl(keyContainer, index);
+            BuildOpOrModeControl(opContainer, index);
             BuildValueControl(valueContainer, index);
 
             typeDropdown.RegisterValueChangedCallback(e =>
@@ -73,10 +90,13 @@ namespace GOAP.EditorView
                 {
                     ValueType = newType,
                     KeyIndex = 0,
-                    Value = 0
+                    Value = 0,
+                    Operator = CompareOp.Equal,
+                    Mode = EffectMode.Assign
                 };
                 SendEvent(DataChangedEvent.GetPooled());
                 BuildKeyControl(keyContainer, index);
+                BuildOpOrModeControl(opContainer, index);
                 BuildValueControl(valueContainer, index);
             });
 
@@ -92,6 +112,7 @@ namespace GOAP.EditorView
 
             row.Add(typeDropdown);
             row.Add(keyContainer);
+            row.Add(opContainer);
             row.Add(valueContainer);
             row.Add(deleteButton);
             return row;
@@ -111,7 +132,11 @@ namespace GOAP.EditorView
                 field.RegisterValueChangedCallback(e =>
                 {
                     var cur = _entries[index];
-                    _entries[index] = new WorldStateEntry { ValueType = cur.ValueType, KeyIndex = e.newValue, Value = cur.Value };
+                    _entries[index] = new WorldStateEntry
+                    {
+                        ValueType = cur.ValueType, KeyIndex = e.newValue, Value = cur.Value,
+                        Operator = cur.Operator, Mode = cur.Mode
+                    };
                     SendEvent(DataChangedEvent.GetPooled());
                 });
                 container.Add(field);
@@ -139,10 +164,80 @@ namespace GOAP.EditorView
                 int selectedIndex = choices.IndexOf(e.newValue);
                 int enumIntValue = selectedIndex >= 0 ? (int)enumValues.GetValue(selectedIndex) : 0;
                 var cur = _entries[index];
-                _entries[index] = new WorldStateEntry { ValueType = cur.ValueType, KeyIndex = enumIntValue, Value = cur.Value };
+                _entries[index] = new WorldStateEntry
+                {
+                    ValueType = cur.ValueType, KeyIndex = enumIntValue, Value = cur.Value,
+                    Operator = cur.Operator, Mode = cur.Mode
+                };
                 SendEvent(DataChangedEvent.GetPooled());
             });
             container.Add(dropdown);
+        }
+
+        // Condition 模式：比较运算符下拉；Effect 模式：效果模式下拉
+        private void BuildOpOrModeControl(VisualElement container, int index)
+        {
+            container.Clear();
+            var entry = _entries[index];
+            bool isBool = entry.ValueType == WorldStateValueType.Bool;
+
+            if (_mode == WorldStateListMode.Condition)
+            {
+                var labels = isBool ? BoolOpLabels : OpLabels;
+                var choices = new List<string>(labels);
+                int currentIndex = isBool
+                    ? ClampOpForBool(entry.Operator)
+                    : (int)entry.Operator;
+
+                var dropdown = new DropdownField(choices, currentIndex);
+                dropdown.style.flexGrow = 1;
+                dropdown.RegisterValueChangedCallback(e =>
+                {
+                    int sel = choices.IndexOf(e.newValue);
+                    CompareOp newOp;
+                    if (isBool)
+                        newOp = sel == 1 ? CompareOp.NotEqual : CompareOp.Equal;
+                    else
+                        newOp = (CompareOp)sel;
+
+                    var cur = _entries[index];
+                    _entries[index] = new WorldStateEntry
+                    {
+                        ValueType = cur.ValueType, KeyIndex = cur.KeyIndex, Value = cur.Value,
+                        Operator = newOp, Mode = cur.Mode
+                    };
+                    SendEvent(DataChangedEvent.GetPooled());
+                });
+                container.Add(dropdown);
+            }
+            else // Effect
+            {
+                if (isBool)
+                {
+                    // Bool 强制 Assign，显示只读标签
+                    var label = new Label("Assign");
+                    label.style.unityTextAlign = UnityEngine.TextAnchor.MiddleLeft;
+                    container.Add(label);
+                    return;
+                }
+
+                var choices = new List<string>(ModeLabels);
+                int currentIndex = (int)entry.Mode;
+                var dropdown = new DropdownField(choices, currentIndex);
+                dropdown.style.flexGrow = 1;
+                dropdown.RegisterValueChangedCallback(e =>
+                {
+                    int sel = choices.IndexOf(e.newValue);
+                    var cur = _entries[index];
+                    _entries[index] = new WorldStateEntry
+                    {
+                        ValueType = cur.ValueType, KeyIndex = cur.KeyIndex, Value = cur.Value,
+                        Operator = cur.Operator, Mode = (EffectMode)sel
+                    };
+                    SendEvent(DataChangedEvent.GetPooled());
+                });
+                container.Add(dropdown);
+            }
         }
 
         // 根据 ValueType 构建值输入控件（Bool → Toggle，Int → IntegerField）
@@ -157,7 +252,11 @@ namespace GOAP.EditorView
                 toggle.RegisterValueChangedCallback(e =>
                 {
                     var cur = _entries[index];
-                    _entries[index] = new WorldStateEntry { ValueType = cur.ValueType, KeyIndex = cur.KeyIndex, Value = e.newValue ? 1 : 0 };
+                    _entries[index] = new WorldStateEntry
+                    {
+                        ValueType = cur.ValueType, KeyIndex = cur.KeyIndex, Value = e.newValue ? 1 : 0,
+                        Operator = cur.Operator, Mode = cur.Mode
+                    };
                     SendEvent(DataChangedEvent.GetPooled());
                 });
                 container.Add(toggle);
@@ -169,7 +268,11 @@ namespace GOAP.EditorView
                 field.RegisterValueChangedCallback(e =>
                 {
                     var cur = _entries[index];
-                    _entries[index] = new WorldStateEntry { ValueType = cur.ValueType, KeyIndex = cur.KeyIndex, Value = e.newValue };
+                    _entries[index] = new WorldStateEntry
+                    {
+                        ValueType = cur.ValueType, KeyIndex = cur.KeyIndex, Value = e.newValue,
+                        Operator = cur.Operator, Mode = cur.Mode
+                    };
                     SendEvent(DataChangedEvent.GetPooled());
                 });
                 container.Add(field);
@@ -178,9 +281,20 @@ namespace GOAP.EditorView
 
         private void AddEntry()
         {
-            _entries.Add(new WorldStateEntry { ValueType = WorldStateValueType.Bool, KeyIndex = 0, Value = 0 });
+            _entries.Add(new WorldStateEntry
+            {
+                ValueType = WorldStateValueType.Bool,
+                KeyIndex = 0,
+                Value = 0,
+                Operator = CompareOp.Equal,
+                Mode = EffectMode.Assign
+            });
             SendEvent(DataChangedEvent.GetPooled());
             Refresh();
         }
+
+        // Bool 键仅支持 == 和 !=，将其他运算符映射到 dropdown index
+        private static int ClampOpForBool(CompareOp op)
+            => op == CompareOp.NotEqual ? 1 : 0;
     }
 }

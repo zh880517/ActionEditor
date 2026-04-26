@@ -187,6 +187,28 @@ int health = agent.WorldState.GetInt((int)IntKey.Health);
 - **感知层写入**：每帧由游戏代码根据实际情况更新
 - **规划器只读克隆**：规划搜索时对状态做 `Clone()`，不污染实际状态
 
+### CompareOp（前置条件 / 目标终态的比较运算符）
+
+| 值 | 含义 | 示例 |
+|---|---|---|
+| `Equal` | 等于（默认） | Health == 100 |
+| `NotEqual` | 不等于 | HasWeapon != false |
+| `Greater` | 大于 | Health > 50 |
+| `Less` | 小于 | Health < 20 |
+| `GreaterOrEqual` | 大于等于 | AmmoLeft >= 1 |
+| `LessOrEqual` | 小于等于 | ThreatLevel <= 3 |
+
+Bool 键仅支持 `Equal` / `NotEqual`。每个 key 在同一条件集中只能出现一次。
+
+### EffectMode（效果的应用模式）
+
+| 值 | 含义 | 示例 |
+|---|---|---|
+| `Assign` | 赋值（默认） | Health = 100 |
+| `Add` | 增减（值可为负） | AmmoLeft += -1 |
+
+Bool 键仅支持 `Assign`。增减效果在反向规划中使用乐观策略：规划器假设增减效果总能满足同 key 条件，实际可行性由 PlanExecutor 运行时检查把关。
+
 ### ActionStatus（`OnUpdate` 的返回值）
 
 | 值 | 含义 |

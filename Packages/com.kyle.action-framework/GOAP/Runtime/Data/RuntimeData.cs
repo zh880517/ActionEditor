@@ -55,6 +55,24 @@ namespace GOAP
         Int  = 1
     }
 
+    // 前置条件 / 目标终态的比较运算符
+    public enum CompareOp
+    {
+        Equal = 0,
+        NotEqual,
+        Greater,
+        Less,
+        GreaterOrEqual,
+        LessOrEqual
+    }
+
+    // 效果的应用模式
+    public enum EffectMode
+    {
+        Assign = 0,
+        Add
+    }
+
     // 运行时键编码工具
     // 高位掩码将 ValueType 编入 key，使 BoolKey 和 IntKey 枚举值允许重叠
     // 布局：bit30 = ValueType（0=Bool, 1=Int），bit0-29 = 原始枚举值
@@ -85,6 +103,10 @@ namespace GOAP
         public int KeyIndex;
         // 值：bool 用 0/1 表示，int 直接存储
         public int Value;
+        // 比较运算符（用于 Preconditions / DesiredState，默认 Equal）
+        public CompareOp Operator;
+        // 效果模式（用于 Effects，默认 Assign）
+        public EffectMode Mode;
 
         // 运行时编码后的键（ValueType 编入高位）
         public int RuntimeKey => WorldStateKey.Encode(ValueType, KeyIndex);

@@ -78,7 +78,7 @@ namespace GOAP.EditorView
 
             // 期望终态折叠组
             var foldout = new Foldout { text = "▼ 期望终态", value = _data.FoldoutDesiredState };
-            foldout.Add(new WorldStateListView(_data.DesiredState, _boolKeyType, _intKeyType));
+            foldout.Add(new WorldStateListView(_data.DesiredState, _boolKeyType, _intKeyType, WorldStateListMode.Condition));
             foldout.RegisterValueChangedCallback(e =>
             {
                 _data.FoldoutDesiredState = e.newValue;
