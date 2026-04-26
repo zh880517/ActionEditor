@@ -48,19 +48,26 @@ namespace GOAP.EditorView
             header.Add(deleteBtn);
             Add(header);
 
-            // Id 字段
-            AddLabeledField("Id", new TextField { value = _data.Id }, f =>
+            // 名称字段（编辑 ScriptableObject.name）
+            AddLabeledField("名称", new TextField { value = _data.name }, f =>
             {
-                _data.Id = ((TextField)f).value;
+                _data.name = ((TextField)f).value;
                 SendEvent(DataChangedEvent.GetPooled());
             });
 
-            // DisplayName 字段
-            AddLabeledField("显示名", new TextField { value = _data.DisplayName }, f =>
-            {
-                _data.DisplayName = ((TextField)f).value;
-                SendEvent(DataChangedEvent.GetPooled());
-            });
+            // Id 标签（只读，来自 Config.Id）
+            var idRow = new VisualElement();
+            idRow.style.flexDirection = FlexDirection.Row;
+            idRow.style.marginTop = 4;
+            idRow.style.alignItems = Align.Center;
+            var idLabel = new Label("Id");
+            idLabel.style.width = 60;
+            idLabel.style.color = new StyleColor(new Color(0.7f, 0.7f, 0.7f));
+            var idValue = new Label(_data.Id);
+            idValue.style.color = new StyleColor(new Color(0.5f, 0.8f, 0.5f));
+            idRow.Add(idLabel);
+            idRow.Add(idValue);
+            Add(idRow);
 
             // BasePriority 字段
             AddLabeledField("优先级", new FloatField { value = _data.BasePriority }, f =>

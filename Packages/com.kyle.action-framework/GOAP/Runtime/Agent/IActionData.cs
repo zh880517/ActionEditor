@@ -1,21 +1,13 @@
 namespace GOAP
 {
-    // 行动数据接口，用于标记行动的数据 struct
-    // 与 FlowGraph 的 struct T 模式对应：
-    //   struct MyActionData : IActionData { ... }
-    //   class MyAction : Action<MyActionData> { ... }
+    // 行动数据接口，用于标记行动的纯数据 struct，对应 FlowGraph 的节点 struct T
+    // 实现此接口的 struct 只存储数据，不包含任何行为逻辑
+    // 行为逻辑通过 TActionExecutor<T> 实现，并注册到 ActionExecutor<T>.Executor
     public interface IActionData
     {
-        // 行动唯一标识，与编辑器 ActionId 对应
         string Id { get; }
-
-        // 规划代价
         float Cost { get; }
-
-        // 前置条件
         WorldState Preconditions { get; }
-
-        // 效果
         WorldState Effects { get; }
     }
 }

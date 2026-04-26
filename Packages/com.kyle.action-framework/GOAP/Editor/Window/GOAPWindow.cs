@@ -12,14 +12,11 @@ namespace GOAP.EditorView
     // 布局：
     //   顶部工具栏（选择 Config、新增、导出）
     //   中部左右分栏（Goals 卡片组 | Actions 卡片组）
-    //   底部调试面板（仅 Play 模式）
     public class GOAPWindow : EditorWindow
     {
         private ConfigAsset _currentConfig;
         private ScrollView _goalsScrollView;
         private ScrollView _actionsScrollView;
-        private VisualElement _debugContainer;
-        private DebugView _debugView;
 
         [MenuItem("Tools/GOAP Editor")]
         public static void Open()
@@ -30,12 +27,10 @@ namespace GOAP.EditorView
 
         private void OnEnable()
         {
-            EditorApplication.playModeStateChanged += OnPlayModeChanged;
         }
 
         private void OnDisable()
         {
-            EditorApplication.playModeStateChanged -= OnPlayModeChanged;
         }
 
         public void CreateGUI()
@@ -61,15 +56,6 @@ namespace GOAP.EditorView
             columns.Add(actionsPanel);
             root.Add(columns);
 
-            // 调试面板容器
-            _debugContainer = new VisualElement();
-            _debugContainer.style.borderTopWidth = 1;
-            _debugContainer.style.borderTopColor = new StyleColor(new Color(0.3f, 0.3f, 0.3f));
-            _debugContainer.style.marginTop = 8;
-            _debugContainer.style.maxHeight = 180;
-            root.Add(_debugContainer);
-
-            RefreshDebugPanel();
             RefreshCards();
         }
 
@@ -97,7 +83,7 @@ namespace GOAP.EditorView
             });
 
             var addActionBtn = new Button(() => ShowAddActionMenu()) { text = "+ Action" };
-            var addGoalBtn = new Button(() => AddGoal()) { text = "+ Goal" };
+            var addGoalBtn = new Button(() => ShowAddGoalMenu()) { text = "+ Goal" };
 
             var saveBtn = new Button(() => SaveAndExport()) { text = "保存/导出" };
             saveBtn.style.backgroundColor = new StyleColor(new Color(0.2f, 0.5f, 0.2f));
@@ -144,7 +130,15 @@ namespace GOAP.EditorView
                 var card = new GoalCardView(goal, _currentConfig.BoolKeyType, _currentConfig.IntKeyType);
                 var capturedGoal = goal;
                 card.RegisterCallback<DataChangedEvent>(_ => MarkDirty());
-                card.RegisterCallback<DeleteRequestEvent>(_ => { _currentConfig.Goals.Remove(capturedGoal); MarkDirty(); RefreshCards(); });
+                card.RegisterCallback<DeleteRequestEvent>(_ =>
+                {
+                    _currentConfig.Goals.Remove(capturedGoal);
+                    AssetDatabase.RemoveObjectFromAsset(capturedGoal);
+                    DestroyImmediate(capturedGoal);
+                    MarkDirty();
+                    AssetDatabase.SaveAssets();
+                    RefreshCards();
+                });
                 _goalsScrollView.Add(card);
             }
 
@@ -238,11 +232,36 @@ namespace GOAP.EditorView
             RefreshCards();
         }
 
-        private void AddGoal()
+        // 弹出 Goal 类型选择菜单
+        private void ShowAddGoalMenu()
         {
             if (_currentConfig == null) return;
-            _currentConfig.Goals.Add(new GoalData());
+            var menu = new GenericMenu();
+            foreach (var type in TypeCache.GetTypesDerivedFrom<GoalData>())
+            {
+                if (type.IsAbstract) continue;
+                var t = type;
+                menu.AddItem(new GUIContent(ObjectNames.NicifyVariableName(type.Name)), false,
+                    () => AddGoalOfType(t));
+            }
+            if (menu.GetItemCount() == 0)
+                menu.AddDisabledItem(new GUIContent("没有可用的 Goal 类型"));
+            menu.ShowAsContext();
+        }
+
+        // 创建指定类型的 GoalData 子资产并加入 Config
+        private void AddGoalOfType(Type type)
+        {
+            if (_currentConfig == null) return;
+            var goal = CreateInstance(type) as GoalData;
+            goal.name = type.Name;
+            goal.hideFlags = HideFlags.HideInHierarchy;
+            var path = AssetDatabase.GetAssetPath(_currentConfig);
+            if (!string.IsNullOrEmpty(path))
+                AssetDatabase.AddObjectToAsset(goal, _currentConfig);
+            _currentConfig.Goals.Add(goal);
             MarkDirty();
+            AssetDatabase.SaveAssets();
             RefreshCards();
         }
 
@@ -261,31 +280,6 @@ namespace GOAP.EditorView
             }
             AssetDatabase.SaveAssets();
             Exporter.Export(_currentConfig);
-        }
-
-        // 刷新底部调试面板
-        private void RefreshDebugPanel()
-        {
-            _debugContainer?.Clear();
-            if (Application.isPlaying)
-            {
-                _debugView = new DebugView();
-                _debugContainer?.Add(_debugView);
-            }
-            else
-            {
-                var hint = new Label("调试面板：仅在 Play 模式下可用");
-                hint.style.color = new StyleColor(new Color(0.5f, 0.5f, 0.5f));
-                hint.style.unityTextAlign = TextAnchor.MiddleCenter;
-                hint.style.marginTop = 8;
-                _debugContainer?.Add(hint);
-            }
-        }
-
-        private void OnPlayModeChanged(PlayModeStateChange state)
-        {
-            if (state == PlayModeStateChange.EnteredPlayMode || state == PlayModeStateChange.EnteredEditMode)
-                RefreshDebugPanel();
         }
     }
 }

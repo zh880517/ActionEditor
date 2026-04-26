@@ -7,11 +7,6 @@ namespace GOAP
     // 子类通过继承扩展额外字段，并标注 [XxxGroup]（ActionGroupAttribute 子类）声明分组
     public abstract class ActionData : ScriptableObject
     {
-        // 对应运行时 IAction.Id，用于绑定执行逻辑
-        public string Id = "NewAction";
-
-        public string DisplayName = "New Action";
-
         // 规划代价
         public float Cost = 1f;
 
@@ -24,5 +19,7 @@ namespace GOAP
         // 编辑器折叠状态（不导出到运行时）
         public bool FoldoutPreconditions = true;
         public bool FoldoutEffects = true;
+
+        public abstract ActionRuntimeData Export();
     }
 }

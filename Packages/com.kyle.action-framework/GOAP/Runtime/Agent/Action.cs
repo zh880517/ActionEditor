@@ -1,56 +1,72 @@
 namespace GOAP
 {
-    // 泛型行动基类，类似 FlowGraph 的 TFlowNode<T> 模式
-    // T 是描述行动数据的 struct（实现 IActionData），包含 Id、Cost、Preconditions、Effects
-    // 子类只需重写行为方法，无需重复实现数据属性
+    // 行动运行时容器，对应 FlowGraph 的 TFlowNodeRuntimeData<T>
+    // 持有纯数据 struct T，并通过 ActionExecutor<T>.Executor 分发生命周期调用
+    // 行为逻辑全部在 TActionExecutor<T> 子类中实现，此类为 sealed，不可继承
     //
-    // 用法示例：
-    //   public struct MeleeAttackData : IActionData
-    //   {
-    //       public string Id => "MeleeAttack";
-    //       public float Cost => 1f;
-    //       public WorldState Preconditions { get; set; }
-    //       public WorldState Effects { get; set; }
-    //       public float AttackRange;
-    //   }
-    //
-    //   public class MeleeAttackAction : Action<MeleeAttackData>
-    //   {
-    //       public MeleeAttackAction(MeleeAttackData data) : base(data) { }
-    //       protected override bool OnIsAchievable(WorldState current) => current.TryGet((int)MyKey.EnemyInRange, out var v) && v != 0;
-    //       protected override ActionStatus OnPerform(Agent agent) { /* 攻击逻辑 */ return ActionStatus.Completed; }
-    //   }
-    public abstract class Action<T> : IAction where T : IActionData
+    // 生命周期：
+    //   IsAchievable  → 规划期 + 执行前检查
+    //   OnEnter       → 首次 Perform 时调用一次
+    //   OnUpdate      → 每帧 Perform 时调用，返回 Running 则继续
+    //   OnExit        → Completed / Failed 时自动调用
+    //   OnAbort       → Agent 重规划或目标切换时调用
+    public sealed class Action<T> : IAction where T : struct, IActionData
     {
-        // 行动数据实例，子类可通过 Data 访问自定义字段
-        protected T Data { get; }
+        private readonly T _data;
+        private bool _entered;
 
-        protected Action(T data)
+        public Action(T data)
         {
-            Data = data;
+            _data = data;
         }
 
-        // --- IAction 实现（代理到 Data）---
+        // --- IAction 实现 ---
 
-        public string Id => Data.Id;
-        public float Cost => Data.Cost;
-        public WorldState Preconditions => Data.Preconditions;
-        public WorldState Effects => Data.Effects;
+        public string Id => _data.Id;
+        public float Cost => _data.Cost;
+        public WorldState Preconditions => _data.Preconditions;
+        public WorldState Effects => _data.Effects;
 
-        public bool IsAchievable(WorldState current) => OnIsAchievable(current);
-        public ActionStatus Perform(Agent agent) => OnPerform(agent);
-        public void Abort(Agent agent) => OnAbort(agent);
+        public bool IsAchievable(WorldState current)
+        {
+            var executor = ActionExecutor<T>.Executor;
+            return executor == null || executor.IsAchievable(current, _data);
+        }
 
-        // --- 子类重写点 ---
+        // 首次调用触发 OnEnter，之后每帧调用 OnUpdate
+        // OnUpdate 返回非 Running 时自动调用 OnExit
+        public ActionStatus Perform(Agent agent)
+        {
+            var executor = ActionExecutor<T>.Executor;
+            if (executor == null)
+                return ActionStatus.Failed;
 
-        // 运行时额外可行性检查（如距离、冷却等动态条件）
-        // 默认实现：始终可行，子类可增加动态检查
-        protected virtual bool OnIsAchievable(WorldState current) => true;
+            if (!_entered)
+            {
+                _entered = true;
+                executor.OnEnter(agent, _data);
+            }
 
-        // 执行行动逻辑，每帧调用直到返回 Completed 或 Failed
-        protected abstract ActionStatus OnPerform(Agent agent);
+            var status = executor.OnUpdate(agent, _data);
 
-        // 中断行动，清理内部状态
-        protected virtual void OnAbort(Agent agent) { }
+            if (status != ActionStatus.Running)
+            {
+                executor.OnExit(agent, _data);
+                _entered = false;
+            }
+
+            return status;
+        }
+
+        // 被 Agent 中断时调用（重规划、目标切换）
+        public void Abort(Agent agent)
+        {
+            if (_entered)
+            {
+                ActionExecutor<T>.Executor?.OnAbort(agent, _data);
+                _entered = false;
+            }
+        }
     }
 }
+

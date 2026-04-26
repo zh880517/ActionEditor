@@ -48,17 +48,10 @@ namespace GOAP.EditorView
             header.Add(deleteBtn);
             Add(header);
 
-            // Id 字段
-            AddLabeledField("Id", new TextField { value = _data.Id }, f =>
-            {
-                _data.Id = ((TextField)f).value;
-                SendEvent(DataChangedEvent.GetPooled());
-            });
-
             // DisplayName 字段
-            AddLabeledField("显示名", new TextField { value = _data.DisplayName }, f =>
+            AddLabeledField("显示名", new TextField { value = _data.name }, f =>
             {
-                _data.DisplayName = ((TextField)f).value;
+                _data.name = ((TextField)f).value;
                 SendEvent(DataChangedEvent.GetPooled());
             });
 

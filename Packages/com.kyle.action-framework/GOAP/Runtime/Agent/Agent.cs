@@ -21,14 +21,10 @@ namespace GOAP
         // 规划最大深度
         public int MaxPlanDepth { get; set; } = 10;
 
-        // 调试信息
         public IGoal CurrentGoal { get; private set; }
         public Plan CurrentPlan { get; private set; }
         public IAction CurrentAction { get; private set; }
         public AgentStatus Status { get; private set; } = AgentStatus.Idle;
-
-        // 上次规划耗时（毫秒），供调试使用
-        public float LastPlanTimeMs { get; private set; }
 
         // 重规划请求标志
         private bool _replanRequested;
@@ -119,18 +115,14 @@ namespace GOAP
             return best;
         }
 
-        // 调用规划器，记录耗时
+        // 调用规划器
         private Plan RunPlanner(IGoal goal)
         {
-            var sw = System.Diagnostics.Stopwatch.StartNew();
-            var plan = Planner.Plan(
+            return Planner.Plan(
                 WorldState,
                 goal.GetDesiredState(),
                 AvailableActions,
                 MaxPlanDepth);
-            sw.Stop();
-            LastPlanTimeMs = (float)sw.Elapsed.TotalMilliseconds;
-            return plan;
         }
 
         // 执行计划中当前行动，处理完成/失败/推进
