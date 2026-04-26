@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -9,10 +10,14 @@ namespace GOAP.EditorView
     public class ActionCardView : VisualElement
     {
         private readonly ActionData _data;
+        private readonly Type _boolKeyType;
+        private readonly Type _intKeyType;
 
-        public ActionCardView(ActionData data)
+        public ActionCardView(ActionData data, Type boolKeyType, Type intKeyType)
         {
             _data = data;
+            _boolKeyType = boolKeyType;
+            _intKeyType = intKeyType;
             Build();
         }
 
@@ -66,7 +71,7 @@ namespace GOAP.EditorView
 
             // 前置条件折叠组
             var precondFoldout = new Foldout { text = "▼ 前置条件", value = _data.FoldoutPreconditions };
-            precondFoldout.Add(new WorldStateListView(_data.Preconditions));
+            precondFoldout.Add(new WorldStateListView(_data.Preconditions, _boolKeyType, _intKeyType));
             precondFoldout.RegisterValueChangedCallback(e =>
             {
                 _data.FoldoutPreconditions = e.newValue;
@@ -76,7 +81,7 @@ namespace GOAP.EditorView
 
             // 效果折叠组
             var effectFoldout = new Foldout { text = "▼ 效果", value = _data.FoldoutEffects };
-            effectFoldout.Add(new WorldStateListView(_data.Effects));
+            effectFoldout.Add(new WorldStateListView(_data.Effects, _boolKeyType, _intKeyType));
             effectFoldout.RegisterValueChangedCallback(e =>
             {
                 _data.FoldoutEffects = e.newValue;

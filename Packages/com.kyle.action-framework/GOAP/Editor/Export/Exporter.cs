@@ -1,5 +1,4 @@
 using System.IO;
-using GOAP;
 using UnityEditor;
 using UnityEngine;
 
@@ -13,7 +12,7 @@ namespace GOAP.EditorView
         {
             var runtimeData = new RuntimeData
             {
-                Name = asset.ConfigName
+                Name = asset.name
             };
 
             // 转换 Action 数据
@@ -45,7 +44,7 @@ namespace GOAP.EditorView
             string json = JsonUtility.ToJson(runtimeData, prettyPrint: true);
             string assetPath = AssetDatabase.GetAssetPath(asset);
             string dirPath = Path.GetDirectoryName(assetPath);
-            string outputPath = Path.Combine(dirPath, $"{asset.ConfigName}_runtime.json");
+            string outputPath = Path.Combine(dirPath, $"{asset.name}_runtime.json");
 
             File.WriteAllText(outputPath, json);
             AssetDatabase.Refresh();

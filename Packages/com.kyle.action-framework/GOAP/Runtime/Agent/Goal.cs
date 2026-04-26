@@ -16,7 +16,7 @@ namespace GOAP
     //   {
     //       public KillEnemyGoal(KillEnemyData data) : base(data) { }
     //       protected override float OnGetPriority(WorldState current)
-    //           => current.TryGet<bool>("enemyVisible", out var v) && v ? Data.BasePriority : 0f;
+    //           => current.TryGet((int)MyKey.EnemyVisible, out var v) && v != 0 ? Data.BasePriority : 0f;
     //   }
     public abstract class Goal<T> : IGoal where T : IGoalData
     {

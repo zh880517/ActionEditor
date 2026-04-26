@@ -141,7 +141,7 @@ namespace GOAP.EditorView
 
             foreach (var goal in _currentConfig.Goals)
             {
-                var card = new GoalCardView(goal);
+                var card = new GoalCardView(goal, _currentConfig.BoolKeyType, _currentConfig.IntKeyType);
                 var capturedGoal = goal;
                 card.RegisterCallback<DataChangedEvent>(_ => MarkDirty());
                 card.RegisterCallback<DeleteRequestEvent>(_ => { _currentConfig.Goals.Remove(capturedGoal); MarkDirty(); RefreshCards(); });
@@ -150,7 +150,7 @@ namespace GOAP.EditorView
 
             foreach (var action in _currentConfig.Actions)
             {
-                var card = new ActionCardView(action);
+                var card = new ActionCardView(action, _currentConfig.BoolKeyType, _currentConfig.IntKeyType);
                 var capturedAction = action;
                 card.RegisterCallback<DataChangedEvent>(_ => MarkDirty());
                 card.RegisterCallback<DeleteRequestEvent>(_ =>

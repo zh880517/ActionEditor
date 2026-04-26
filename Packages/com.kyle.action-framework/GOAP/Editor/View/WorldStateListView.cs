@@ -1,21 +1,25 @@
+using System;
 using System.Collections.Generic;
-using GOAP;
-using UnityEditor;
 using UnityEngine.UIElements;
 
 namespace GOAP.EditorView
 {
     // WorldState 键值对列表编辑器
-    // 每行：Key 文本框 + ValueType 下拉（bool/int/float/string）+ Value 控件 + 删除按钮
+    // 每行：ValueType 下拉（Bool/Int）+ Key 枚举下拉 + Value 控件 + 删除按钮
+    // boolKeyType / intKeyType 由 ConfigAsset 子类提供，用于枚举 Key 选项
     // 数据变更时向上发送 DataChangedEvent
     public class WorldStateListView : VisualElement
     {
         private readonly List<WorldStateEntry> _entries;
+        private readonly Type _boolKeyType;
+        private readonly Type _intKeyType;
         private readonly VisualElement _listContainer;
 
-        public WorldStateListView(List<WorldStateEntry> entries)
+        public WorldStateListView(List<WorldStateEntry> entries, Type boolKeyType, Type intKeyType)
         {
             _entries = entries;
+            _boolKeyType = boolKeyType;
+            _intKeyType = intKeyType;
 
             style.paddingLeft = 4;
 
@@ -45,32 +49,34 @@ namespace GOAP.EditorView
 
             var entry = _entries[index];
 
-            // Key 输入框
-            var keyField = new TextField { value = entry.Key };
-            keyField.style.width = 120;
-            keyField.style.flexShrink = 1;
-            keyField.RegisterValueChangedCallback(e =>
-            {
-                var current = _entries[index];
-                _entries[index] = new WorldStateEntry { Key = e.newValue, ValueType = current.ValueType, ValueJson = current.ValueJson };
-                SendEvent(DataChangedEvent.GetPooled());
-            });
+            // ValueType 下拉（Bool/Int）
+            var typeChoices = new List<string> { "Bool", "Int" };
+            int currentTypeIndex = entry.ValueType == WorldStateValueType.Bool ? 0 : 1;
+            var typeDropdown = new DropdownField(typeChoices, currentTypeIndex);
+            typeDropdown.style.width = 50;
 
-            // ValueType 下拉
-            var typeChoices = new List<string> { "bool", "int", "float", "string" };
-            var typeDropdown = new DropdownField(typeChoices, typeChoices.IndexOf(entry.ValueType) >= 0 ? typeChoices.IndexOf(entry.ValueType) : 0);
-            typeDropdown.style.width = 70;
+            // Key 枚举下拉容器（根据 ValueType 填充对应枚举）
+            var keyContainer = new VisualElement();
+            keyContainer.style.width = 130;
 
-            // Value 控件（根据类型动态切换）
+            // Value 控件容器
             var valueContainer = new VisualElement();
             valueContainer.style.flexGrow = 1;
+
+            BuildKeyControl(keyContainer, index);
             BuildValueControl(valueContainer, index);
 
             typeDropdown.RegisterValueChangedCallback(e =>
             {
-                var current = _entries[index];
-                _entries[index] = new WorldStateEntry { Key = current.Key, ValueType = e.newValue, ValueJson = GetDefaultJson(e.newValue) };
+                var newType = e.newValue == "Bool" ? WorldStateValueType.Bool : WorldStateValueType.Int;
+                _entries[index] = new WorldStateEntry
+                {
+                    ValueType = newType,
+                    KeyIndex = 0,
+                    Value = 0
+                };
                 SendEvent(DataChangedEvent.GetPooled());
+                BuildKeyControl(keyContainer, index);
                 BuildValueControl(valueContainer, index);
             });
 
@@ -84,96 +90,97 @@ namespace GOAP.EditorView
             deleteButton.style.width = 24;
             deleteButton.style.color = new UnityEngine.Color(1f, 0.4f, 0.4f);
 
-            row.Add(keyField);
             row.Add(typeDropdown);
+            row.Add(keyContainer);
             row.Add(valueContainer);
             row.Add(deleteButton);
             return row;
         }
 
-        // 根据当前 ValueType 构建值输入控件
+        // 根据 ValueType 构建 Key 枚举下拉（枚举为 null 时降级为整数输入框）
+        private void BuildKeyControl(VisualElement container, int index)
+        {
+            container.Clear();
+            var entry = _entries[index];
+            var keyType = entry.ValueType == WorldStateValueType.Bool ? _boolKeyType : _intKeyType;
+
+            if (keyType == null || !keyType.IsEnum)
+            {
+                var field = new IntegerField { value = entry.KeyIndex };
+                field.style.flexGrow = 1;
+                field.RegisterValueChangedCallback(e =>
+                {
+                    var cur = _entries[index];
+                    _entries[index] = new WorldStateEntry { ValueType = cur.ValueType, KeyIndex = e.newValue, Value = cur.Value };
+                    SendEvent(DataChangedEvent.GetPooled());
+                });
+                container.Add(field);
+                return;
+            }
+
+            var names = Enum.GetNames(keyType);
+            var enumValues = Enum.GetValues(keyType);
+            var choices = new List<string>(names);
+
+            int currentIndex = 0;
+            for (int i = 0; i < enumValues.Length; i++)
+            {
+                if ((int)enumValues.GetValue(i) == entry.KeyIndex)
+                {
+                    currentIndex = i;
+                    break;
+                }
+            }
+
+            var dropdown = new DropdownField(choices, currentIndex);
+            dropdown.style.flexGrow = 1;
+            dropdown.RegisterValueChangedCallback(e =>
+            {
+                int selectedIndex = choices.IndexOf(e.newValue);
+                int enumIntValue = selectedIndex >= 0 ? (int)enumValues.GetValue(selectedIndex) : 0;
+                var cur = _entries[index];
+                _entries[index] = new WorldStateEntry { ValueType = cur.ValueType, KeyIndex = enumIntValue, Value = cur.Value };
+                SendEvent(DataChangedEvent.GetPooled());
+            });
+            container.Add(dropdown);
+        }
+
+        // 根据 ValueType 构建值输入控件（Bool → Toggle，Int → IntegerField）
         private void BuildValueControl(VisualElement container, int index)
         {
             container.Clear();
             var entry = _entries[index];
-            switch (entry.ValueType)
+
+            if (entry.ValueType == WorldStateValueType.Bool)
             {
-                case "bool":
+                var toggle = new Toggle { value = entry.Value != 0 };
+                toggle.RegisterValueChangedCallback(e =>
                 {
-                    bool.TryParse(entry.ValueJson, out bool val);
-                    var toggle = new Toggle { value = val };
-                    toggle.RegisterValueChangedCallback(e =>
-                    {
-                        var cur = _entries[index];
-                        _entries[index] = new WorldStateEntry { Key = cur.Key, ValueType = cur.ValueType, ValueJson = e.newValue.ToString().ToLower() };
-                        SendEvent(DataChangedEvent.GetPooled());
-                    });
-                    container.Add(toggle);
-                    break;
-                }
-                case "int":
+                    var cur = _entries[index];
+                    _entries[index] = new WorldStateEntry { ValueType = cur.ValueType, KeyIndex = cur.KeyIndex, Value = e.newValue ? 1 : 0 };
+                    SendEvent(DataChangedEvent.GetPooled());
+                });
+                container.Add(toggle);
+            }
+            else
+            {
+                var field = new IntegerField { value = entry.Value };
+                field.style.flexGrow = 1;
+                field.RegisterValueChangedCallback(e =>
                 {
-                    int.TryParse(entry.ValueJson, out int val);
-                    var field = new IntegerField { value = val };
-                    field.style.flexGrow = 1;
-                    field.RegisterValueChangedCallback(e =>
-                    {
-                        var cur = _entries[index];
-                        _entries[index] = new WorldStateEntry { Key = cur.Key, ValueType = cur.ValueType, ValueJson = e.newValue.ToString() };
-                        SendEvent(DataChangedEvent.GetPooled());
-                    });
-                    container.Add(field);
-                    break;
-                }
-                case "float":
-                {
-                    float.TryParse(entry.ValueJson, System.Globalization.NumberStyles.Float,
-                        System.Globalization.CultureInfo.InvariantCulture, out float val);
-                    var field = new FloatField { value = val };
-                    field.style.flexGrow = 1;
-                    field.RegisterValueChangedCallback(e =>
-                    {
-                        var cur = _entries[index];
-                        _entries[index] = new WorldStateEntry { Key = cur.Key, ValueType = cur.ValueType, ValueJson = e.newValue.ToString(System.Globalization.CultureInfo.InvariantCulture) };
-                        SendEvent(DataChangedEvent.GetPooled());
-                    });
-                    container.Add(field);
-                    break;
-                }
-                case "string":
-                default:
-                {
-                    var field = new TextField { value = entry.ValueJson ?? "" };
-                    field.style.flexGrow = 1;
-                    field.RegisterValueChangedCallback(e =>
-                    {
-                        var cur = _entries[index];
-                        _entries[index] = new WorldStateEntry { Key = cur.Key, ValueType = cur.ValueType, ValueJson = e.newValue };
-                        SendEvent(DataChangedEvent.GetPooled());
-                    });
-                    container.Add(field);
-                    break;
-                }
+                    var cur = _entries[index];
+                    _entries[index] = new WorldStateEntry { ValueType = cur.ValueType, KeyIndex = cur.KeyIndex, Value = e.newValue };
+                    SendEvent(DataChangedEvent.GetPooled());
+                });
+                container.Add(field);
             }
         }
 
         private void AddEntry()
         {
-            _entries.Add(new WorldStateEntry { Key = "newKey", ValueType = "bool", ValueJson = "false" });
+            _entries.Add(new WorldStateEntry { ValueType = WorldStateValueType.Bool, KeyIndex = 0, Value = 0 });
             SendEvent(DataChangedEvent.GetPooled());
             Refresh();
-        }
-
-        private string GetDefaultJson(string valueType)
-        {
-            switch (valueType)
-            {
-                case "bool":   return "false";
-                case "int":    return "0";
-                case "float":  return "0";
-                case "string": return "";
-                default:       return "";
-            }
         }
     }
 }

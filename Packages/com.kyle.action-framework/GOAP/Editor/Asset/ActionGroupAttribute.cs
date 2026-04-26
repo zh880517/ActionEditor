@@ -1,6 +1,6 @@
 using System;
 
-namespace GOAP.EditorView
+namespace GOAP
 {
     // 分组基类 Attribute，继承后以子类类名（去掉末尾 "Group"）作为分组名
     // 标注在 ActionData 子类上，声明该类型属于哪个分组

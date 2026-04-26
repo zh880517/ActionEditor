@@ -102,11 +102,8 @@ namespace GOAP
         {
             foreach (var kvp in requiredState.State)
             {
-                if (action.Effects.TryGet<object>(kvp.Key, out var effectVal))
-                {
-                    if (System.Object.Equals(effectVal, kvp.Value))
-                        return true;
-                }
+                if (action.Effects.TryGet(kvp.Key, out var effectVal) && effectVal == kvp.Value)
+                    return true;
             }
             return false;
         }
@@ -119,7 +116,7 @@ namespace GOAP
             // 移除被 effects 满足的键（这些条件已被满足，不再需要规划）
             foreach (var kvp in action.Effects.State)
             {
-                if (child.TryGet<object>(kvp.Key, out var val) && System.Object.Equals(val, kvp.Value))
+                if (child.TryGet(kvp.Key, out var val) && val == kvp.Value)
                     child.Remove(kvp.Key);
             }
             // 加入前置条件（这些条件还需要被满足）

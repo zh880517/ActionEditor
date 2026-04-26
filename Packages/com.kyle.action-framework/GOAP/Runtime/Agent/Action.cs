@@ -17,7 +17,7 @@ namespace GOAP
     //   public class MeleeAttackAction : Action<MeleeAttackData>
     //   {
     //       public MeleeAttackAction(MeleeAttackData data) : base(data) { }
-    //       protected override bool OnIsAchievable(WorldState current) => current.TryGet<bool>("enemyInRange", out var v) && v;
+    //       protected override bool OnIsAchievable(WorldState current) => current.TryGet((int)MyKey.EnemyInRange, out var v) && v != 0;
     //       protected override ActionStatus OnPerform(Agent agent) { /* 攻击逻辑 */ return ActionStatus.Completed; }
     //   }
     public abstract class Action<T> : IAction where T : IActionData

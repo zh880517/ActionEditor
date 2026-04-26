@@ -1,8 +1,7 @@
 using System;
 using System.Collections.Generic;
-using GOAP;
 
-namespace GOAP.EditorView
+namespace GOAP
 {
     // 编辑器中单个 Goal 的数据，存储在 ConfigAsset 中
     [Serializable]

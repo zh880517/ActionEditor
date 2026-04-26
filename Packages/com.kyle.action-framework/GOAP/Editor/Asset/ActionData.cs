@@ -1,8 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
-using GOAP;
 
-namespace GOAP.EditorView
+namespace GOAP
 {
     // ActionData 是 Action 的编辑器数据基类（ScriptableObject），存为 ConfigAsset 子资产
     // 子类通过继承扩展额外字段，并标注 [XxxGroup]（ActionGroupAttribute 子类）声明分组

@@ -1,35 +1,30 @@
-using System;
 using System.Collections.Generic;
 
 namespace GOAP
 {
-    // NPC 世界状态，用字典存储任意键值对
+    // NPC 世界状态，用整数键值对存储状态
+    // 键为枚举整数值（由 ConfigAsset.BoolKeyType / IntKeyType 定义），值统一用 int 存储
+    // bool 状态以 0（false）/ 非零（true）表示；BoolKey 与 IntKey 枚举值不应重叠
     // 规划器通过 Clone() 生成快照后进行搜索，不污染实际状态
     public class WorldState
     {
-        private readonly Dictionary<string, object> _state = new Dictionary<string, object>();
+        private readonly Dictionary<int, int> _state = new Dictionary<int, int>();
 
-        public IReadOnlyDictionary<string, object> State => _state;
+        public IReadOnlyDictionary<int, int> State => _state;
 
-        public void Set(string key, object value)
+        public void Set(int key, int value)
         {
             _state[key] = value;
         }
 
-        public bool TryGet<T>(string key, out T value)
+        public bool TryGet(int key, out int value)
         {
-            if (_state.TryGetValue(key, out var obj) && obj is T typed)
-            {
-                value = typed;
-                return true;
-            }
-            value = default;
-            return false;
+            return _state.TryGetValue(key, out value);
         }
 
-        public bool Contains(string key) => _state.ContainsKey(key);
+        public bool Contains(int key) => _state.ContainsKey(key);
 
-        public void Remove(string key) => _state.Remove(key);
+        public void Remove(int key) => _state.Remove(key);
 
         public void Clear() => _state.Clear();
 
@@ -42,14 +37,14 @@ namespace GOAP
             return clone;
         }
 
-        // 检查 this 是否满足 subset 中所有键值对（值相等判断用 Equals）
+        // 检查 this 是否满足 subset 中所有键值对（值相等判断）
         public bool Satisfies(WorldState subset)
         {
             foreach (var kvp in subset._state)
             {
                 if (!_state.TryGetValue(kvp.Key, out var val))
                     return false;
-                if (!Equals(val, kvp.Value))
+                if (val != kvp.Value)
                     return false;
             }
             return true;

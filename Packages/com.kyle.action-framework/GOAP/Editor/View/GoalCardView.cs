@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -9,10 +10,14 @@ namespace GOAP.EditorView
     public class GoalCardView : VisualElement
     {
         private readonly GoalData _data;
+        private readonly Type _boolKeyType;
+        private readonly Type _intKeyType;
 
-        public GoalCardView(GoalData data)
+        public GoalCardView(GoalData data, Type boolKeyType, Type intKeyType)
         {
             _data = data;
+            _boolKeyType = boolKeyType;
+            _intKeyType = intKeyType;
             Build();
         }
 
@@ -66,7 +71,7 @@ namespace GOAP.EditorView
 
             // 期望终态折叠组
             var foldout = new Foldout { text = "▼ 期望终态", value = _data.FoldoutDesiredState };
-            foldout.Add(new WorldStateListView(_data.DesiredState));
+            foldout.Add(new WorldStateListView(_data.DesiredState, _boolKeyType, _intKeyType));
             foldout.RegisterValueChangedCallback(e =>
             {
                 _data.FoldoutDesiredState = e.newValue;
