@@ -2,53 +2,59 @@ using System.Collections.Generic;
 
 namespace GOAP
 {
-    // NPC AI 驱动器，每帧通过 Tick() 推进目标选择 → 规划 → 执行流程
+    // NPC AI 驱动器（薄编排层）
+    // 职责拆分：
+    //   目标选择  → GoalSelector（含滞后切换逻辑）
+    //   计划执行  → PlanExecutor（完整 Action 生命周期管理）
+    //   规划搜索  → Planner（静态，反向 A*）
     // 游戏代码负责：
-    //   1. 每帧更新 WorldState（感知层写入）
-    //   2. 注册 Goals 和 AvailableActions
+    //   1. 每帧通过感知层更新 WorldState
+    //   2. 注册 Goals 和 Actions
     //   3. 调用 Tick(deltaTime)
     public class Agent
     {
-        // 当前世界状态，由外部感知层负责更新
+        // 当前世界状态，由外部感知层每帧写入
         public WorldState WorldState { get; } = new WorldState();
 
         // 注册的目标列表
         public List<IGoal> Goals { get; } = new List<IGoal>();
 
-        // 可用行动列表
-        public List<IAction> AvailableActions { get; } = new List<IAction>();
+        // 可用行动列表（规划与执行共用）
+        public List<IAction> Actions { get; } = new List<IAction>();
 
-        // 规划最大深度
+        // 规划最大深度（反向 A* 搜索层数上限）
         public int MaxPlanDepth { get; set; } = 10;
 
         public IGoal CurrentGoal { get; private set; }
         public Plan CurrentPlan { get; private set; }
-        public IAction CurrentAction { get; private set; }
+
+        // 当前正在执行的 Action（由 PlanExecutor 持有，只读展示）
+        public IAction CurrentAction => _planExecutor.CurrentAction;
+
         public AgentStatus Status { get; private set; } = AgentStatus.Idle;
 
-        // 重规划请求标志
+        // --- 内部组件 ---
+        private readonly GoalSelector _goalSelector = new GoalSelector();
+        private readonly PlanExecutor _planExecutor = new PlanExecutor();
+        private readonly AgentContext _context;
         private bool _replanRequested;
 
-        // 当前计划中正在执行的行动索引
-        private int _currentActionIndex;
-
-        // 当前目标发生变化时调用，子类可重写以响应目标切换（如切换动画、重置状态）
-        protected virtual void OnGoalChanged(IGoal newGoal) { }
-
-        // 重规划完成时调用，子类可重写（plan 为 null 表示规划失败）
-        protected virtual void OnPlanChanged(Plan newPlan) { }
+        public Agent()
+        {
+            _context = new AgentContext(this);
+        }
 
         // 主驱动入口，每帧调用
         public void Tick(float deltaTime)
         {
-            // 选出当前最优目标
-            var bestGoal = SelectGoal();
+            // 1. 目标选择（含滞后逻辑）
+            var bestGoal = _goalSelector.Select(WorldState, Goals);
 
-            // 目标切换或请求重规划 → 中断当前行动，重新规划
+            // 2. 目标切换或重规划请求 → 中断当前 Action，重新规划
             bool goalChanged = bestGoal != CurrentGoal;
             if (goalChanged || _replanRequested)
             {
-                AbortCurrentAction();
+                _planExecutor.Abort(_context);
                 CurrentGoal = bestGoal;
                 _replanRequested = false;
 
@@ -56,25 +62,20 @@ namespace GOAP
                 {
                     Status = AgentStatus.Idle;
                     CurrentPlan = null;
-                    CurrentAction = null;
                     return;
                 }
 
-                // 规划
+                // 3. 规划（同步，本帧内完成）
                 Status = AgentStatus.Planning;
-                var plan = RunPlanner(bestGoal);
+                CurrentPlan = Planner.Plan(WorldState, bestGoal.GetDesiredState(), Actions, MaxPlanDepth);
+                _planExecutor.SetPlan(CurrentPlan);
 
-                CurrentPlan = plan;
-                _currentActionIndex = 0;
-                OnPlanChanged(plan);
+                if (goalChanged) OnGoalChanged(bestGoal);
+                OnPlanChanged(CurrentPlan);
 
-                if (goalChanged)
-                    OnGoalChanged(bestGoal);
-
-                if (plan == null || !plan.IsValid)
+                if (!CurrentPlan.IsValid)
                 {
                     Status = AgentStatus.Failed;
-                    CurrentAction = null;
                     return;
                 }
             }
@@ -85,99 +86,35 @@ namespace GOAP
                 return;
             }
 
-            // 执行当前行动
+            // 4. 执行计划
             Status = AgentStatus.Executing;
-            ExecuteCurrentAction();
+            var execStatus = _planExecutor.Tick(_context, deltaTime);
+
+            switch (execStatus)
+            {
+                case PlanExecutorStatus.Done:
+                    // 所有 Action 执行完毕，目标达成
+                    CurrentPlan = null;
+                    Status = AgentStatus.Idle;
+                    break;
+
+                case PlanExecutorStatus.Failed:
+                    // 执行失败，下帧触发重规划
+                    RequestReplan();
+                    break;
+            }
         }
 
-        // 请求在下一帧重新规划（外部事件驱动，如受伤、发现新敌人等）
+        // 请求在下一帧重新规划（外部事件驱动：受伤、发现敌人、资源消耗等）
         public void RequestReplan()
         {
             _replanRequested = true;
         }
 
-        // 从 Goals 中选出优先级最高且有效的目标
-        private IGoal SelectGoal()
-        {
-            IGoal best = null;
-            float bestPriority = float.MinValue;
-            foreach (var goal in Goals)
-            {
-                if (!goal.IsValid(WorldState))
-                    continue;
-                float priority = goal.GetPriority(WorldState);
-                if (priority > bestPriority)
-                {
-                    bestPriority = priority;
-                    best = goal;
-                }
-            }
-            return best;
-        }
+        // 目标发生变化时调用，子类可重写（如切换动画状态机）
+        protected virtual void OnGoalChanged(IGoal newGoal) { }
 
-        // 调用规划器
-        private Plan RunPlanner(IGoal goal)
-        {
-            return Planner.Plan(
-                WorldState,
-                goal.GetDesiredState(),
-                AvailableActions,
-                MaxPlanDepth);
-        }
-
-        // 执行计划中当前行动，处理完成/失败/推进
-        private void ExecuteCurrentAction()
-        {
-            if (_currentActionIndex >= CurrentPlan.Actions.Count)
-            {
-                // 计划全部执行完毕
-                CurrentAction = null;
-                CurrentPlan = null;
-                Status = AgentStatus.Idle;
-                return;
-            }
-
-            CurrentAction = CurrentPlan.Actions[_currentActionIndex];
-
-            // 运行时再次检查前置条件
-            if (!WorldState.Satisfies(CurrentAction.Preconditions) || !CurrentAction.IsAchievable(WorldState))
-            {
-                // 前置条件不再满足，触发重规划
-                RequestReplan();
-                return;
-            }
-
-            var status = CurrentAction.Perform(this);
-            switch (status)
-            {
-                case ActionStatus.Completed:
-                    // 将行动效果应用到世界状态，推进到下一个行动
-                    WorldState.Apply(CurrentAction.Effects);
-                    _currentActionIndex++;
-                    CurrentAction = null;
-                    break;
-
-                case ActionStatus.Failed:
-                    // 行动失败，触发重规划
-                    CurrentAction = null;
-                    RequestReplan();
-                    break;
-
-                case ActionStatus.Running:
-                    // 继续执行，下帧再 Tick
-                    break;
-            }
-        }
-
-        // 中断当前正在执行的行动
-        private void AbortCurrentAction()
-        {
-            if (CurrentAction != null)
-            {
-                CurrentAction.Abort(this);
-                CurrentAction = null;
-            }
-            _currentActionIndex = 0;
-        }
+        // 规划完成时调用，子类可重写（plan.IsValid 为 false 表示规划失败）
+        protected virtual void OnPlanChanged(Plan newPlan) { }
     }
 }

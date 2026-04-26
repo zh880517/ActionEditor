@@ -35,6 +35,8 @@ namespace GOAP
         public float GetPriority(WorldState current) => OnGetPriority(current);
         public bool IsValid(WorldState current) => OnIsValid(current);
 
+        public float InsistenceBias => OnGetInsistenceBias();
+
         // --- 子类重写点 ---
 
         // 动态优先级，默认返回 BasePriority
@@ -42,5 +44,8 @@ namespace GOAP
 
         // 是否有效，默认始终有效
         protected virtual bool OnIsValid(WorldState current) => true;
+
+        // 滘后切换閘值，默认 0（无滘后效果）
+        protected virtual float OnGetInsistenceBias() => 0f;
     }
 }

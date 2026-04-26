@@ -1,13 +1,11 @@
 namespace GOAP
 {
-    // 行动数据接口，用于标记行动的纯数据 struct，对应 FlowGraph 的节点 struct T
-    // 实现此接口的 struct 只存储数据，不包含任何行为逻辑
-    // 行为逻辑通过 TActionExecutor<T> 实现，并注册到 ActionExecutor<T>.Executor
+    // 行动执行数据接口，struct 只存储类型专有字段（如攻击范围、技能 ID 等）
+    // 规划数据（Cost / Preconditions / Effects）统一由 SerializedActionData 持有
+    // 行为逻辑通过 TActionRunner<T> 实现，并注册到 ActionRunner<T>.Runner
     public interface IActionData
     {
+        // 行动唯一标识，与编辑器中的 ActionId 对应
         string Id { get; }
-        float Cost { get; }
-        WorldState Preconditions { get; }
-        WorldState Effects { get; }
     }
 }

@@ -2,169 +2,219 @@ using System.Collections.Generic;
 
 namespace GOAP
 {
-    // 规划器，使用反向 A* 搜索找到从当前状态到目标状态的最优行动序列
-    // 反向搜索：从目标状态出发，反推每个行动的前置条件，直到当前状态满足所有前置条件
     public static class Planner
     {
-        // 规划入口
-        // currentState: 当前世界状态快照
-        // goalState:    目标终态（只需满足其中的键值对即可）
-        // availableActions: NPC 当前可用的行动列表
-        // maxDepth:     最大搜索深度，防止无限递归
-        // 返回 null 表示无解
+        private static readonly Stack<PlannerNode> _nodePool = new Stack<PlannerNode>(64);
+        private static readonly Stack<WorldState> _statePool = new Stack<WorldState>(64);
+        private static readonly List<PlannerNode> _allocated = new List<PlannerNode>(64);
+        private static readonly List<WorldState> _allocatedStates = new List<WorldState>(64);
+
+        private static readonly MinHeap<PlannerNode> _openList =
+            new MinHeap<PlannerNode>((a, b) => a.F.CompareTo(b.F));
+
+        private static readonly HashSet<WorldState> _closedSet =
+            new HashSet<WorldState>(WorldStateComparer.Instance);
+
+        private static readonly List<IAction> _planBuffer = new List<IAction>();
+
         public static Plan Plan(
             WorldState currentState,
             WorldState goalState,
             IReadOnlyList<IAction> availableActions,
             int maxDepth = 10)
         {
-            var openList = new List<PlannerNode>();
-            var closedList = new List<PlannerNode>();
+            _openList.Clear();
+            _closedSet.Clear();
 
-            // 起始节点：目标状态就是起点（反向搜索）
-            var start = new PlannerNode
+            var startState = RentState();
+            startState.CopyFrom(goalState);
+
+            var startNode = RentNode();
+            startNode.Parent = null;
+            startNode.Action = null;
+            startNode.State = startState;
+            startNode.G = 0f;
+            startNode.H = Heuristic(currentState, startState);
+            startNode.Depth = 0;
+            _openList.Push(startNode);
+
+            Plan result = GOAP.Plan.Empty;
+
+            while (_openList.Count > 0)
             {
-                Parent = null,
-                Action = null,
-                State = goalState.Clone(),
-                Cost = 0f
-            };
-            openList.Add(start);
+                var current = _openList.Pop();
 
-            while (openList.Count > 0)
-            {
-                // 取代价最低的节点
-                var current = GetLowestCostNode(openList);
-                openList.Remove(current);
-                closedList.Add(current);
+                if (_closedSet.Contains(current.State))
+                    continue;
+                _closedSet.Add(current.State);
 
-                // 如果当前状态已满足（即当前世界状态满足了反向推导到此节点的所有前置条件）
                 if (currentState.Satisfies(current.State))
                 {
-                    return BuildPlan(current);
+                    result = BuildPlan(current);
+                    break;
                 }
 
-                // 搜索深度限制
-                if (GetDepth(current) >= maxDepth)
+                if (current.Depth >= maxDepth)
                     continue;
 
-                // 遍历所有可用行动，找能推进规划的行动
-                foreach (var action in availableActions)
+                for (int a = 0; a < availableActions.Count; a++)
                 {
-                    // 行动运行时可行性检查
-                    if (!action.IsAchievable(currentState))
+                    var action = availableActions[a];
+
+                    if (!action.IsApplicable(currentState))
                         continue;
 
-                    // 反向逻辑：此行动的 Effects 是否满足当前节点需要的某些条件
                     if (!HasRelevantEffect(action, current.State))
                         continue;
 
-                    // 生成子节点：将 current.State 中被 action.Effects 满足的条件移除，加入 action.Preconditions
                     var childState = BuildChildState(current.State, action);
 
-                    var child = new PlannerNode
+                    if (_closedSet.Contains(childState))
                     {
-                        Parent = current,
-                        Action = action,
-                        State = childState,
-                        Cost = current.Cost + action.Cost
-                    };
-
-                    // 跳过已在 closed 中的等价节点
-                    if (IsInList(closedList, child))
+                        ReturnState(childState);
                         continue;
+                    }
 
-                    openList.Add(child);
+                    float g = current.G + action.Cost;
+                    float h = Heuristic(currentState, childState);
+
+                    var childNode = RentNode();
+                    childNode.Parent = current;
+                    childNode.Action = action;
+                    childNode.State = childState;
+                    childNode.G = g;
+                    childNode.H = h;
+                    childNode.Depth = current.Depth + 1;
+                    _openList.Push(childNode);
                 }
             }
 
-            // 无解
-            return null;
+            ReturnAll();
+            return result;
         }
 
-        // 从目标节点反向回溯，构建有序行动序列
+        private static float Heuristic(WorldState current, WorldState needed)
+        {
+            int unmet = 0;
+            for (int i = 0; i < needed.Count; i++)
+            {
+                var (key, value) = needed.GetEntry(i);
+                if (!current.TryGet(key, out var val) || val != value)
+                    unmet++;
+            }
+            return unmet;
+        }
+
         private static Plan BuildPlan(PlannerNode goalNode)
         {
-            var actions = new List<IAction>();
+            _planBuffer.Clear();
             float cost = 0f;
             var node = goalNode;
             while (node.Action != null)
             {
-                actions.Insert(0, node.Action);
+                _planBuffer.Add(node.Action);
                 cost += node.Action.Cost;
                 node = node.Parent;
             }
-            return new Plan(actions, cost);
+            _planBuffer.Reverse();
+            return new Plan(new List<IAction>(_planBuffer), cost);
         }
 
-        // 反向搜索：判断 action.Effects 中是否有键值对出现在 requiredState 中（且值相同）
         private static bool HasRelevantEffect(IAction action, WorldState requiredState)
         {
-            foreach (var kvp in requiredState.State)
+            for (int i = 0; i < requiredState.Count; i++)
             {
-                if (action.Effects.TryGet(kvp.Key, out var effectVal) && effectVal == kvp.Value)
+                var (key, value) = requiredState.GetEntry(i);
+                if (action.Effects.TryGet(key, out var effectVal) && effectVal == value)
                     return true;
             }
             return false;
         }
 
-        // 构建子节点的 WorldState：
-        // 从 parentState 中移除被 action.Effects 满足的键值对，再加入 action.Preconditions
         private static WorldState BuildChildState(WorldState parentState, IAction action)
         {
-            var child = parentState.Clone();
-            // 移除被 effects 满足的键（这些条件已被满足，不再需要规划）
-            foreach (var kvp in action.Effects.State)
+            var child = RentState();
+            child.CopyFrom(parentState);
+
+            for (int i = 0; i < action.Effects.Count; i++)
             {
-                if (child.TryGet(kvp.Key, out var val) && val == kvp.Value)
-                    child.Remove(kvp.Key);
+                var (key, value) = action.Effects.GetEntry(i);
+                if (child.TryGet(key, out var val) && val == value)
+                    child.Remove(key);
             }
-            // 加入前置条件（这些条件还需要被满足）
             child.Apply(action.Preconditions);
             return child;
         }
 
-        private static PlannerNode GetLowestCostNode(List<PlannerNode> nodes)
+        private static PlannerNode RentNode()
         {
-            var best = nodes[0];
-            for (int i = 1; i < nodes.Count; i++)
+            var node = _nodePool.Count > 0 ? _nodePool.Pop() : new PlannerNode();
+            _allocated.Add(node);
+            return node;
+        }
+
+        private static WorldState RentState()
+        {
+            var state = _statePool.Count > 0 ? _statePool.Pop() : new WorldState();
+            state.Clear();
+            _allocatedStates.Add(state);
+            return state;
+        }
+
+        private static void ReturnState(WorldState state)
+        {
+            _allocatedStates.Remove(state);
+            state.Clear();
+            _statePool.Push(state);
+        }
+
+        private static void ReturnAll()
+        {
+            _openList.Clear();
+            _closedSet.Clear();
+
+            for (int i = 0; i < _allocated.Count; i++)
             {
-                if (nodes[i].Cost < best.Cost)
-                    best = nodes[i];
+                var node = _allocated[i];
+                node.Parent = null;
+                node.Action = null;
+                node.State = null;
+                _nodePool.Push(node);
             }
-            return best;
-        }
+            _allocated.Clear();
 
-        private static int GetDepth(PlannerNode node)
-        {
-            int depth = 0;
-            var cur = node;
-            while (cur.Parent != null) { depth++; cur = cur.Parent; }
-            return depth;
-        }
-
-        private static bool IsInList(List<PlannerNode> list, PlannerNode node)
-        {
-            foreach (var n in list)
+            for (int i = 0; i < _allocatedStates.Count; i++)
             {
-                if (n.Action == node.Action && StatesEqual(n.State, node.State))
-                    return true;
+                var state = _allocatedStates[i];
+                state.Clear();
+                _statePool.Push(state);
             }
-            return false;
+            _allocatedStates.Clear();
         }
 
-        private static bool StatesEqual(WorldState a, WorldState b)
+        private sealed class WorldStateComparer : IEqualityComparer<WorldState>
         {
-            return a.Satisfies(b) && b.Satisfies(a);
+            public static readonly WorldStateComparer Instance = new WorldStateComparer();
+
+            public bool Equals(WorldState x, WorldState y)
+            {
+                if (ReferenceEquals(x, y)) return true;
+                if (x == null || y == null) return false;
+                return x.Satisfies(y) && y.Satisfies(x);
+            }
+
+            public int GetHashCode(WorldState obj) => obj.ComputeHash();
         }
     }
 
-    // 规划器内部搜索节点
     internal class PlannerNode
     {
         public PlannerNode Parent;
         public IAction Action;
-        public WorldState State;   // 反向搜索中此节点仍需满足的条件集合
-        public float Cost;
+        public WorldState State;
+        public float G;
+        public float H;
+        public int Depth;
+        public float F => G + H;
     }
 }

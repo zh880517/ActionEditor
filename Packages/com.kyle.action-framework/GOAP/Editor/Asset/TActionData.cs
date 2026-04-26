@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using UnityEditor;
 
 namespace GOAP
 {
@@ -12,11 +11,11 @@ namespace GOAP
     {
         public T Config;
 
-        public override ActionRuntimeData Export()
+        public override SerializedActionData Export()
         {
-            var exportData = new TActionRuntimeData<T>();
-            if (AssetDatabase.TryGetGUIDAndLocalFileIdentifier(this, out string guid, out long id))
-                exportData.ID = id;
+            var exportData = new TSerializedActionData<T>();
+            exportData.Id = Config.Id;
+            exportData.Name = name;
             exportData.Data = Config;
             exportData.Cost = Cost;
             exportData.Preconditions = new List<WorldStateEntry>(Preconditions);

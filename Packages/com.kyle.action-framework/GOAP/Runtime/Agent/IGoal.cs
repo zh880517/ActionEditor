@@ -15,5 +15,9 @@ namespace GOAP
 
         // 当前是否有效（不满足条件的目标不会被选中）
         bool IsValid(WorldState current);
+
+        // 目标滘后切换閘值：新目标的优先级优势必须 > InsistenceBias 才会切换
+        // 局油目标频繁切换，默认为 0（无滘后效果）
+        float InsistenceBias { get; }
     }
 }

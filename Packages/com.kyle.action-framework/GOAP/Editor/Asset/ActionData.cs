@@ -20,6 +20,6 @@ namespace GOAP
         public bool FoldoutPreconditions = true;
         public bool FoldoutEffects = true;
 
-        public abstract ActionRuntimeData Export();
+        public abstract SerializedActionData Export();
     }
 }

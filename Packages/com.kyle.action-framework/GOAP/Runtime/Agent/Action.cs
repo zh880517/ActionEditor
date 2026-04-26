@@ -1,72 +1,60 @@
 namespace GOAP
 {
-    // 行动运行时容器，对应 FlowGraph 的 TFlowNodeRuntimeData<T>
-    // 持有纯数据 struct T，并通过 ActionExecutor<T>.Executor 分发生命周期调用
-    // 行为逻辑全部在 TActionExecutor<T> 子类中实现，此类为 sealed，不可继承
-    //
-    // 生命周期：
-    //   IsAchievable  → 规划期 + 执行前检查
-    //   OnEnter       → 首次 Perform 时调用一次
-    //   OnUpdate      → 每帧 Perform 时调用，返回 Running 则继续
-    //   OnExit        → Completed / Failed 时自动调用
-    //   OnAbort       → Agent 重规划或目标切换时调用
-    public sealed class Action<T> : IAction where T : struct, IActionData
+    public sealed class RuntimeAction<T> : IAction where T : struct, IActionData
     {
+        private enum ActionState { Inactive, Active }
+
         private readonly T _data;
-        private bool _entered;
+        private readonly WorldState _preconditions;
+        private readonly WorldState _effects;
+        private ActionState _state = ActionState.Inactive;
 
-        public Action(T data)
+        public RuntimeAction(SerializedActionData planningData, T executionData)
         {
-            _data = data;
+            _data = executionData;
+            Id = planningData.Id;
+            Cost = planningData.Cost;
+            _preconditions = WorldState.FromEntries(planningData.Preconditions);
+            _effects = WorldState.FromEntries(planningData.Effects);
         }
 
-        // --- IAction 实现 ---
+        public string Id { get; }
+        public float Cost { get; }
+        public WorldState Preconditions => _preconditions;
+        public WorldState Effects => _effects;
 
-        public string Id => _data.Id;
-        public float Cost => _data.Cost;
-        public WorldState Preconditions => _data.Preconditions;
-        public WorldState Effects => _data.Effects;
-
-        public bool IsAchievable(WorldState current)
+        public bool IsApplicable(WorldState current)
         {
-            var executor = ActionExecutor<T>.Executor;
-            return executor == null || executor.IsAchievable(current, _data);
+            var runner = ActionRunner<T>.Runner;
+            return runner == null || runner.IsApplicable(current, _data);
         }
 
-        // 首次调用触发 OnEnter，之后每帧调用 OnUpdate
-        // OnUpdate 返回非 Running 时自动调用 OnExit
-        public ActionStatus Perform(Agent agent)
+        public void OnEnter(AgentContext ctx)
         {
-            var executor = ActionExecutor<T>.Executor;
-            if (executor == null)
-                return ActionStatus.Failed;
-
-            if (!_entered)
-            {
-                _entered = true;
-                executor.OnEnter(agent, _data);
-            }
-
-            var status = executor.OnUpdate(agent, _data);
-
-            if (status != ActionStatus.Running)
-            {
-                executor.OnExit(agent, _data);
-                _entered = false;
-            }
-
-            return status;
+            if (_state == ActionState.Active) return;
+            _state = ActionState.Active;
+            ActionRunner<T>.Runner?.OnEnter(ctx, _data);
         }
 
-        // 被 Agent 中断时调用（重规划、目标切换）
-        public void Abort(Agent agent)
+        public ActionStatus OnUpdate(AgentContext ctx, float deltaTime)
         {
-            if (_entered)
-            {
-                ActionExecutor<T>.Executor?.OnAbort(agent, _data);
-                _entered = false;
-            }
+            var runner = ActionRunner<T>.Runner;
+            if (runner == null) return ActionStatus.Failed;
+            return runner.OnUpdate(ctx, _data, deltaTime);
+        }
+
+        public void OnExit(AgentContext ctx)
+        {
+            if (_state != ActionState.Active) return;
+            _state = ActionState.Inactive;
+            ActionRunner<T>.Runner?.OnExit(ctx, _data);
+        }
+
+        public void OnAbort(AgentContext ctx)
+        {
+            if (_state != ActionState.Active) return;
+            _state = ActionState.Inactive;
+            ActionRunner<T>.Runner?.OnAbort(ctx, _data);
         }
     }
 }
-
