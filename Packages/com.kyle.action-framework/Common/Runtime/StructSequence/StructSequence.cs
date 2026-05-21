@@ -18,7 +18,7 @@ public class StructSequence : IStructSequenceWriter, IStructSequenceReader, IDis
         _current = _head;
     }
 
-    public unsafe void Push<T>(int messageId, ref T value) where T : struct, IUnmanagedStruct
+    public unsafe void Push<T>(int messageId, ref T value) where T : struct
     {
         int payloadSize = UnmanagedStructReadWrite<T>.Size;
         if (_current.Remaining < payloadSize)
@@ -33,7 +33,7 @@ public class StructSequence : IStructSequenceWriter, IStructSequenceReader, IDis
         _metas.Add(new SequenceMeta { MessageID = messageId, Block = _current, Offset = offset });
     }
 
-    public unsafe T Read<T>(SequenceMeta meta) where T : struct, IUnmanagedStruct
+    public unsafe T Read<T>(SequenceMeta meta) where T : struct
     {
         byte* ptr = meta.Block.GetPayloadPtr(meta.Offset);
         return UnmanagedStructReadWrite<T>.Read(meta.Block, ptr);

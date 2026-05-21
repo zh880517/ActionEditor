@@ -5,7 +5,7 @@ namespace TestNamespace
 {
     // ── 测试用 struct ──
 
-    public struct DamageEvent : IUnmanagedStruct
+    public struct DamageEvent
     {
         public int targetId;       // offset 0, 4B
         public double damage;      // offset 4, 8B
@@ -13,7 +13,7 @@ namespace TestNamespace
     }
     // PayloadSize = 4 + 8 + 4 = 16
 
-    public struct MoveEvent : IUnmanagedStruct
+    public struct MoveEvent
     {
         public int entityId;       // offset 0, 4B
         public float x;            // offset 4, 4B
@@ -22,7 +22,7 @@ namespace TestNamespace
     }
     // PayloadSize = 16 (blittable)
 
-    public struct SpawnEvent : IUnmanagedStruct
+    public struct SpawnEvent
     {
         public int entityId;       // offset 0, 4B
         public string prefabName;  // offset 4, 4B (ref index)

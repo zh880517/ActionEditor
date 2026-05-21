@@ -1,4 +1,4 @@
-public unsafe class UnmanagedStructReadWrite<T> where T : struct, IUnmanagedStruct
+public unsafe class UnmanagedStructReadWrite<T> where T : struct
 {
     public delegate void WriteDelegate(InternalSequence block, byte* ptr, ref T value);
     public delegate T ReadDelegate(InternalSequence block, byte* ptr);
@@ -11,23 +11,20 @@ public unsafe class UnmanagedStructReadWrite<T> where T : struct, IUnmanagedStru
     private static WriteDelegate _writeFunc;
     private static ReadDelegate _readFunc;
 
-    private static int _size = System.Runtime.InteropServices.Marshal.SizeOf<T>();
+    private static int _size;
     public static int Size => _size;
     public static void Write(InternalSequence block, byte* ptr, ref T value)
     {
-        if(_writeFunc != null)
-        {
-            _writeFunc(block, ptr, ref value);
-            return;
-        }
-        System.Runtime.InteropServices.Marshal.StructureToPtr(value, (System.IntPtr)ptr, false);
+        if (_writeFunc == null)
+            throw new System.InvalidOperationException($"UnmanagedStructReadWrite<{typeof(T).Name}> 未初始化，请先调用 Init");
+        _writeFunc(block, ptr, ref value);
     }
 
     public static T Read(InternalSequence block, byte* ptr)
     {
-        if(_readFunc != null)
-            return _readFunc(block, ptr);
-        return System.Runtime.InteropServices.Marshal.PtrToStructure<T>((System.IntPtr)ptr);
+        if (_readFunc == null)
+            throw new System.InvalidOperationException($"UnmanagedStructReadWrite<{typeof(T).Name}> 未初始化，请先调用 Init");
+        return _readFunc(block, ptr);
     }
     
 }
