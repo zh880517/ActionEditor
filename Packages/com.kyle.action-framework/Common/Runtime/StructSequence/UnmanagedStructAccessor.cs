@@ -2,12 +2,12 @@
 {
     public static int Size => sizeof(T);
 
-    public static T Read(InternalSequence block, byte* ptr)
+    public static T Read(InternalSequence block, System.IntPtr ptr)
     {
         return *(T*)ptr;
     }
 
-    public static void Write(InternalSequence block, byte* ptr, ref T value)
+    public static void Write(InternalSequence block, System.IntPtr ptr, ref T value)
     {
         *(T*)ptr = value;
     }

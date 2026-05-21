@@ -27,19 +27,19 @@ public class InternalSequence : IDisposable
         next = null;
     }
 
-    public unsafe byte* TryAlloc(int size)
+    public IntPtr TryAlloc(int size)
     {
         if (_writeOffset + size > _capacity)
-            return null;
+            return IntPtr.Zero;
 
-        byte* ptr = (byte*)_memory + _writeOffset;
+        IntPtr ptr = IntPtr.Add(_memory, _writeOffset);
         _writeOffset += size;
         return ptr;
     }
 
-    public unsafe byte* GetPayloadPtr(int offset)
+    public IntPtr GetPayloadPtr(int offset)
     {
-        return (byte*)_memory + offset;
+        return IntPtr.Add(_memory, offset);
     }
 
     public int WriteRef(object obj)

@@ -1,7 +1,7 @@
-public unsafe class UnsafeStructAccessor<T> where T : struct
+public class UnsafeStructAccessor<T> where T : struct
 {
-    public delegate void WriteDelegate(InternalSequence block, byte* ptr, ref T value);
-    public delegate T ReadDelegate(InternalSequence block, byte* ptr);
+    public delegate void WriteDelegate(InternalSequence block, System.IntPtr ptr, ref T value);
+    public delegate T ReadDelegate(InternalSequence block, System.IntPtr ptr);
     public static void Init(int size, WriteDelegate writeFunc, ReadDelegate readFunc)
     {
         _size = size;
@@ -13,14 +13,14 @@ public unsafe class UnsafeStructAccessor<T> where T : struct
 
     private static int _size;
     public static int Size => _size;
-    public static void Write(InternalSequence block, byte* ptr, ref T value)
+    public static void Write(InternalSequence block, System.IntPtr ptr, ref T value)
     {
         if (_writeFunc == null)
             throw new System.InvalidOperationException($"UnmanagedStructReadWrite<{typeof(T).Name}> 未初始化，请先调用 Init");
         _writeFunc(block, ptr, ref value);
     }
 
-    public static T Read(InternalSequence block, byte* ptr)
+    public static T Read(InternalSequence block, System.IntPtr ptr)
     {
         if (_readFunc == null)
             throw new System.InvalidOperationException($"UnmanagedStructReadWrite<{typeof(T).Name}> 未初始化，请先调用 Init");

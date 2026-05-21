@@ -18,7 +18,7 @@ public class StructSequence : IStructSequenceWriter, IStructSequenceReader, IDis
         _current = _head;
     }
 
-    public unsafe void Push<T>(int messageId, ref T value) where T : struct
+    public void Push<T>(int messageId, ref T value) where T : struct
     {
         int payloadSize = UnsafeStructAccessor<T>.Size;
         if (_current.Remaining < payloadSize)
@@ -28,12 +28,12 @@ public class StructSequence : IStructSequenceWriter, IStructSequenceReader, IDis
             _current = newBlock;
         }
         int offset = _current.WriteOffset;
-        byte* ptr = _current.TryAlloc(payloadSize);
+        System.IntPtr ptr = _current.TryAlloc(payloadSize);
         UnsafeStructAccessor<T>.Write(_current, ptr, ref value);
         _metas.Add(new SequenceMeta { MessageID = messageId, Block = _current, Offset = offset });
     }
 
-    public unsafe void PushUnmanaged<T>(int messageId, ref T value) where T : unmanaged
+    public void PushUnmanaged<T>(int messageId, ref T value) where T : unmanaged
     {
         int payloadSize = UnmanagedStructAccessor<T>.Size;
         if (_current.Remaining < payloadSize)
@@ -43,20 +43,20 @@ public class StructSequence : IStructSequenceWriter, IStructSequenceReader, IDis
             _current = newBlock;
         }
         int offset = _current.WriteOffset;
-        byte* ptr = _current.TryAlloc(payloadSize);
+        System.IntPtr ptr = _current.TryAlloc(payloadSize);
         UnmanagedStructAccessor<T>.Write(_current, ptr, ref value);
         _metas.Add(new SequenceMeta { MessageID = messageId, Block = _current, Offset = offset });
     }
 
-    public unsafe T Read<T>(SequenceMeta meta) where T : struct
+    public T Read<T>(SequenceMeta meta) where T : struct
     {
-        byte* ptr = meta.Block.GetPayloadPtr(meta.Offset);
+        System.IntPtr ptr = meta.Block.GetPayloadPtr(meta.Offset);
         return UnsafeStructAccessor<T>.Read(meta.Block, ptr);
     }
 
-    public unsafe T ReadUnmanaged<T>(SequenceMeta meta) where T : unmanaged
+    public T ReadUnmanaged<T>(SequenceMeta meta) where T : unmanaged
     {
-        byte* ptr = meta.Block.GetPayloadPtr(meta.Offset);
+        System.IntPtr ptr = meta.Block.GetPayloadPtr(meta.Offset);
         return UnmanagedStructAccessor<T>.Read(meta.Block, ptr);
     }
 

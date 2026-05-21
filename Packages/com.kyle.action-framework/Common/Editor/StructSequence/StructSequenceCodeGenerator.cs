@@ -193,7 +193,7 @@ namespace CodeGen.StructSequence
         private static void GenerateWriteMethod(CSharpCodeWriter writer, SSStructData structData, string nameSpace)
         {
             string typeName = GeneratorUtils.TypeToName(structData.Type, nameSpace);
-            string sig = $"private static void Write{structData.TypeName}(InternalSequence block, byte* ptr, ref {typeName} value)";
+            string sig = $"private static void Write{structData.TypeName}(InternalSequence block, System.IntPtr ptr, ref {typeName} value)";
             using (new CSharpCodeWriter.Scop(writer, sig))
             {
                 foreach (var field in structData.Fields)
@@ -202,13 +202,13 @@ namespace CodeGen.StructSequence
                     switch (field.Kind)
                     {
                         case SSFieldKind.Unmanaged:
-                            writer.WriteLine($"*({fieldTypeName}*)(ptr + {field.ByteOffset}) = value.{field.FieldName};");
+                            writer.WriteLine($"*({fieldTypeName}*)System.IntPtr.Add(ptr, {field.ByteOffset}) = value.{field.FieldName};");
                             break;
                         case SSFieldKind.Struct:
-                            writer.WriteLine($"UnsafeStructAccessor<{fieldTypeName}>.Write(block, ptr + {field.ByteOffset}, ref value.{field.FieldName});");
+                            writer.WriteLine($"UnsafeStructAccessor<{fieldTypeName}>.Write(block, System.IntPtr.Add(ptr, {field.ByteOffset}), ref value.{field.FieldName});");
                             break;
                         default:
-                            writer.WriteLine($"*(int*)(ptr + {field.ByteOffset}) = block.WriteRef(value.{field.FieldName});");
+                            writer.WriteLine($"*(int*)System.IntPtr.Add(ptr, {field.ByteOffset}) = block.WriteRef(value.{field.FieldName});");
                             break;
                     }
                 }
@@ -219,7 +219,7 @@ namespace CodeGen.StructSequence
         private static void GenerateReadMethod(CSharpCodeWriter writer, SSStructData structData, string nameSpace)
         {
             string typeName = GeneratorUtils.TypeToName(structData.Type, nameSpace);
-            string sig = $"private static {typeName} Read{structData.TypeName}(InternalSequence block, byte* ptr)";
+            string sig = $"private static {typeName} Read{structData.TypeName}(InternalSequence block, System.IntPtr ptr)";
             using (new CSharpCodeWriter.Scop(writer, sig))
             {
                 writer.WriteLine($"{typeName} data = default;");
@@ -229,13 +229,13 @@ namespace CodeGen.StructSequence
                     switch (field.Kind)
                     {
                         case SSFieldKind.Unmanaged:
-                            writer.WriteLine($"data.{field.FieldName} = *({fieldTypeName}*)(ptr + {field.ByteOffset});");
+                            writer.WriteLine($"data.{field.FieldName} = *({fieldTypeName}*)System.IntPtr.Add(ptr, {field.ByteOffset});");
                             break;
                         case SSFieldKind.Struct:
-                            writer.WriteLine($"data.{field.FieldName} = UnsafeStructAccessor<{fieldTypeName}>.Read(block, ptr + {field.ByteOffset});");
+                            writer.WriteLine($"data.{field.FieldName} = UnsafeStructAccessor<{fieldTypeName}>.Read(block, System.IntPtr.Add(ptr, {field.ByteOffset}));");
                             break;
                         default:
-                            writer.WriteLine($"data.{field.FieldName} = ({fieldTypeName})block.GetRef(*(int*)(ptr + {field.ByteOffset}));");
+                            writer.WriteLine($"data.{field.FieldName} = ({fieldTypeName})block.GetRef(*(int*)System.IntPtr.Add(ptr, {field.ByteOffset}));");
                             break;
                     }
                 }

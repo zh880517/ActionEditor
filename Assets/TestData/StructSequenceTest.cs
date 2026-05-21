@@ -55,18 +55,18 @@ namespace TestNamespace
             // DamageEvent: 含引用字段，注册自定义委托
             UnsafeStructAccessor<DamageEvent>.Init(
                 16,
-                (InternalSequence block, byte* ptr, ref DamageEvent v) =>
+                (InternalSequence block, System.IntPtr ptr, ref DamageEvent v) =>
                 {
-                    *(int*)(ptr + 0) = v.targetId;
-                    *(double*)(ptr + 4) = v.damage;
-                    *(int*)(ptr + 12) = block.WriteRef(v.skillName);
+                    *(int*)System.IntPtr.Add(ptr, 0) = v.targetId;
+                    *(double*)System.IntPtr.Add(ptr, 4) = v.damage;
+                    *(int*)System.IntPtr.Add(ptr, 12) = block.WriteRef(v.skillName);
                 },
-                (InternalSequence block, byte* ptr) =>
+                (InternalSequence block, System.IntPtr ptr) =>
                 {
                     DamageEvent data;
-                    data.targetId = *(int*)(ptr + 0);
-                    data.damage = *(double*)(ptr + 4);
-                    data.skillName = (string)block.GetRef(*(int*)(ptr + 12));
+                    data.targetId = *(int*)System.IntPtr.Add(ptr, 0);
+                    data.damage = *(double*)System.IntPtr.Add(ptr, 4);
+                    data.skillName = (string)block.GetRef(*(int*)System.IntPtr.Add(ptr, 12));
                     return data;
                 }
             );
@@ -74,18 +74,18 @@ namespace TestNamespace
             // SpawnEvent: 含引用字段，注册自定义委托
             UnsafeStructAccessor<SpawnEvent>.Init(
                 12,
-                (InternalSequence block, byte* ptr, ref SpawnEvent v) =>
+                (InternalSequence block, System.IntPtr ptr, ref SpawnEvent v) =>
                 {
-                    *(int*)(ptr + 0) = v.entityId;
-                    *(int*)(ptr + 4) = block.WriteRef(v.prefabName);
-                    *(int*)(ptr + 8) = block.WriteRef(v.tags);
+                    *(int*)System.IntPtr.Add(ptr, 0) = v.entityId;
+                    *(int*)System.IntPtr.Add(ptr, 4) = block.WriteRef(v.prefabName);
+                    *(int*)System.IntPtr.Add(ptr, 8) = block.WriteRef(v.tags);
                 },
-                (InternalSequence block, byte* ptr) =>
+                (InternalSequence block, System.IntPtr ptr) =>
                 {
                     SpawnEvent data;
-                    data.entityId = *(int*)(ptr + 0);
-                    data.prefabName = (string)block.GetRef(*(int*)(ptr + 4));
-                    data.tags = (int[])block.GetRef(*(int*)(ptr + 8));
+                    data.entityId = *(int*)System.IntPtr.Add(ptr, 0);
+                    data.prefabName = (string)block.GetRef(*(int*)System.IntPtr.Add(ptr, 4));
+                    data.tags = (int[])block.GetRef(*(int*)System.IntPtr.Add(ptr, 8));
                     return data;
                 }
             );
