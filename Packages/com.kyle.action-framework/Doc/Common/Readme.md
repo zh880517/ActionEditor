@@ -28,5 +28,6 @@
 | **CSharpCodeWriter** | 流式 C# 源码生成工具，自动管理缩进与代码块结构，供 DataVisit、FlowGraph 等代码生成器使用 | [CSharpCodeWriter.md](CSharpCodeWriter.md) |
 | **ScriptObjectCollector** | `ScriptableSingleton`，追踪和缓存磁盘 `.asset` 文件，监听资产增删变化并触发事件 | [ScriptObjectCollector.md](ScriptObjectCollector.md) |
 | **DataVisit 代码生成** | DataVisit 的编辑器端代码生成入口，扫描 Catalog 类型并输出序列化代码 | [DataVisit.md](DataVisit.md) |
+| **StructSequence 代码生成** | StructSequence 的编辑器端代码生成入口，扫描 `StructSequenceCatalogAttribute` 标记的 struct，自动生成读写委托注册代码（`Tools/StructSequence/Generate All`） | [StructSequence.md](StructSequence.md) |
 | **VisualElement 组件** | 通用小控件：`IconButton`、`MouseCursorRect`、`PlayButtonsView`、`TypeSelectWindow` | — |
 | **Editor Utils** | 编辑器工具集：`GeneratorUtils`、`HandlesUtil`、`MonoScriptUtil`、`VisualElementUtil` | — |
