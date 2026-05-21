@@ -55,6 +55,34 @@ namespace CodeGen.StructSequence
             return catalogs;
         }
 
+        // 从指定类型数组构建一个 SSCatalogData：过滤非 struct 类型（基本类型、枚举、指针均排除），并去重
+        public static SSCatalogData CreateCatalogFromTypes(Type[] types, string nameSpace, string generatePath, string genClassName)
+        {
+            var catalog = new SSCatalogData
+            {
+                AttributeType = null,
+                NameSpace = nameSpace,
+                GeneratePath = generatePath,
+                GenClassName = genClassName,
+            };
+
+            var seen = new HashSet<Type>();
+            foreach (var type in types)
+            {
+                if (type == null)
+                    continue;
+                // 仅保留 struct（值类型，且非基本类型、非枚举、非指针）
+                if (!type.IsValueType || type.IsPrimitive || type.IsEnum || type.IsPointer)
+                    continue;
+                if (!seen.Add(type))
+                    continue;
+                catalog.Structs.Add(CreateStructData(type));
+            }
+
+            BuildOffsets(new List<SSCatalogData> { catalog });
+            return catalog;
+        }
+
         // 根据 Catalog Attribute 类型创建 SSCatalogData，推导生成类名
         private static SSCatalogData CreateCatalog(Type catalogAttributeType)
         {
@@ -90,10 +118,14 @@ namespace CodeGen.StructSequence
                 foreach (var field in fields)
                 {
                     bool fieldUnmanaged = IsUnmanagedType(field.FieldType);
+                    bool fieldIsStruct = !fieldUnmanaged && field.FieldType.IsValueType;
+                    var kind = fieldUnmanaged ? SSFieldKind.Unmanaged
+                             : fieldIsStruct  ? SSFieldKind.Struct
+                             :                  SSFieldKind.Reference;
                     structData.Fields.Add(new SSFieldData
                     {
                         Field = field,
-                        IsUnmanaged = fieldUnmanaged,
+                        Kind = kind,
                         UnmanagedSize = fieldUnmanaged ? GetUnmanagedSize(field.FieldType) : 0,
                     });
                 }
@@ -104,6 +136,12 @@ namespace CodeGen.StructSequence
         // 计算所有非 unmanaged 结构体每个字段的 ByteOffset（紧凑顺序，无对齐填充）
         private static void BuildOffsets(List<SSCatalogData> catalogs)
         {
+            // 构建 Type → SSStructData 索引，供递归计算非 unmanaged struct 字段大小
+            var structMap = new Dictionary<Type, SSStructData>();
+            foreach (var catalog in catalogs)
+                foreach (var s in catalog.Structs)
+                    structMap[s.Type] = s;
+
             foreach (var catalog in catalogs)
             {
                 foreach (var structData in catalog.Structs)
@@ -114,11 +152,40 @@ namespace CodeGen.StructSequence
                     foreach (var field in structData.Fields)
                     {
                         field.ByteOffset = offset;
-                        // unmanaged 字段按其实际大小，managed 引用字段存 ref index（int = 4字节）
-                        offset += field.IsUnmanaged ? field.UnmanagedSize : sizeof(int);
+                        offset += GetFieldPayloadSize(field, structMap);
                     }
                 }
             }
+        }
+
+        // 计算一个字段在 payload 中占用的字节数
+        private static int GetFieldPayloadSize(SSFieldData field, Dictionary<Type, SSStructData> structMap)
+        {
+            switch (field.Kind)
+            {
+                case SSFieldKind.Unmanaged:
+                    return field.UnmanagedSize;
+                case SSFieldKind.Struct:
+                    // 非 unmanaged struct：递归计算其 payload 大小
+                    if (structMap.TryGetValue(field.FieldType, out var nested))
+                        return ComputeStructPayloadSize(nested, structMap);
+                    // 未在 catalog 中注册的嵌套 struct，无法静态确定大小，回退为引用索引
+                    return sizeof(int);
+                default:
+                    // 引用类型：存 ref index（int = 4字节）
+                    return sizeof(int);
+            }
+        }
+
+        // 递归计算一个非 unmanaged SSStructData 的 payload 总字节数
+        private static int ComputeStructPayloadSize(SSStructData structData, Dictionary<Type, SSStructData> structMap)
+        {
+            if (structData.IsUnmanaged)
+                return GetUnmanagedSize(structData.Type);
+            int size = 0;
+            foreach (var field in structData.Fields)
+                size += GetFieldPayloadSize(field, structMap);
+            return size;
         }
 
         // 判断一个类型是否为 unmanaged（值类型且所有字段递归均为 unmanaged）

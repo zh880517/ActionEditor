@@ -32,16 +32,27 @@ namespace CodeGen.StructSequence
         public string TypeName => Type.Name;
     }
 
+    // 字段在 payload 中的存储方式
+    public enum SSFieldKind
+    {
+        // unmanaged 值类型，直接指针读写
+        Unmanaged,
+        // 非 unmanaged 的 struct，通过 UnsafeStructAccessor<T> 递归读写
+        Struct,
+        // 引用类型（class / interface / string），存 ref index（4字节）
+        Reference,
+    }
+
     // 一个字段的分析数据
     public class SSFieldData
     {
         // 字段的反射信息
         public FieldInfo Field;
-        // 该字段是否是 unmanaged 类型（可以直接用指针读写）
-        public bool IsUnmanaged;
+        // 字段的存储方式
+        public SSFieldKind Kind;
         // 字段在 payload 中的紧凑字节偏移（无对齐填充，由 BuildOffsets 计算）
         public int ByteOffset;
-        // 字段的 unmanaged 字节大小（IsUnmanaged 为 true 时有效）
+        // 字段的 unmanaged 字节大小（Kind == Unmanaged 时有效）
         public int UnmanagedSize;
 
         public string FieldName => Field.Name;

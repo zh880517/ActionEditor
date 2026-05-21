@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using CodeGen;
@@ -24,6 +25,67 @@ namespace CodeGen.StructSequence
 
             if (modifiedFiles.Count > 0)
                 AssetDatabase.Refresh();
+        }
+
+        // 从给定类型数组自定义生成代码：过滤非 struct 类型、去重，Write / Read / Init() 合并到单个文件
+        public static void GenerateFromTypes(Type[] types, string path, string nameSpace, string className)
+        {
+            var catalog = StructSequenceTypeCollector.CreateCatalogFromTypes(types, nameSpace, path, className);
+            if (catalog.Structs.Count == 0)
+                return;
+
+            string filePath = GenerateMergedFile(catalog);
+            if (filePath != null)
+                AssetDatabase.Refresh();
+        }
+
+        // 将 Write 方法、Read 方法、Init() 注册合并写入单个文件 {GenClassName}.cs
+        private static string GenerateMergedFile(SSCatalogData catalog)
+        {
+            var writer = new CSharpCodeWriter();
+            writer.WriteLine("using UnityEngine;");
+            writer.WriteLine("//此文件由工具自动生成: StructSequenceCodeGenerator.GenerateFromTypes()");
+
+            using (new CSharpCodeWriter.NameSpaceScop(writer, catalog.NameSpace))
+            {
+                using (new CSharpCodeWriter.Scop(writer, $"public static unsafe partial class {catalog.GenClassName}"))
+                {
+                    // Write 方法段
+                    bool hasMethod = false;
+                    foreach (var structData in catalog.Structs)
+                    {
+                        if (structData.IsUnmanaged)
+                            continue;
+                        if (hasMethod)
+                            writer.NewLine();
+                        GenerateWriteMethod(writer, structData, catalog.NameSpace);
+                        hasMethod = true;
+                    }
+
+                    // Read 方法段
+                    foreach (var structData in catalog.Structs)
+                    {
+                        if (structData.IsUnmanaged)
+                            continue;
+                        writer.NewLine();
+                        GenerateReadMethod(writer, structData, catalog.NameSpace);
+                    }
+
+                    // Init() 注册方法
+                    writer.NewLine();
+                    writer.WriteLine("[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]");
+                    using (new CSharpCodeWriter.Scop(writer, "public static void Init()"))
+                    {
+                        foreach (var structData in catalog.Structs)
+                            GenerateRegistration(writer, structData, catalog.NameSpace, catalog);
+                    }
+                }
+            }
+
+            string filePath = Path.Combine(catalog.GeneratePath, $"{catalog.GenClassName}.cs");
+            if (GeneratorUtils.WriteToFile(filePath, writer.ToString()))
+                return filePath;
+            return null;
         }
 
         // 为一个 Catalog 生成三个 partial class 文件：Write / Read / 注册
@@ -115,7 +177,7 @@ namespace CodeGen.StructSequence
                     {
                         foreach (var structData in catalog.Structs)
                         {
-                            GenerateRegistration(writer, structData, catalog.NameSpace);
+                            GenerateRegistration(writer, structData, catalog.NameSpace, catalog);
                         }
                     }
                 }
@@ -136,14 +198,18 @@ namespace CodeGen.StructSequence
             {
                 foreach (var field in structData.Fields)
                 {
-                    if (field.IsUnmanaged)
+                    string fieldTypeName = GeneratorUtils.TypeToName(field.FieldType, nameSpace);
+                    switch (field.Kind)
                     {
-                        string fieldTypeName = GeneratorUtils.TypeToName(field.FieldType, nameSpace);
-                        writer.WriteLine($"*({fieldTypeName}*)(ptr + {field.ByteOffset}) = value.{field.FieldName};");
-                    }
-                    else
-                    {
-                        writer.WriteLine($"*(int*)(ptr + {field.ByteOffset}) = block.WriteRef(value.{field.FieldName});");
+                        case SSFieldKind.Unmanaged:
+                            writer.WriteLine($"*({fieldTypeName}*)(ptr + {field.ByteOffset}) = value.{field.FieldName};");
+                            break;
+                        case SSFieldKind.Struct:
+                            writer.WriteLine($"UnsafeStructAccessor<{fieldTypeName}>.Write(block, ptr + {field.ByteOffset}, ref value.{field.FieldName});");
+                            break;
+                        default:
+                            writer.WriteLine($"*(int*)(ptr + {field.ByteOffset}) = block.WriteRef(value.{field.FieldName});");
+                            break;
                     }
                 }
             }
@@ -159,15 +225,18 @@ namespace CodeGen.StructSequence
                 writer.WriteLine($"{typeName} data = default;");
                 foreach (var field in structData.Fields)
                 {
-                    if (field.IsUnmanaged)
+                    string fieldTypeName = GeneratorUtils.TypeToName(field.FieldType, nameSpace);
+                    switch (field.Kind)
                     {
-                        string fieldTypeName = GeneratorUtils.TypeToName(field.FieldType, nameSpace);
-                        writer.WriteLine($"data.{field.FieldName} = *({fieldTypeName}*)(ptr + {field.ByteOffset});");
-                    }
-                    else
-                    {
-                        string fieldTypeName = GeneratorUtils.TypeToName(field.FieldType, nameSpace);
-                        writer.WriteLine($"data.{field.FieldName} = ({fieldTypeName})block.GetRef(*(int*)(ptr + {field.ByteOffset}));");
+                        case SSFieldKind.Unmanaged:
+                            writer.WriteLine($"data.{field.FieldName} = *({fieldTypeName}*)(ptr + {field.ByteOffset});");
+                            break;
+                        case SSFieldKind.Struct:
+                            writer.WriteLine($"data.{field.FieldName} = UnsafeStructAccessor<{fieldTypeName}>.Read(block, ptr + {field.ByteOffset});");
+                            break;
+                        default:
+                            writer.WriteLine($"data.{field.FieldName} = ({fieldTypeName})block.GetRef(*(int*)(ptr + {field.ByteOffset}));");
+                            break;
                     }
                 }
                 writer.WriteLine("return data;");
@@ -175,7 +244,7 @@ namespace CodeGen.StructSequence
         }
 
         // 生成 Init() 中对单个结构体的注册代码
-        private static void GenerateRegistration(CSharpCodeWriter writer, SSStructData structData, string nameSpace)
+        private static void GenerateRegistration(CSharpCodeWriter writer, SSStructData structData, string nameSpace, SSCatalogData catalog)
         {
             string typeName = GeneratorUtils.TypeToName(structData.Type, nameSpace);
             if (structData.IsUnmanaged)
@@ -184,17 +253,31 @@ namespace CodeGen.StructSequence
             }
             else
             {
-                int totalSize = ComputePayloadSize(structData);
+                int totalSize = ComputePayloadSize(structData, catalog);
                 writer.WriteLine($"UnsafeStructAccessor<{typeName}>.Init({totalSize}, Write{structData.TypeName}, Read{structData.TypeName});");
             }
         }
 
         // 计算非 unmanaged 结构体 payload 的总字节数（紧凑布局）
-        private static int ComputePayloadSize(SSStructData structData)
+        private static int ComputePayloadSize(SSStructData structData, SSCatalogData catalog)
         {
             int size = 0;
             foreach (var field in structData.Fields)
-                size += field.IsUnmanaged ? field.UnmanagedSize : sizeof(int);
+            {
+                switch (field.Kind)
+                {
+                    case SSFieldKind.Unmanaged:
+                        size += field.UnmanagedSize;
+                        break;
+                    case SSFieldKind.Struct:
+                        var nested = catalog.Structs.Find(s => s.Type == field.FieldType);
+                        size += nested != null ? ComputePayloadSize(nested, catalog) : sizeof(int);
+                        break;
+                    default:
+                        size += sizeof(int);
+                        break;
+                }
+            }
             return size;
         }
     }
