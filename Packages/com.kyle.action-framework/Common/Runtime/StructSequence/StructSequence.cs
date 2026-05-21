@@ -10,7 +10,7 @@ public class StructSequence : IStructSequenceWriter, IStructSequenceReader, IDis
 
     public IReadOnlyList<SequenceMeta> Metas => _metas;
 
-    public void Init()
+    public StructSequence()
     {
         _pool = new InternalSequencePool();
         _metas = new List<SequenceMeta>();
@@ -20,7 +20,7 @@ public class StructSequence : IStructSequenceWriter, IStructSequenceReader, IDis
 
     public unsafe void Push<T>(int messageId, ref T value) where T : struct
     {
-        int payloadSize = UnmanagedStructReadWrite<T>.Size;
+        int payloadSize = UnsafeStructAccessor<T>.Size;
         if (_current.Remaining < payloadSize)
         {
             var newBlock = _pool.Rent();
@@ -29,14 +29,14 @@ public class StructSequence : IStructSequenceWriter, IStructSequenceReader, IDis
         }
         int offset = _current.WriteOffset;
         byte* ptr = _current.TryAlloc(payloadSize);
-        UnmanagedStructReadWrite<T>.Write(_current, ptr, ref value);
+        UnsafeStructAccessor<T>.Write(_current, ptr, ref value);
         _metas.Add(new SequenceMeta { MessageID = messageId, Block = _current, Offset = offset });
     }
 
     public unsafe T Read<T>(SequenceMeta meta) where T : struct
     {
         byte* ptr = meta.Block.GetPayloadPtr(meta.Offset);
-        return UnmanagedStructReadWrite<T>.Read(meta.Block, ptr);
+        return UnsafeStructAccessor<T>.Read(meta.Block, ptr);
     }
 
     public void Reset()

@@ -47,8 +47,13 @@ namespace TestNamespace
     {
         public static void RegisterAll()
         {
+            UnsafeStructAccessor<MoveEvent>.Init(
+                sizeof(MoveEvent),
+                UnmanagedStructAccessor<MoveEvent>.Write,
+                UnmanagedStructAccessor<MoveEvent>.Read
+            );
             // DamageEvent: 含引用字段，注册自定义委托
-            UnmanagedStructReadWrite<DamageEvent>.Init(
+            UnsafeStructAccessor<DamageEvent>.Init(
                 16,
                 (InternalSequence block, byte* ptr, ref DamageEvent v) =>
                 {
@@ -67,7 +72,7 @@ namespace TestNamespace
             );
 
             // SpawnEvent: 含引用字段，注册自定义委托
-            UnmanagedStructReadWrite<SpawnEvent>.Init(
+            UnsafeStructAccessor<SpawnEvent>.Init(
                 12,
                 (InternalSequence block, byte* ptr, ref SpawnEvent v) =>
                 {
@@ -114,7 +119,6 @@ namespace TestNamespace
         static void TestBasicPushConsume()
         {
             var seq = new StructSequence();
-            seq.Init();
 
             IStructSequenceWriter writer = seq;
             IStructSequenceReader reader = seq;
@@ -140,7 +144,6 @@ namespace TestNamespace
         static void TestMultipleTypes()
         {
             var seq = new StructSequence();
-            seq.Init();
 
             IStructSequenceWriter writer = seq;
             IStructSequenceReader reader = seq;
@@ -190,7 +193,6 @@ namespace TestNamespace
         static void TestNullReference()
         {
             var seq = new StructSequence();
-            seq.Init();
 
             IStructSequenceWriter writer = seq;
             IStructSequenceReader reader = seq;
@@ -212,7 +214,6 @@ namespace TestNamespace
         static void TestMultiBlock()
         {
             var seq = new StructSequence();
-            seq.Init();
 
             IStructSequenceWriter writer = seq;
             IStructSequenceReader reader = seq;
@@ -242,7 +243,6 @@ namespace TestNamespace
         static void TestResetAndReuse()
         {
             var seq = new StructSequence();
-            seq.Init();
 
             IStructSequenceWriter writer = seq;
             IStructSequenceReader reader = seq;
@@ -274,7 +274,6 @@ namespace TestNamespace
         static void TestMultiMessageID()
         {
             var seq = new StructSequence();
-            seq.Init();
 
             IStructSequenceWriter writer = seq;
             IStructSequenceReader reader = seq;

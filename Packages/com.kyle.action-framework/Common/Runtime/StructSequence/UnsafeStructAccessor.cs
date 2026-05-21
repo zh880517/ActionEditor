@@ -1,4 +1,4 @@
-public unsafe class UnmanagedStructReadWrite<T> where T : struct
+public unsafe class UnsafeStructAccessor<T> where T : struct
 {
     public delegate void WriteDelegate(InternalSequence block, byte* ptr, ref T value);
     public delegate T ReadDelegate(InternalSequence block, byte* ptr);
@@ -26,5 +26,4 @@ public unsafe class UnmanagedStructReadWrite<T> where T : struct
             throw new System.InvalidOperationException($"UnmanagedStructReadWrite<{typeof(T).Name}> 未初始化，请先调用 Init");
         return _readFunc(block, ptr);
     }
-    
 }
