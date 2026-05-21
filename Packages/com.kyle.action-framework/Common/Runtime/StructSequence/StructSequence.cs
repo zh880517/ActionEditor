@@ -1,55 +1,42 @@
 using System;
+using System.Collections.Generic;
 
-public class StructSequence : IDisposable
+public class StructSequence : IStructSequenceWriter, IStructSequenceReader, IDisposable
 {
     private InternalSequence _head;
     private InternalSequence _current;
-    private Action<InternalSequence>[] _handlers;
-    private int _totalMessageCount;
+    private List<SequenceMeta> _metas;
     private InternalSequencePool _pool;
 
-    public int TotalMessageCount => _totalMessageCount;
+    public IReadOnlyList<SequenceMeta> Metas => _metas;
 
-    public void Init(int maxTypeCount = 64)
+    public void Init()
     {
         _pool = new InternalSequencePool();
-        _handlers = new Action<InternalSequence>[maxTypeCount];
+        _metas = new List<SequenceMeta>();
         _head = _pool.Rent();
         _current = _head;
-        _totalMessageCount = 0;
     }
 
-    public void RegisterHandler(int typeIndex, Action<InternalSequence> handler)
+    public unsafe void Push<T>(int messageId, ref T value) where T : struct, IUnmanagedStruct
     {
-        _handlers[typeIndex] = handler;
-    }
-
-    public InternalSequence AllocMessage(int messageSize)
-    {
-        if (_current.Remaining < messageSize)
+        int payloadSize = UnmanagedStructReadWrite<T>.Size;
+        if (_current.Remaining < payloadSize)
         {
             var newBlock = _pool.Rent();
             _current.next = newBlock;
             _current = newBlock;
         }
-        _totalMessageCount++;
-        return _current;
+        int offset = _current.WriteOffset;
+        byte* ptr = _current.TryAlloc(payloadSize);
+        UnmanagedStructReadWrite<T>.Write(_current, ptr, ref value);
+        _metas.Add(new SequenceMeta { MessageID = messageId, Block = _current, Offset = offset });
     }
 
-    public unsafe void Consume()
+    public unsafe T Read<T>(SequenceMeta meta) where T : struct, IUnmanagedStruct
     {
-        var block = _head;
-        while (block != null)
-        {
-            block.ResetRead();
-            for (int i = 0; i < block.MessageCount; i++)
-            {
-                byte* hdr = block.AllocRead(4);
-                int typeIndex = *(int*)hdr;
-                _handlers[typeIndex](block);
-            }
-            block = block.next;
-        }
+        byte* ptr = meta.Block.GetPayloadPtr(meta.Offset);
+        return UnmanagedStructReadWrite<T>.Read(meta.Block, ptr);
     }
 
     public void Reset()
@@ -61,9 +48,9 @@ public class StructSequence : IDisposable
             _pool.Return(block);
             block = next;
         }
+        _metas.Clear();
         _head = _pool.Rent();
         _current = _head;
-        _totalMessageCount = 0;
     }
 
     public void Dispose()
@@ -79,5 +66,6 @@ public class StructSequence : IDisposable
         _current = null;
         _pool?.Dispose();
         _pool = null;
+        _metas = null;
     }
 }

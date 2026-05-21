@@ -11,7 +11,7 @@ namespace TestNamespace
         public double damage;      // offset 4, 8B
         public string skillName;   // offset 12, 4B (ref index)
     }
-    // MessageSize = 4(header) + 4 + 8 + 4 = 20
+    // PayloadSize = 4 + 8 + 4 = 16
 
     public struct MoveEvent : IUnmanagedStruct
     {
@@ -20,7 +20,7 @@ namespace TestNamespace
         public float y;            // offset 8, 4B
         public float z;            // offset 12, 4B
     }
-    // MessageSize = 4(header) + 4 + 4 + 4 + 4 = 20
+    // PayloadSize = 16 (blittable)
 
     public struct SpawnEvent : IUnmanagedStruct
     {
@@ -28,108 +28,64 @@ namespace TestNamespace
         public string prefabName;  // offset 4, 4B (ref index)
         public int[] tags;         // offset 8, 4B (ref index)
     }
-    // MessageSize = 4(header) + 4 + 4 + 4 = 16
+    // PayloadSize = 4 + 4 + 4 = 12
 
-    // ── 类型索引（模拟生成） ──
+    // ── MessageID 常量 ──
 
-    public static class TestStructTypeIndex
+    public static class TestMessageID
     {
         public const int DamageEvent = 0;
         public const int MoveEvent = 1;
         public const int SpawnEvent = 2;
-        public const int Max = 3;
+        // 同一 struct 多个语义示例
+        public const int DamageEvent_Crit = 3;
     }
 
-    // ── 手写 Write/Read（模拟代码生成器产出） ──
+    // ── 初始化 UnmanagedStructReadWrite 委托（模拟代码生成器产出） ──
 
     public static unsafe class TestStructIO
     {
-        // DamageEvent: MessageSize = 20
-        public static void Write_DamageEvent(ref DamageEvent data, InternalSequence block)
+        public static void RegisterAll()
         {
-            byte* ptr = block.TryAlloc(20);
-            *(int*)(ptr + 0) = TestStructTypeIndex.DamageEvent;
-            *(int*)(ptr + 4) = data.targetId;
-            *(double*)(ptr + 8) = data.damage;
-            *(int*)(ptr + 16) = block.WriteRef(data.skillName);
-            block.IncrementMessageCount();
-        }
+            // DamageEvent: 含引用字段，注册自定义委托
+            UnmanagedStructReadWrite<DamageEvent>.Init(
+                16,
+                (InternalSequence block, byte* ptr, ref DamageEvent v) =>
+                {
+                    *(int*)(ptr + 0) = v.targetId;
+                    *(double*)(ptr + 4) = v.damage;
+                    *(int*)(ptr + 12) = block.WriteRef(v.skillName);
+                },
+                (InternalSequence block, byte* ptr) =>
+                {
+                    DamageEvent data;
+                    data.targetId = *(int*)(ptr + 0);
+                    data.damage = *(double*)(ptr + 4);
+                    data.skillName = (string)block.GetRef(*(int*)(ptr + 12));
+                    return data;
+                }
+            );
 
-        public static DamageEvent Read_DamageEvent(InternalSequence block)
-        {
-            byte* ptr = block.AllocRead(16); // payload only, header already consumed
-            DamageEvent data;
-            data.targetId = *(int*)(ptr + 0);
-            data.damage = *(double*)(ptr + 4);
-            data.skillName = (string)block.GetRef(*(int*)(ptr + 12));
-            return data;
-        }
+            // SpawnEvent: 含引用字段，注册自定义委托
+            UnmanagedStructReadWrite<SpawnEvent>.Init(
+                12,
+                (InternalSequence block, byte* ptr, ref SpawnEvent v) =>
+                {
+                    *(int*)(ptr + 0) = v.entityId;
+                    *(int*)(ptr + 4) = block.WriteRef(v.prefabName);
+                    *(int*)(ptr + 8) = block.WriteRef(v.tags);
+                },
+                (InternalSequence block, byte* ptr) =>
+                {
+                    SpawnEvent data;
+                    data.entityId = *(int*)(ptr + 0);
+                    data.prefabName = (string)block.GetRef(*(int*)(ptr + 4));
+                    data.tags = (int[])block.GetRef(*(int*)(ptr + 8));
+                    return data;
+                }
+            );
 
-        // MoveEvent: MessageSize = 20
-        public static void Write_MoveEvent(ref MoveEvent data, InternalSequence block)
-        {
-            byte* ptr = block.TryAlloc(20);
-            *(int*)(ptr + 0) = TestStructTypeIndex.MoveEvent;
-            *(int*)(ptr + 4) = data.entityId;
-            *(float*)(ptr + 8) = data.x;
-            *(float*)(ptr + 12) = data.y;
-            *(float*)(ptr + 16) = data.z;
-            block.IncrementMessageCount();
-        }
-
-        public static MoveEvent Read_MoveEvent(InternalSequence block)
-        {
-            byte* ptr = block.AllocRead(16);
-            MoveEvent data;
-            data.entityId = *(int*)(ptr + 0);
-            data.x = *(float*)(ptr + 4);
-            data.y = *(float*)(ptr + 8);
-            data.z = *(float*)(ptr + 12);
-            return data;
-        }
-
-        // SpawnEvent: MessageSize = 16
-        public static void Write_SpawnEvent(ref SpawnEvent data, InternalSequence block)
-        {
-            byte* ptr = block.TryAlloc(16);
-            *(int*)(ptr + 0) = TestStructTypeIndex.SpawnEvent;
-            *(int*)(ptr + 4) = data.entityId;
-            *(int*)(ptr + 8) = block.WriteRef(data.prefabName);
-            *(int*)(ptr + 12) = block.WriteRef(data.tags);
-            block.IncrementMessageCount();
-        }
-
-        public static SpawnEvent Read_SpawnEvent(InternalSequence block)
-        {
-            byte* ptr = block.AllocRead(12);
-            SpawnEvent data;
-            data.entityId = *(int*)(ptr + 0);
-            data.prefabName = (string)block.GetRef(*(int*)(ptr + 4));
-            data.tags = (int[])block.GetRef(*(int*)(ptr + 8));
-            return data;
-        }
-    }
-
-    // ── Push 封装（模拟 Push<T> 的生成代码） ──
-
-    public static class TestStructPush
-    {
-        public static void Push(StructSequence seq, DamageEvent data)
-        {
-            var block = seq.AllocMessage(20);
-            TestStructIO.Write_DamageEvent(ref data, block);
-        }
-
-        public static void Push(StructSequence seq, MoveEvent data)
-        {
-            var block = seq.AllocMessage(20);
-            TestStructIO.Write_MoveEvent(ref data, block);
-        }
-
-        public static void Push(StructSequence seq, SpawnEvent data)
-        {
-            var block = seq.AllocMessage(16);
-            TestStructIO.Write_SpawnEvent(ref data, block);
+            // MoveEvent: 纯值类型，无需注册，使用默认 sizeof(T) 路径
         }
     }
 
@@ -139,11 +95,13 @@ namespace TestNamespace
     {
         public static void RunAll()
         {
+            TestStructIO.RegisterAll();
             TestBasicPushConsume();
             TestMultipleTypes();
             TestNullReference();
             TestMultiBlock();
             TestResetAndReuse();
+            TestMultiMessageID();
             Debug.Log("[StructSequenceTest] All tests passed!");
         }
 
@@ -152,27 +110,23 @@ namespace TestNamespace
             if (!condition) throw new Exception($"Assertion failed: {msg}");
         }
 
-        // 测试 1: 基本 Push → Consume
+        // 测试 1: 基本 Push → 读取 Meta
         static void TestBasicPushConsume()
         {
             var seq = new StructSequence();
-            seq.Init(TestStructTypeIndex.Max);
+            seq.Init();
 
-            DamageEvent received = default;
-            seq.RegisterHandler(TestStructTypeIndex.DamageEvent, block =>
-            {
-                received = TestStructIO.Read_DamageEvent(block);
-            });
+            IStructSequenceWriter writer = seq;
+            IStructSequenceReader reader = seq;
 
-            TestStructPush.Push(seq, new DamageEvent
-            {
-                targetId = 42,
-                damage = 99.5,
-                skillName = "Fireball"
-            });
+            var evt = new DamageEvent { targetId = 42, damage = 99.5, skillName = "Fireball" };
+            writer.Push(TestMessageID.DamageEvent, ref evt);
 
-            Assert(seq.TotalMessageCount == 1, "TotalMessageCount should be 1");
-            seq.Consume();
+            Assert(reader.Metas.Count == 1, "Metas.Count should be 1");
+
+            var meta = reader.Metas[0];
+            Assert(meta.MessageID == TestMessageID.DamageEvent, "MessageID mismatch");
+            var received = reader.Read<DamageEvent>(meta);
 
             Assert(received.targetId == 42, "targetId mismatch");
             Assert(Math.Abs(received.damage - 99.5) < 0.001, "damage mismatch");
@@ -186,34 +140,47 @@ namespace TestNamespace
         static void TestMultipleTypes()
         {
             var seq = new StructSequence();
-            seq.Init(TestStructTypeIndex.Max);
+            seq.Init();
 
-            DamageEvent dmg = default;
-            MoveEvent mov = default;
+            IStructSequenceWriter writer = seq;
+            IStructSequenceReader reader = seq;
+
+            var dmg1 = new DamageEvent { targetId = 1, damage = 10.0, skillName = "Slash" };
+            var mov = new MoveEvent { entityId = 2, x = 1f, y = 2f, z = 3f };
+            var dmg2 = new DamageEvent { targetId = 3, damage = 20.0, skillName = "Arrow" };
+
+            writer.Push(TestMessageID.DamageEvent, ref dmg1);
+            writer.Push(TestMessageID.MoveEvent, ref mov);
+            writer.Push(TestMessageID.DamageEvent, ref dmg2);
+
+            Assert(reader.Metas.Count == 3, "Metas.Count should be 3");
+
             int dmgCount = 0, movCount = 0;
+            DamageEvent lastDmg = default;
+            MoveEvent lastMov = default;
 
-            seq.RegisterHandler(TestStructTypeIndex.DamageEvent, block =>
+            var metas = reader.Metas;
+            for (int i = 0; i < metas.Count; i++)
             {
-                dmg = TestStructIO.Read_DamageEvent(block);
-                dmgCount++;
-            });
-            seq.RegisterHandler(TestStructTypeIndex.MoveEvent, block =>
-            {
-                mov = TestStructIO.Read_MoveEvent(block);
-                movCount++;
-            });
-
-            TestStructPush.Push(seq, new DamageEvent { targetId = 1, damage = 10.0, skillName = "Slash" });
-            TestStructPush.Push(seq, new MoveEvent { entityId = 2, x = 1f, y = 2f, z = 3f });
-            TestStructPush.Push(seq, new DamageEvent { targetId = 3, damage = 20.0, skillName = "Arrow" });
-
-            seq.Consume();
+                var meta = metas[i];
+                switch (meta.MessageID)
+                {
+                    case TestMessageID.DamageEvent:
+                        lastDmg = reader.Read<DamageEvent>(meta);
+                        dmgCount++;
+                        break;
+                    case TestMessageID.MoveEvent:
+                        lastMov = reader.Read<MoveEvent>(meta);
+                        movCount++;
+                        break;
+                }
+            }
 
             Assert(dmgCount == 2, "dmgCount should be 2");
             Assert(movCount == 1, "movCount should be 1");
-            Assert(dmg.targetId == 3, "last dmg targetId should be 3");
-            Assert(mov.entityId == 2, "mov entityId should be 2");
-            Assert(Math.Abs(mov.x - 1f) < 0.001f, "mov.x mismatch");
+            Assert(lastDmg.targetId == 3, "last dmg targetId should be 3");
+            Assert(lastMov.entityId == 2, "mov entityId should be 2");
+            Assert(Math.Abs(lastMov.x - 1f) < 0.001f, "mov.x mismatch");
 
             seq.Dispose();
             Debug.Log("[StructSequenceTest] TestMultipleTypes passed");
@@ -223,22 +190,15 @@ namespace TestNamespace
         static void TestNullReference()
         {
             var seq = new StructSequence();
-            seq.Init(TestStructTypeIndex.Max);
+            seq.Init();
 
-            SpawnEvent received = default;
-            seq.RegisterHandler(TestStructTypeIndex.SpawnEvent, block =>
-            {
-                received = TestStructIO.Read_SpawnEvent(block);
-            });
+            IStructSequenceWriter writer = seq;
+            IStructSequenceReader reader = seq;
 
-            TestStructPush.Push(seq, new SpawnEvent
-            {
-                entityId = 100,
-                prefabName = null,
-                tags = null
-            });
+            var evt = new SpawnEvent { entityId = 100, prefabName = null, tags = null };
+            writer.Push(TestMessageID.SpawnEvent, ref evt);
 
-            seq.Consume();
+            var received = reader.Read<SpawnEvent>(reader.Metas[0]);
 
             Assert(received.entityId == 100, "entityId mismatch");
             Assert(received.prefabName == null, "prefabName should be null");
@@ -252,32 +212,27 @@ namespace TestNamespace
         static void TestMultiBlock()
         {
             var seq = new StructSequence();
-            seq.Init(TestStructTypeIndex.Max);
+            seq.Init();
 
-            int consumeCount = 0;
-            seq.RegisterHandler(TestStructTypeIndex.MoveEvent, block =>
-            {
-                var data = TestStructIO.Read_MoveEvent(block);
-                Assert(data.entityId == consumeCount, $"multi-block entityId mismatch at {consumeCount}");
-                consumeCount++;
-            });
+            IStructSequenceWriter writer = seq;
+            IStructSequenceReader reader = seq;
 
-            // MoveEvent MessageSize = 20, block = 4096B → ~204 messages per block
+            // MoveEvent PayloadSize = 16, block = 4096B → 256 messages per block
             int totalMessages = 1000;
             for (int i = 0; i < totalMessages; i++)
             {
-                TestStructPush.Push(seq, new MoveEvent
-                {
-                    entityId = i,
-                    x = i * 0.1f,
-                    y = i * 0.2f,
-                    z = i * 0.3f
-                });
+                var evt = new MoveEvent { entityId = i, x = i * 0.1f, y = i * 0.2f, z = i * 0.3f };
+                writer.Push(TestMessageID.MoveEvent, ref evt);
             }
 
-            Assert(seq.TotalMessageCount == totalMessages, "TotalMessageCount mismatch");
-            seq.Consume();
-            Assert(consumeCount == totalMessages, $"consumeCount should be {totalMessages}, got {consumeCount}");
+            Assert(reader.Metas.Count == totalMessages, "Metas.Count mismatch");
+
+            var metas = reader.Metas;
+            for (int i = 0; i < metas.Count; i++)
+            {
+                var data = reader.Read<MoveEvent>(metas[i]);
+                Assert(data.entityId == i, $"multi-block entityId mismatch at {i}");
+            }
 
             seq.Dispose();
             Debug.Log("[StructSequenceTest] TestMultiBlock passed");
@@ -287,38 +242,61 @@ namespace TestNamespace
         static void TestResetAndReuse()
         {
             var seq = new StructSequence();
-            seq.Init(TestStructTypeIndex.Max);
+            seq.Init();
 
-            int consumeCount = 0;
-            seq.RegisterHandler(TestStructTypeIndex.DamageEvent, block =>
-            {
-                var data = TestStructIO.Read_DamageEvent(block);
-                consumeCount++;
-            });
+            IStructSequenceWriter writer = seq;
+            IStructSequenceReader reader = seq;
 
             // 第一轮
             for (int i = 0; i < 100; i++)
             {
-                TestStructPush.Push(seq, new DamageEvent { targetId = i, damage = i, skillName = $"skill_{i}" });
+                var evt = new DamageEvent { targetId = i, damage = i, skillName = $"skill_{i}" };
+                writer.Push(TestMessageID.DamageEvent, ref evt);
             }
-            seq.Consume();
-            Assert(consumeCount == 100, "round 1 consumeCount should be 100");
+            Assert(reader.Metas.Count == 100, "round 1 Metas.Count should be 100");
 
             seq.Reset();
-            Assert(seq.TotalMessageCount == 0, "TotalMessageCount should be 0 after reset");
+            Assert(reader.Metas.Count == 0, "Metas.Count should be 0 after reset");
 
-            // 第二轮：验证 Reset 后仍可正常使用
-            consumeCount = 0;
+            // 第二轮
             for (int i = 0; i < 50; i++)
             {
-                TestStructPush.Push(seq, new DamageEvent { targetId = i, damage = i * 2, skillName = null });
+                var evt = new DamageEvent { targetId = i, damage = i * 2, skillName = null };
+                writer.Push(TestMessageID.DamageEvent, ref evt);
             }
-            seq.Consume();
-            Assert(consumeCount == 50, "round 2 consumeCount should be 50");
+            Assert(reader.Metas.Count == 50, "round 2 Metas.Count should be 50");
 
-            // 第一轮的引用应仍有效（消费者已持有）
             seq.Dispose();
             Debug.Log("[StructSequenceTest] TestResetAndReuse passed");
+        }
+
+        // 测试 6: 同一 struct 多个 MessageID（不同语义）
+        static void TestMultiMessageID()
+        {
+            var seq = new StructSequence();
+            seq.Init();
+
+            IStructSequenceWriter writer = seq;
+            IStructSequenceReader reader = seq;
+
+            var normal = new DamageEvent { targetId = 1, damage = 10.0, skillName = "Slash" };
+            var crit = new DamageEvent { targetId = 2, damage = 50.0, skillName = "Crit" };
+
+            writer.Push(TestMessageID.DamageEvent, ref normal);
+            writer.Push(TestMessageID.DamageEvent_Crit, ref crit);
+
+            Assert(reader.Metas.Count == 2, "Metas.Count should be 2");
+            Assert(reader.Metas[0].MessageID == TestMessageID.DamageEvent, "first should be DamageEvent");
+            Assert(reader.Metas[1].MessageID == TestMessageID.DamageEvent_Crit, "second should be DamageEvent_Crit");
+
+            var r0 = reader.Read<DamageEvent>(reader.Metas[0]);
+            var r1 = reader.Read<DamageEvent>(reader.Metas[1]);
+            Assert(r0.targetId == 1, "normal targetId mismatch");
+            Assert(r1.targetId == 2, "crit targetId mismatch");
+            Assert(Math.Abs(r1.damage - 50.0) < 0.001, "crit damage mismatch");
+
+            seq.Dispose();
+            Debug.Log("[StructSequenceTest] TestMultiMessageID passed");
         }
     }
 }

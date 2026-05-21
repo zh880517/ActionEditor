@@ -8,15 +8,13 @@ public class InternalSequence : IDisposable
 
     private IntPtr _memory;
     private int _writeOffset;
-    private int _readOffset;
     private int _capacity;
-    private int _messageCount;
     private List<object> _references;
 
     public InternalSequence next;
 
-    public int MessageCount => _messageCount;
     public int Remaining => _capacity - _writeOffset;
+    public int WriteOffset => _writeOffset;
 
     public InternalSequence() : this(DefaultCapacity) { }
 
@@ -26,8 +24,6 @@ public class InternalSequence : IDisposable
         _memory = Marshal.AllocHGlobal(capacity);
         _references = new List<object>();
         _writeOffset = 0;
-        _readOffset = 0;
-        _messageCount = 0;
         next = null;
     }
 
@@ -41,11 +37,9 @@ public class InternalSequence : IDisposable
         return ptr;
     }
 
-    public unsafe byte* AllocRead(int size)
+    public unsafe byte* GetPayloadPtr(int offset)
     {
-        byte* ptr = (byte*)_memory + _readOffset;
-        _readOffset += size;
-        return ptr;
+        return (byte*)_memory + offset;
     }
 
     public int WriteRef(object obj)
@@ -65,21 +59,9 @@ public class InternalSequence : IDisposable
         return _references[index];
     }
 
-    public void ResetRead()
-    {
-        _readOffset = 0;
-    }
-
-    public void IncrementMessageCount()
-    {
-        _messageCount++;
-    }
-
     public void Reset()
     {
         _writeOffset = 0;
-        _readOffset = 0;
-        _messageCount = 0;
         _references.Clear();
         next = null;
     }
