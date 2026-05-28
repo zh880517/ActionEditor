@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -14,7 +14,7 @@ namespace NamedAsset.Editor
             List<string> remainFiles = new List<string>();
             foreach (var file in files)
             {
-                if (FolderLimit.Count > 0 && FolderLimit.Exists(it=>file.StartsWith(file)))
+                if (FolderLimit.Count > 0 && !FolderLimit.Exists(it => IsInFolderLimit(file, it)))
                 {
                     remainFiles.Add(file);
                     continue;
@@ -32,6 +32,22 @@ namespace NamedAsset.Editor
                 builder.PackDepenceFile(file, bundleName);
             }
             return remainFiles;
+        }
+
+        private static bool IsInFolderLimit(string file, string folder)
+        {
+            if (string.IsNullOrEmpty(folder))
+                return true;
+
+            string normalizedFile = NormalizePath(file).TrimEnd('/');
+            string normalizedFolder = NormalizePath(folder).TrimEnd('/');
+            return normalizedFile.Equals(normalizedFolder, StringComparison.OrdinalIgnoreCase)
+                || normalizedFile.StartsWith(normalizedFolder + "/", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string NormalizePath(string path)
+        {
+            return string.IsNullOrEmpty(path) ? string.Empty : path.Replace('\\', '/');
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -25,16 +25,18 @@ namespace NamedAsset
             }
             else if (file.Type == FilePathType.URL)
             {
-                UnityWebRequest webRequest = UnityWebRequest.Get(file.Path);
-                webRequest.useHttpContinue = false;
-                await webRequest.SendWebRequest();
-                if (webRequest.result == UnityWebRequest.Result.Success)
+                using (UnityWebRequest webRequest = UnityWebRequest.Get(file.Path))
                 {
-                    json = webRequest.downloadHandler.text;
-                }
-                else
-                {
-                    throw new System.Exception($"load AssetManifest fail : {file.Path} => {webRequest.error}");
+                    webRequest.useHttpContinue = false;
+                    await webRequest.SendWebRequest();
+                    if (webRequest.result == UnityWebRequest.Result.Success)
+                    {
+                        json = webRequest.downloadHandler.text;
+                    }
+                    else
+                    {
+                        throw new System.Exception($"load AssetManifest fail : {file.Path} => {webRequest.error}");
+                    }
                 }
             }
             else if (file.Type == FilePathType.Bytes)
@@ -66,10 +68,12 @@ namespace NamedAsset
                     break;
                 case FilePathType.URL:
                     {
-                        var webRequest = UnityWebRequestAssetBundle.GetAssetBundle(file.Path, info.Hash, 0);
-                        await webRequest.SendWebRequest();
-                        info.Bundle = webRequest.result == UnityWebRequest.Result.Success ? DownloadHandlerAssetBundle.GetContent(webRequest) : null;
-                        info.State = info.Bundle ? BundleLoadState.Loaded : BundleLoadState.LoadFailed;
+                        using (var webRequest = UnityWebRequestAssetBundle.GetAssetBundle(file.Path, info.Hash, 0))
+                        {
+                            await webRequest.SendWebRequest();
+                            info.Bundle = webRequest.result == UnityWebRequest.Result.Success ? DownloadHandlerAssetBundle.GetContent(webRequest) : null;
+                            info.State = info.Bundle ? BundleLoadState.Loaded : BundleLoadState.LoadFailed;
+                        }
                     }
                     break;
                 case FilePathType.Bytes:

@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace NamedAsset
@@ -79,7 +79,14 @@ namespace NamedAsset
                 int depIdx = info.DependenceIdx[i];
                 if (depIdx >= 0)
                 {
-                    await EnsureBundleLoaded(bundleInfos[depIdx]);
+                    var depInfo = bundleInfos[depIdx];
+                    await EnsureBundleLoaded(depInfo);
+                    if (depInfo.State != BundleLoadState.Loaded || depInfo.Bundle == null)
+                        return new AssetLoadResult { Result = AssetRequestResult.BundleLoadFailed };
+                }
+                else
+                {
+                    return new AssetLoadResult { Result = AssetRequestResult.BundleNotFound };
                 }
             }
 

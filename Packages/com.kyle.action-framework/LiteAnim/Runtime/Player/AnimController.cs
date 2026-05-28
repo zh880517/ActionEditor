@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.Playables;
@@ -70,7 +70,7 @@ namespace LiteAnim
             for (int i = 0; i < transitions.Count; i++)
             {
                 var transition = transitions[i];
-                if(transition.FadeTime >= transition.FadeDuration)
+                if(transition.FadeDuration <= 0 || transition.FadeTime >= transition.FadeDuration)
                 {
                     transitions.RemoveAt(i);
                     i--;
@@ -87,6 +87,12 @@ namespace LiteAnim
             {
                 var play = playingStates[i];
                 if (play.Looped && OnStateLoop(play))
+                {
+                    playingStates.RemoveAt(i);
+                    --i;
+                    continue;
+                }
+                if (play.State.Length <= 0)
                 {
                     playingStates.RemoveAt(i);
                     --i;
@@ -117,10 +123,12 @@ namespace LiteAnim
             var state = states.Find(it => it.Name == name);
             if (state == null)
             {
-                var motion = asset.Motions.Find(it => it.name == name);
+                var motion = asset.Motions.Find(it => it && it.name == name);
                 if (!motion)
                     return null;
                 state = LiteAnimUtil.CreateState(motion);
+                if (state == null)
+                    return null;
                 state.Player = player;
                 state.Create(graph.Graph);
                 states.Add(state);
@@ -135,7 +143,7 @@ namespace LiteAnim
                 if (playIndex >= 0)
                 {
                     var exist = playingStates[playIndex];
-                    if((exist.MaxLoop - exist.Loop) <= 1 && exist.Time / state.Length > 0.5f)
+                    if(state.Length > 0 && (exist.MaxLoop - exist.Loop) <= 1 && exist.Time / state.Length > 0.5f)
                     {
                         exist.MaxLoop++;
                         playingStates[playIndex] = exist;
@@ -171,6 +179,8 @@ namespace LiteAnim
                 return 0;
             if (time >= state.Length)
             {
+                if(state.Length <= 0)
+                    return 0;
                 if(state.Motion.Loop)
                 {
                     loop = (int)(time / state.Length);

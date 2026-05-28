@@ -1,4 +1,4 @@
-﻿namespace EasyConfig
+namespace EasyConfig
 {
     public abstract class TConfigLoader<TLoader, TData> : ConfigLoader<TData> where TLoader : TConfigLoader<TLoader, TData>, new()
     {
@@ -14,6 +14,11 @@
 
         public static void Destroy()
         {
+            if (_instance != null)
+            {
+                ConfigLoaderManager.Instance.UnregisterLoader(_instance);
+                _instance.Clear();
+            }
             _instance = null;
         }
 

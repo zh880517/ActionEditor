@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Mathematics;
 using Unity.Jobs.LowLevel.Unsafe;
@@ -1833,10 +1833,15 @@ namespace VisualShape
             // 使用 Burst 编译的函数绘制线条
             // 这比纯 C# 快很多（约 5 倍）。
             var meshDataArray = Mesh.AcquireReadOnlyMeshData(mesh);
-            var meshData = meshDataArray[0];
-
-            JobWireMesh.JobWireMeshFunctionPointer(ref meshData, ref this);
-            meshDataArray.Dispose();
+            try
+            {
+                var meshData = meshDataArray[0];
+                JobWireMesh.JobWireMeshFunctionPointer(ref meshData, ref this);
+            }
+            finally
+            {
+                meshDataArray.Dispose();
+            }
         }
 
         /// <summary>
@@ -1875,20 +1880,33 @@ namespace VisualShape
             [BurstCompile]
             public static unsafe void WireMesh(float3* verts, int* indices, int vertexCount, int indexCount, ref CommandBuilder draw)
             {
+                WireTriangleMesh(verts, indices, vertexCount, indexCount, ref draw);
+            }
+
+            static unsafe void WireTriangleMesh(float3* verts, int* indices, int vertexCount, int indexCount, ref CommandBuilder draw)
+            {
+                if (indexCount % 3 != 0) throw new Exception("Triangle mesh index count must be a multiple of 3");
+                for (int i = 0; i < indexCount; i++)
+                {
+                    var index = indices[i];
+                    if (index < 0 || index >= vertexCount)
+                    {
+                        throw new Exception("Invalid vertex index. Index out of bounds");
+                    }
+                }
+
                 // 忽略 NativeHashMap 在早期 collections 包版本中被标记为过时的警告。
                 // 它工作正常，在后续版本中 NativeHashMap 不再过时。
 #pragma warning disable 618
                 var seenEdges = new NativeHashMap<int2, bool>(indexCount, Allocator.Temp);
 #pragma warning restore 618
+                try
+                {
                 for (int i = 0; i < indexCount; i += 3)
                 {
                     var a = indices[i];
                     var b = indices[i + 1];
                     var c = indices[i + 2];
-                    if (a < 0 || b < 0 || c < 0 || a >= vertexCount || b >= vertexCount || c >= vertexCount)
-                    {
-                        throw new Exception("Invalid vertex index. Index out of bounds");
-                    }
                     int v1, v2;
 
                     // 绘制三角形的每条边。
@@ -1917,6 +1935,123 @@ namespace VisualShape
                         draw.Line(verts[v1], verts[v2]);
                     }
                 }
+                }
+                finally
+                {
+                    if (seenEdges.IsCreated)
+                    {
+                        seenEdges.Dispose();
+                    }
+                }
+            }
+
+            static unsafe void DrawIndexedLine(float3* verts, int* indices, int vertexCount, int a, int b, ref CommandBuilder draw)
+            {
+                var v1 = indices[a];
+                var v2 = indices[b];
+                if (v1 < 0 || v2 < 0 || v1 >= vertexCount || v2 >= vertexCount)
+                {
+                    throw new Exception("Invalid vertex index. Index out of bounds");
+                }
+                draw.Line(verts[v1], verts[v2]);
+            }
+
+            static unsafe void WireIndexedMesh(float3* verts, int* indices, int vertexCount, int indexCount, MeshTopology topology, ref CommandBuilder draw)
+            {
+                switch (topology)
+                {
+                    case MeshTopology.Triangles:
+                        WireTriangleMesh(verts, indices, vertexCount, indexCount, ref draw);
+                        break;
+                    case MeshTopology.Quads:
+                        if (indexCount % 4 != 0) throw new Exception("Quad mesh index count must be a multiple of 4");
+                        for (int i = 0; i < indexCount; i += 4)
+                        {
+                            DrawIndexedLine(verts, indices, vertexCount, i, i + 1, ref draw);
+                            DrawIndexedLine(verts, indices, vertexCount, i + 1, i + 2, ref draw);
+                            DrawIndexedLine(verts, indices, vertexCount, i + 2, i + 3, ref draw);
+                            DrawIndexedLine(verts, indices, vertexCount, i + 3, i, ref draw);
+                        }
+                        break;
+                    case MeshTopology.Lines:
+                        if (indexCount % 2 != 0) throw new Exception("Line mesh index count must be a multiple of 2");
+                        for (int i = 0; i < indexCount; i += 2)
+                        {
+                            DrawIndexedLine(verts, indices, vertexCount, i, i + 1, ref draw);
+                        }
+                        break;
+                    case MeshTopology.LineStrip:
+                        for (int i = 1; i < indexCount; i++)
+                        {
+                            DrawIndexedLine(verts, indices, vertexCount, i - 1, i, ref draw);
+                        }
+                        break;
+                    case MeshTopology.Points:
+                        break;
+                    default:
+                        throw new Exception("Unsupported mesh topology");
+                }
+            }
+
+            static unsafe void WireSequentialMesh(float3* verts, int vertexCount, int startVertex, int vertexCountInSubmesh, MeshTopology topology, ref CommandBuilder draw)
+            {
+                int end = startVertex + vertexCountInSubmesh;
+                if (startVertex < 0 || vertexCountInSubmesh < 0 || end > vertexCount)
+                {
+                    throw new Exception("Invalid vertex range. Index out of bounds");
+                }
+
+                switch (topology)
+                {
+                    case MeshTopology.Triangles:
+                        if (vertexCountInSubmesh % 3 != 0) throw new Exception("Triangle mesh vertex count must be a multiple of 3");
+                        for (int i = startVertex; i < end; i += 3)
+                        {
+                            draw.Line(verts[i], verts[i + 1]);
+                            draw.Line(verts[i + 1], verts[i + 2]);
+                            draw.Line(verts[i + 2], verts[i]);
+                        }
+                        break;
+                    case MeshTopology.Quads:
+                        if (vertexCountInSubmesh % 4 != 0) throw new Exception("Quad mesh vertex count must be a multiple of 4");
+                        for (int i = startVertex; i < end; i += 4)
+                        {
+                            draw.Line(verts[i], verts[i + 1]);
+                            draw.Line(verts[i + 1], verts[i + 2]);
+                            draw.Line(verts[i + 2], verts[i + 3]);
+                            draw.Line(verts[i + 3], verts[i]);
+                        }
+                        break;
+                    case MeshTopology.Lines:
+                        if (vertexCountInSubmesh % 2 != 0) throw new Exception("Line mesh vertex count must be a multiple of 2");
+                        for (int i = startVertex; i < end; i += 2)
+                        {
+                            draw.Line(verts[i], verts[i + 1]);
+                        }
+                        break;
+                    case MeshTopology.LineStrip:
+                        for (int i = startVertex + 1; i < end; i++)
+                        {
+                            draw.Line(verts[i - 1], verts[i]);
+                        }
+                        break;
+                    case MeshTopology.Points:
+                        break;
+                    default:
+                        throw new Exception("Unsupported mesh topology");
+                }
+            }
+
+            static unsafe void WireSubMesh(float3* verts, int* indices, int vertexCount, SubMeshDescriptor submesh, ref CommandBuilder draw)
+            {
+                if (submesh.indexCount > 0)
+                {
+                    WireIndexedMesh(verts, indices, vertexCount, submesh.indexCount, submesh.topology, ref draw);
+                }
+                else
+                {
+                    WireSequentialMesh(verts, vertexCount, submesh.baseVertex + submesh.firstVertex, submesh.vertexCount, submesh.topology, ref draw);
+                }
             }
 
             [BurstCompile]
@@ -1930,16 +2065,28 @@ namespace VisualShape
                 }
                 var tris = new NativeArray<int>(maxIndices, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
                 var verts = new NativeArray<Vector3>(rawMeshData.vertexCount, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
-                rawMeshData.GetVertices(verts);
-
-                for (int subMeshIndex = 0; subMeshIndex < rawMeshData.subMeshCount; subMeshIndex++)
+                try
                 {
-                    var submesh = rawMeshData.GetSubMesh(subMeshIndex);
-                    rawMeshData.GetIndices(tris, subMeshIndex);
-                    unsafe
+                    rawMeshData.GetVertices(verts);
+
+                    for (int subMeshIndex = 0; subMeshIndex < rawMeshData.subMeshCount; subMeshIndex++)
                     {
-                        WireMesh((float3*)verts.GetUnsafeReadOnlyPtr(), (int*)tris.GetUnsafeReadOnlyPtr(), verts.Length, submesh.indexCount, ref draw);
+                        var submesh = rawMeshData.GetSubMesh(subMeshIndex);
+                        if (submesh.indexCount > 0)
+                        {
+                            rawMeshData.GetIndices(tris, subMeshIndex);
+                        }
+                        unsafe
+                        {
+                            var indices = submesh.indexCount > 0 ? (int*)tris.GetUnsafeReadOnlyPtr() : null;
+                            WireSubMesh((float3*)verts.GetUnsafeReadOnlyPtr(), indices, verts.Length, submesh, ref draw);
+                        }
                     }
+                }
+                finally
+                {
+                    if (tris.IsCreated) tris.Dispose();
+                    if (verts.IsCreated) verts.Dispose();
                 }
             }
         }
@@ -1964,6 +2111,7 @@ namespace VisualShape
         /// </summary>
         public void SolidMesh(Mesh mesh)
         {
+            if (mesh == null) throw new System.ArgumentNullException();
             SolidMeshInternal(mesh, false);
         }
 
@@ -1977,6 +2125,7 @@ namespace VisualShape
 
         void SolidMeshInternal(Mesh mesh, bool temporary)
         {
+            if (mesh == null) throw new System.ArgumentNullException();
             var g = gizmos.Target as ShapeData;
 
             g.data.Get(uniqueID).meshes.Add(new SubmittedMesh
@@ -3099,5 +3248,3 @@ namespace VisualShape
         #endregion
     }
 }
-
-

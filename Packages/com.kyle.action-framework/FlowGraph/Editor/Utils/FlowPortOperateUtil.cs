@@ -110,6 +110,7 @@ namespace Flow.EditorView
                     else if (e.OutputIndex > index)
                     {
                         e.OutputIndex--;
+                        graph.Edges[i] = e;
                     }
                 }
             }
@@ -145,6 +146,7 @@ namespace Flow.EditorView
                         else if (e.OutputIndex > index)
                         {
                             e.OutputIndex--;
+                            graph.Edges[i] = e;
                         }
                     }
                 }
@@ -166,6 +168,7 @@ namespace Flow.EditorView
                     if (e.OutputIndex == srcIndex)
                     {
                         e.OutputIndex = dstIndex;
+                        graph.Edges[i] = e;
                         continue;
                     }
                     //先处理srcIndex的移除
@@ -174,6 +177,7 @@ namespace Flow.EditorView
                     //再处理dstIndex的插入
                     if (e.OutputIndex >= dstIndex)
                         e.OutputIndex++;
+                    graph.Edges[i] = e;
                 }
             }
         }

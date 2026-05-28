@@ -1,4 +1,4 @@
-﻿using UnityEngine.Playables;
+using UnityEngine.Playables;
 
 namespace LiteAnim
 {
@@ -10,14 +10,14 @@ namespace LiteAnim
 
         public ILiteAnimPlayer Player { get; set; }
         private int version = -1;// 动画版本号，用于检测动画资源是否被修改
-        public bool IsChanged => version != Motion.Version;// 动画资源是否被修改
-        public int LayerIndex => Motion.LayerIndex;
+        public bool IsChanged => Motion == null || version != Motion.Version;// 动画资源是否被修改
+        public int LayerIndex => Motion != null ? Motion.LayerIndex : 0;
         public virtual void Init(LiteAnimMotion motion)
         {
             Motion = motion;
-            Name = motion.name;
-            Length = motion.GetLength();
-            version = motion.Version;
+            Name = motion ? motion.name : string.Empty;
+            Length = motion ? motion.GetLength() : 0;
+            version = motion ? motion.Version : -1;
         }
 
         public abstract void Create(PlayableGraph graph);

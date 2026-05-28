@@ -6,11 +6,18 @@ namespace GOAP
     public class Plan
     {
         private readonly List<IAction> _actions;
+        private readonly bool _isValid;
 
         public Plan(List<IAction> actions, float totalCost)
+            : this(actions, totalCost, actions != null && actions.Count > 0)
         {
-            _actions = actions;
+        }
+
+        private Plan(List<IAction> actions, float totalCost, bool isValid)
+        {
+            _actions = actions ?? new List<IAction>();
             TotalCost = totalCost;
+            _isValid = isValid;
         }
 
         // 规划出的行动序列（按执行顺序排列）
@@ -20,9 +27,11 @@ namespace GOAP
         public float TotalCost { get; }
 
         // 计划是否有效（有至少一个行动）
-        public bool IsValid => _actions != null && _actions.Count > 0;
+        public bool IsValid => _isValid;
 
         // 空计划（规划失败时使用）
-        public static Plan Empty { get; } = new Plan(new List<IAction>(), 0f);
+        public static Plan Empty { get; } = new Plan(new List<IAction>(), 0f, true);
+
+        public static Plan Invalid { get; } = new Plan(new List<IAction>(), 0f, false);
     }
 }

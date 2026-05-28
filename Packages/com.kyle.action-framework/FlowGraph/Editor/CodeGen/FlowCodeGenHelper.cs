@@ -36,7 +36,7 @@ namespace Flow.EditorView
         private static void WriteInputFieldFill(CSharpCodeWriter writer, FieldInfo field)
         {
             int hashId = UnityEngine.Animator.StringToHash(field.Name);
-            writer.WriteLine($"context.TryGetInputValue(nodeId, {hashId}, ref data.{field.Name})");
+            writer.WriteLine($"context.TryGetInputValue(nodeId, {hashId}, ref data.{field.Name});");
         }
 
         public static CSharpCodeWriter WriteExecutorDefine(IReadOnlyList<FlowNodeCodeGenData> types, string contextTypeName, string tag, string nameSpace)
@@ -47,7 +47,7 @@ namespace Flow.EditorView
                 foreach (var item in types)
                 {
                     string dataTypeName = GeneratorUtils.TypeToName(item.DataType, nameSpace);
-                    string runtimeDataTypeName = item.NodeTypeName;
+                    string runtimeDataTypeName = item.RuntimeDataTypeName;
                     string className = item.ExecutorTypeName;
                     string baseClassName = "Flow.TNormalExecutor";
                     string functionFillInputs = $"protected override void FillInputs({contextTypeName} context, int nodeId, ref {dataTypeName} data)";

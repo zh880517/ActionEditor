@@ -5,6 +5,7 @@ namespace Flow
     {
         internal readonly Dictionary<ulong, DynamicVariable> variables = new Dictionary<ulong, DynamicVariable>();
         protected readonly HashSet<int> cachedDataNodeIndexs = new HashSet<int>();
+        private readonly HashSet<int> runningDataNodeIndexs = new HashSet<int>();
         protected FlowGraphRuntimeData runtimeData;
         protected int currentNodeIndex = -1;
         protected int depenceIndex = -1;
@@ -87,16 +88,7 @@ namespace Flow
                     var dep = runtimeData.DataNodeDependencies[depenceIndex];
                     foreach (var item in dep.Dependencies)
                     {
-                        if (cachedDataNodeIndexs.Contains(item))
-                            continue;
-                        var depNode = runtimeData.Nodes[item];
-                        //调试
-                        debuger?.OnDataNode(GetNodeUID(depNode.NodeID), RuningFrame);
-
-                        var depExecutor = depNode.Executor;
-                        depExecutor.Execute(this, depNode);
-                        if(depNode.IsRealTimeData)
-                            cachedDataNodeIndexs.Add(item);
+                        ExecuteDataNode(item);
                     }
                 }
 
@@ -127,6 +119,55 @@ namespace Flow
             depenceIndex = runtimeData.DataNodeDependencies.FindIndex(n => n.NodeID == nodeId);
         }
 
+        private void ExecuteDataNode(int nodeIndex)
+        {
+            if (cachedDataNodeIndexs.Contains(nodeIndex) || !runningDataNodeIndexs.Add(nodeIndex))
+                return;
+
+            try
+            {
+                var node = runtimeData.Nodes[nodeIndex];
+                int nodeDepenceIndex = runtimeData.DataNodeDependencies.FindIndex(n => n.NodeID == node.NodeID);
+                if (nodeDepenceIndex >= 0)
+                {
+                    var dep = runtimeData.DataNodeDependencies[nodeDepenceIndex];
+                    foreach (var item in dep.Dependencies)
+                    {
+                        if (item != nodeIndex)
+                            ExecuteDataNode(item);
+                    }
+                }
+
+                debuger?.OnDataNode(GetNodeUID(node.NodeID), RuningFrame);
+                node.Executor.Execute(this, node);
+                if (!IsRealTimeDataNode(nodeIndex, new HashSet<int>()))
+                    cachedDataNodeIndexs.Add(nodeIndex);
+            }
+            finally
+            {
+                runningDataNodeIndexs.Remove(nodeIndex);
+            }
+        }
+
+        private bool IsRealTimeDataNode(int nodeIndex, HashSet<int> visited)
+        {
+            if (!visited.Add(nodeIndex))
+                return false;
+            var node = runtimeData.Nodes[nodeIndex];
+            if (node.IsRealTimeData)
+                return true;
+            int nodeDepenceIndex = runtimeData.DataNodeDependencies.FindIndex(n => n.NodeID == node.NodeID);
+            if (nodeDepenceIndex < 0)
+                return false;
+            var dep = runtimeData.DataNodeDependencies[nodeDepenceIndex];
+            foreach (var item in dep.Dependencies)
+            {
+                if (item != nodeIndex && IsRealTimeDataNode(item, visited))
+                    return true;
+            }
+            return false;
+        }
+
         protected int GetNextNodeID(int currentId, int portIndex)
         {
             foreach (var item in runtimeData.Edges)
@@ -154,6 +195,7 @@ namespace Flow
             }
             variables.Clear();
             cachedDataNodeIndexs.Clear();
+            runningDataNodeIndexs.Clear();
             currentNodeIndex = -1;
             NodeContext = null;
             FlowDebugContext.Stop(debuger);

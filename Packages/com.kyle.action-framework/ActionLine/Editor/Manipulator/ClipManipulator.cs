@@ -74,7 +74,8 @@ namespace ActionLine.EditorView
                         else if(evt.Type == 0)
                         {
                             //整体移动
-                            int newStart = Mathf.Clamp(clip.StartFrame + offset, 0, endFrame - 1);
+                            int maxStart = Mathf.Max(0, maxCount - clip.Length);
+                            int newStart = Mathf.Clamp(clip.StartFrame + offset, 0, maxStart);
                             clip.StartFrame = newStart;
                         }
                         else if(evt.Type == 1)
@@ -83,9 +84,21 @@ namespace ActionLine.EditorView
                             int newEnd = Mathf.Clamp(endFrame + offset, clip.StartFrame + 1, maxCount);
                             clip.Length = newEnd - clip.StartFrame;
                         }
+                        SyncClipView(item);
                     }
+                    context.View.Track.Group.UpdateClipPosition();
                 }
             }
+        }
+
+        private void SyncClipView(ActionClipData data)
+        {
+            int index = context.GetIndex(data);
+            if (index < 0)
+                return;
+            var clipView = context.View.Track.Group.GetClipView(index);
+            clipView.StartFrame = data.Clip.StartFrame;
+            clipView.EndFrame = data.Clip.StartFrame + data.Clip.Length;
         }
 
         private void OnMouseUp(ClipMouseUpEvent evt)

@@ -9,7 +9,7 @@ namespace Flow.EditorView
         public string FieldName;
         public override bool IsFlowPort => false;
         public FlowDataPort(bool input, Type type)
-            : base(Orientation.Horizontal, input ? Direction.Input : Direction.Output, Capacity.Multi, type)
+            : base(Orientation.Horizontal, input ? Direction.Input : Direction.Output, Capacity.Single, type)
         {
             var connectorListener = new EdgeConnectorListener();
             m_EdgeConnector = new EdgeConnector<FlowEdgeView>(connectorListener);

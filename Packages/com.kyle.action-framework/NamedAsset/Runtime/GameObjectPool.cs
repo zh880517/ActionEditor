@@ -13,6 +13,8 @@ namespace NamedAsset
         {
             public AssetRequest<GameObject> AssetRequest;
             public Stack<GameObject> Inactive;
+            public int ActiveCount;
+            public bool ClearWhenInactive;
         }
 
         private readonly Dictionary<string, PoolEntry> m_Pools = new();
@@ -48,6 +50,11 @@ namespace NamedAsset
                 var go = entry.Inactive.Pop();
                 if (go != null)
                 {
+                    var entity = go.GetComponent<PoolableEntity>();
+                    if (entity != null)
+                        entity.InPool = false;
+                    entry.ActiveCount++;
+                    m_Pools[name] = entry;
                     go.transform.SetParent(parent, false);
                     go.SetActive(true);
                     return go;
@@ -56,8 +63,10 @@ namespace NamedAsset
 
             var newGo = Object.Instantiate(entry.AssetRequest.Asset, parent);
             newGo.SetActive(false);
-            var entity = newGo.AddComponent<PoolableEntity>();
-            entity.PoolKey = name;
+            var newEntity = newGo.AddComponent<PoolableEntity>();
+            newEntity.PoolKey = name;
+            entry.ActiveCount++;
+            m_Pools[name] = entry;
             newGo.SetActive(true);
             return newGo;
         }
@@ -72,14 +81,55 @@ namespace NamedAsset
                 Object.Destroy(go);
                 return;
             }
+            if (entity.InPool)
+                return;
 
             entity.Reset();
+            entity.InPool = true;
+            if (entry.ActiveCount > 0)
+                entry.ActiveCount--;
+            if (entry.ClearWhenInactive)
+            {
+                Object.Destroy(go);
+                if (entry.ActiveCount <= 0)
+                {
+                    entry.AssetRequest.Release();
+                    m_Pools.Remove(entity.PoolKey);
+                }
+                else
+                {
+                    m_Pools[entity.PoolKey] = entry;
+                }
+                return;
+            }
             go.SetActive(false);
             entry.Inactive.Push(go);
+            m_Pools[entity.PoolKey] = entry;
         }
 
-        public void Clear()
+        public void OnEntityDestroyed(PoolableEntity entity)
         {
+            if (entity == null || entity.InPool)
+                return;
+            if (!m_Pools.TryGetValue(entity.PoolKey, out var entry))
+                return;
+
+            if (entry.ActiveCount > 0)
+                entry.ActiveCount--;
+            if (entry.ClearWhenInactive && entry.ActiveCount <= 0)
+            {
+                entry.AssetRequest.Release();
+                m_Pools.Remove(entity.PoolKey);
+            }
+            else
+            {
+                m_Pools[entity.PoolKey] = entry;
+            }
+        }
+
+        public void Clear(bool forceReleaseActive = false)
+        {
+            var removeKeys = new List<string>();
             foreach (var kv in m_Pools)
             {
                 var entry = kv.Value;
@@ -88,9 +138,19 @@ namespace NamedAsset
                     var go = entry.Inactive.Pop();
                     if (go != null) Object.Destroy(go);
                 }
-                entry.AssetRequest.Release();
+                if (forceReleaseActive || entry.ActiveCount <= 0)
+                {
+                    entry.AssetRequest.Release();
+                    removeKeys.Add(kv.Key);
+                }
+                else
+                {
+                    entry.ClearWhenInactive = true;
+                    m_Pools[kv.Key] = entry;
+                }
             }
-            m_Pools.Clear();
+            for (int i = 0; i < removeKeys.Count; i++)
+                m_Pools.Remove(removeKeys[i]);
         }
     }
 }

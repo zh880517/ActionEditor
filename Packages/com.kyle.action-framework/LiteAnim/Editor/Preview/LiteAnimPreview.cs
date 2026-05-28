@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Animations;
@@ -37,6 +37,8 @@ namespace LiteAnim.EditorView
                 return;
             }
             if (!prefab || !enable)
+                return;
+            if (currentPrefab == prefab && ModelInScen && Animator)
                 return;
 
             currentPrefab = prefab;
@@ -205,6 +207,13 @@ namespace LiteAnim.EditorView
         private void OnDisable()
         {
             DestroyPreviewState();
+            if (ModelInScen)
+            {
+                DestroyImmediate(ModelInScen);
+                ModelInScen = null;
+            }
+            Animator = null;
+            currentPrefab = null;
         }
 
         public float GetParam(string name)

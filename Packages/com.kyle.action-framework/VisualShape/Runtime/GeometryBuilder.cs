@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Mathematics;
 using Unity.Jobs.LowLevel.Unsafe;
@@ -1258,6 +1258,9 @@ namespace VisualShape
 #endif
                 }
             }
+            matrixStack.Dispose();
+            colorStack.Dispose();
+            lineWidthStack.Dispose();
         }
     }
 }

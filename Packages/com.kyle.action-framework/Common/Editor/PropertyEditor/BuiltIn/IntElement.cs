@@ -1,4 +1,4 @@
-﻿using UnityEngine.UIElements;
+using UnityEngine.UIElements;
 
 namespace PropertyEditor.BuiltIn
 {
@@ -57,22 +57,54 @@ namespace PropertyEditor.BuiltIn
     }
 
     [CustomPropertyElement(typeof(ulong))]
-    public class UlongElement : IntegerElement
+    public class UlongElement : PropertyElement
     {
-        public override void SetValue(object value)
+        private readonly TextField field = new TextField();
+        private bool readOnly;
+        private ulong value;
+
+        public UlongElement()
         {
-            field.SetValueWithoutNotify((long)(ulong)value);
+            field.RegisterValueChangedCallback(OnValueChanged);
+            Add(field);
         }
 
-        protected override void OnValueChanged(ChangeEvent<long> evt)
+        public override bool ReadOnly
+        {
+            get => readOnly;
+            set
+            {
+                readOnly = value;
+                field.SetEnabled(!value);
+            }
+        }
+
+        public override void SetLable(string name, string tip)
+        {
+            field.label = name;
+            field.tooltip = tip;
+        }
+
+        public override void SetLableWidth(float width)
+        {
+            field.labelElement.style.minWidth = width;
+        }
+
+        public override void SetValue(object value)
+        {
+            this.value = value is ulong v ? v : 0UL;
+            field.SetValueWithoutNotify(this.value.ToString());
+        }
+
+        private void OnValueChanged(ChangeEvent<string> evt)
         {
             evt.StopPropagation();
-            ulong v = (ulong)evt.newValue;
-            if (v < 0)
+            if (!ulong.TryParse(evt.newValue, out var v))
             {
-                v = 0;
-                field.SetValueWithoutNotify(0);
+                field.SetValueWithoutNotify(value.ToString());
+                return;
             }
+            value = v;
             using var e = PropertyValueChangedEvent.GetPooled(this, v, Field, Index);
             SendEvent(e);
         }

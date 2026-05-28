@@ -190,7 +190,24 @@ namespace DataVisit
 
         public void VisitEnum<T>(uint tag, string name, uint flag, ref T value) where T : Enum
         {
-            WriteInt32(Convert.ToInt32(value));
+            var underlyingType = Enum.GetUnderlyingType(typeof(T));
+            if (underlyingType == typeof(uint))
+            {
+                WriteInt32(unchecked((int)Convert.ToUInt32(value)));
+                return;
+            }
+            if (underlyingType == typeof(ulong))
+            {
+                ulong raw = Convert.ToUInt64(value);
+                if (raw > uint.MaxValue)
+                    throw new OverflowException($"RawBit enum {typeof(T).FullName} value {raw} cannot fit in the legacy 32-bit enum format.");
+                WriteInt32(unchecked((int)(uint)raw));
+                return;
+            }
+            long signed = Convert.ToInt64(value);
+            if (signed < int.MinValue || signed > int.MaxValue)
+                throw new OverflowException($"RawBit enum {typeof(T).FullName} value {signed} cannot fit in the legacy 32-bit enum format.");
+            WriteInt32((int)signed);
         }
 
         public void VisitStruct<T>(uint tag, string name, uint flag, ref T value) where T : struct

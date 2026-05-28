@@ -208,6 +208,10 @@ namespace VisualShape
                 *dynamicBuffer = bufferDynamic;
                 *persistentBuffer = bufferPersist;
             }
+
+            stackStatic.Dispose();
+            stackDynamic.Dispose();
+            stackPersist.Dispose();
         }
     }
 }

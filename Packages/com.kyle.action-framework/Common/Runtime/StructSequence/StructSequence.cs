@@ -21,14 +21,7 @@ public class StructSequence : IStructSequenceWriter, IStructSequenceReader, IDis
     public void Push<T>(int messageId, ref T value) where T : struct
     {
         int payloadSize = UnsafeStructAccessor<T>.Size;
-        if (_current.Remaining < payloadSize)
-        {
-            var newBlock = _pool.Rent();
-            _current.next = newBlock;
-            _current = newBlock;
-        }
-        int offset = _current.WriteOffset;
-        System.IntPtr ptr = _current.TryAlloc(payloadSize);
+        System.IntPtr ptr = AllocPayload(payloadSize, out int offset);
         UnsafeStructAccessor<T>.Write(_current, ptr, ref value);
         _metas.Add(new SequenceMeta { MessageID = messageId, Block = _current, Offset = offset });
     }
@@ -36,16 +29,28 @@ public class StructSequence : IStructSequenceWriter, IStructSequenceReader, IDis
     public void PushUnmanaged<T>(int messageId, ref T value) where T : unmanaged
     {
         int payloadSize = UnmanagedStructAccessor<T>.Size;
+        System.IntPtr ptr = AllocPayload(payloadSize, out int offset);
+        UnmanagedStructAccessor<T>.Write(_current, ptr, ref value);
+        _metas.Add(new SequenceMeta { MessageID = messageId, Block = _current, Offset = offset });
+    }
+
+    private System.IntPtr AllocPayload(int payloadSize, out int offset)
+    {
+        if (payloadSize < 0)
+            throw new ArgumentOutOfRangeException(nameof(payloadSize));
+
         if (_current.Remaining < payloadSize)
         {
-            var newBlock = _pool.Rent();
+            var newBlock = _pool.Rent(payloadSize);
             _current.next = newBlock;
             _current = newBlock;
         }
-        int offset = _current.WriteOffset;
+
+        offset = _current.WriteOffset;
         System.IntPtr ptr = _current.TryAlloc(payloadSize);
-        UnmanagedStructAccessor<T>.Write(_current, ptr, ref value);
-        _metas.Add(new SequenceMeta { MessageID = messageId, Block = _current, Offset = offset });
+        if (ptr == System.IntPtr.Zero)
+            throw new InvalidOperationException($"Failed to allocate {payloadSize} bytes in StructSequence block.");
+        return ptr;
     }
 
     public T Read<T>(SequenceMeta meta) where T : struct

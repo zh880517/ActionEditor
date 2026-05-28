@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 namespace NamedAsset
 {
@@ -145,6 +145,11 @@ namespace NamedAsset
             s_GameObjectPool.Release(go);
         }
 
+        internal static void NotifyPoolableDestroyed(PoolableEntity entity)
+        {
+            s_GameObjectPool.OnEntityDestroyed(entity);
+        }
+
         /// <summary>
         /// 销毁所有缓存池中的闲置实例并释放对应Prefab引用
         /// </summary>
@@ -163,7 +168,7 @@ namespace NamedAsset
 
         public static void Destroy()
         {
-            s_GameObjectPool.Clear();
+            s_GameObjectPool.Clear(true);
             s_Provider?.Destroy();
             s_Provider = null;
             System.Array.Clear(s_Slots, 0, s_Slots.Length);

@@ -447,8 +447,27 @@ namespace DataVisit
 
         public void VisitEnum<T>(uint tag, string name, uint flag, ref T value) where T : Enum
         {
-            long v = (long)UnPackULong(tag);
-            value = (T)Enum.ToObject(typeof(T), v);
+            var underlyingType = Enum.GetUnderlyingType(typeof(T));
+            object rawValue;
+            if (underlyingType == typeof(byte))
+                rawValue = (byte)UnPackUInt(tag);
+            else if (underlyingType == typeof(sbyte))
+                rawValue = (sbyte)UnPackUInt(tag);
+            else if (underlyingType == typeof(short))
+                rawValue = (short)UnPackUInt(tag);
+            else if (underlyingType == typeof(ushort))
+                rawValue = (ushort)UnPackUInt(tag);
+            else if (underlyingType == typeof(int))
+                rawValue = (int)UnPackUInt(tag);
+            else if (underlyingType == typeof(uint))
+                rawValue = UnPackUInt(tag);
+            else if (underlyingType == typeof(long))
+                rawValue = (long)UnPackULong(tag);
+            else if (underlyingType == typeof(ulong))
+                rawValue = UnPackULong(tag);
+            else
+                throw new NotSupportedException($"Unsupported enum underlying type: {underlyingType}");
+            value = (T)Enum.ToObject(typeof(T), rawValue);
         }
 
         public void VisitStruct<T>(uint tag, string name, uint flag, ref T value) where T : struct

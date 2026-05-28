@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace LiteAnim
@@ -47,6 +47,8 @@ namespace LiteAnim
         public float GetLength()
         {
             float length = 0;
+            if (Clips == null)
+                return 0;
             if(Type == MotionType.Clip)
             {
                 foreach (var clip in Clips)
@@ -66,6 +68,8 @@ namespace LiteAnim
 
         public bool IsValid()
         {
+            if (Clips == null || Clips.Count == 0)
+                return false;
             if(Type == MotionType.Clip)
             {
                 return !Clips.Exists(it => it.GetLength() <= 0);

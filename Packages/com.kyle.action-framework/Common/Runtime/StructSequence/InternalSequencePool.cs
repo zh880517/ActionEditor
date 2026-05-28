@@ -13,14 +13,26 @@ internal class InternalSequencePool : IDisposable
 
     public InternalSequence Rent()
     {
-        if (_pool.Count > 0)
-            return _pool.Pop();
+        return Rent(_blockCapacity);
+    }
 
-        return new InternalSequence(_blockCapacity);
+    public InternalSequence Rent(int minCapacity)
+    {
+        while (_pool.Count > 0)
+        {
+            var block = _pool.Pop();
+            if (block.Capacity >= minCapacity)
+                return block;
+            block.Dispose();
+        }
+
+        return new InternalSequence(Math.Max(_blockCapacity, minCapacity));
     }
 
     public void Return(InternalSequence block)
     {
+        if (block == null)
+            return;
         block.Reset();
         _pool.Push(block);
     }

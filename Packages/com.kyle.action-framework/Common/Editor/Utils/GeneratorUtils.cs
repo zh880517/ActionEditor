@@ -32,13 +32,14 @@ namespace CodeGen
                 var paramTypes = type.GenericTypeArguments;
                 StringBuilder sb = new StringBuilder();
                 string fullName = type.FullName;
-                sb.Append(fullName.Substring(0, fullName.IndexOf('`')));
+                string typeName = fullName.Substring(0, fullName.IndexOf('`'));
+                sb.Append(FixedByNameSpace(typeName, nameSpace));
                 sb.Append('<');
                 for (int i=0; i<paramTypes.Length; ++i)
                 {
-                    if (i > 1)
+                    if (i > 0)
                         sb.Append(',');
-                    sb.Append(TypeToName(paramTypes[i]));
+                    sb.Append(TypeToName(paramTypes[i], nameSpace));
                 }
                 sb.Append('>');
                 return sb.ToString();
@@ -50,7 +51,7 @@ namespace CodeGen
         {
             if (!string.IsNullOrEmpty(nameSpace))
             {
-                if (typeName.Length > nameSpace.Length && typeName.StartsWith(typeName))
+                if (typeName.Length > nameSpace.Length && typeName.StartsWith(nameSpace))
                 {
                     if (typeName[nameSpace.Length] == '.')
                         return typeName.Substring(nameSpace.Length + 1);

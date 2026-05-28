@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.Playables;
 
@@ -19,6 +19,8 @@ namespace LiteAnim
 
         public override void Create(PlayableGraph graph)
         {
+            if (Motion.Clips.Count == 0)
+                return;
             mixerPlayable = AnimationMixerPlayable.Create(graph, Motion.Clips.Count);
             playables = new AnimationClipPlayable[Motion.Clips.Count];
             for (int i = 0; i < Motion.Clips.Count; i++)
@@ -58,10 +60,12 @@ namespace LiteAnim
 
         public override void Connect(IConnectable destination, int inputPort)
         {
+            if (!mixerPlayable.IsValid()) return;
             destination.Connect(mixerPlayable, inputPort);
         }
         public override void Connect<V>(V playable, int index)
         {
+            if (!mixerPlayable.IsValid()) return;
             playable.ConnectInput(index, mixerPlayable, 0);
         }
         public override void Evaluate(double time)
@@ -93,7 +97,9 @@ namespace LiteAnim
                         if(time >= next.StartTime && time <= next.EndTime)
                         {
                             //下一个片段需要混合
-                            weight = (float)((time - next.StartTime) / next.MixInLength);
+                            weight = next.MixInLength > 0
+                                ? (float)((time - next.StartTime) / next.MixInLength)
+                                : 1f;
                             weight = Mathf.Clamp01(weight);
                         }
                         mixerPlayable.SetInputWeight(i, 1 - weight);

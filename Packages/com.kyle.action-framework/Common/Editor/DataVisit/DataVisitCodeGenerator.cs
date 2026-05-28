@@ -13,7 +13,7 @@ namespace CodeGen.DataVisit
         {
             var catalogs = DataVisitTypeCollector.CollectAllCatalogs();
 
-            if (catalogs.Count == 0)
+            if (catalogs == null || catalogs.Count == 0)
             {
                 return;
             }
@@ -76,7 +76,7 @@ namespace CodeGen.DataVisit
                     writer.WriteLine($"var _base = ({baseTypeName})value;");
                     writer.WriteLine($"visitier.VisitClass(0, \"\", 0, ref _base);");
                 }
-                foreach (var field in typeInfo.Fields)
+                foreach (var field in typeInfo.Fields.OrderBy(f => f.FieldIndex))
                 {
                     GenerateFieldVisit(writer, field);
                 }

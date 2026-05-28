@@ -178,7 +178,9 @@ namespace ActionLine
             int targetIndex = clips.IndexOf(target);
             if (targetIndex < 0)
             {
+                clips.RemoveAt(oldIndex);
                 clips.Insert(0, clip);
+                EditorUtility.SetDirty(this);
                 return 0;
             }
 

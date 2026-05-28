@@ -17,16 +17,17 @@ namespace ActionLine.EditorView
             if(types == null)
             {
                 types = new List<Type>();
-                var assetType = Context.GetType();
+                var assetType = Context.Target.GetType();
                 var typeList = TypeCollector<ActionLineClip>.Types;
                 foreach (var type in typeList)
                 {
                     var attributes = type.GetCustomAttributes<ActionLineTypeAttribute>(true);
                     foreach (var item in attributes)
                     {
-                        if(item.AssetType.IsSubclassOf(assetType))
+                        if(item.AssetType.IsAssignableFrom(assetType))
                         {
                             types.Add(type);
+                            break;
                         }
                     }
                 }

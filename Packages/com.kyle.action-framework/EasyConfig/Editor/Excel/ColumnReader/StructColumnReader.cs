@@ -50,17 +50,25 @@ namespace EasyConfig.Editor
                 indexName = $"{prefixName}{indexName}";
             if (field.FieldType.IsArray || typeof(IList).IsAssignableFrom(field.FieldType))
             {
+                if (field.GetCustomAttribute<FieldSeparatorAttribute>() != null)
+                {
+                    return new ColumnReader(ConvertUtil.ToConvert(field), indexName);
+                }
                 return new ListColumnReader(field.FieldType, indexName);
+            }
+            if (typeof(IDictionary).IsAssignableFrom(field.FieldType))
+            {
+                return new ColumnReader(ConvertUtil.ToConvert(field), indexName);
             }
             if (ColumnReaderUtil.IsBaseType(field.FieldType))
             {
-                return new ColumnReader(ConvertUtil.ToConvert(field.FieldType), indexName);
+                return new ColumnReader(ConvertUtil.ToConvert(field), indexName);
             }
             if (indexName.EndsWith('.'))
             {
                 return new StructColumnReader(field.FieldType, indexName);
             }
-            return new ColumnReader(ConvertUtil.ToConvert(field.FieldType), indexName);
+            return new ColumnReader(ConvertUtil.ToConvert(field), indexName);
         }
         public object Read(SheetData sheet, int rowIndex, int arrayIndex)
         {

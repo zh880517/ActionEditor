@@ -1,6 +1,8 @@
 using UnityEngine;
 using UnityEngine.Rendering;
+#if UNITY_6000_0_OR_NEWER
 using UnityEngine.Rendering.RenderGraphModule;
+#endif
 using UnityEngine.Rendering.Universal;
 
 namespace VisualShape
@@ -22,6 +24,7 @@ namespace VisualShape
                 public Camera camera;
             }
 
+#if UNITY_6000_0_OR_NEWER
             public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
             {
                 var cameraData = frameData.Get<UniversalCameraData>();
@@ -50,6 +53,12 @@ namespace VisualShape
                         );
                 }
             }
+#else
+            public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
+            {
+                ShapeManager.instance.ExecuteCustomRenderPass(context, renderingData.cameraData.camera);
+            }
+#endif
 
             public override void FrameCleanup(CommandBuffer cmd)
             {

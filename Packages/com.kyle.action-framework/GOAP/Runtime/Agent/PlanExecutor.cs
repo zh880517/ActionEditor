@@ -15,6 +15,14 @@ namespace GOAP
 
         public PlanExecutorStatus Status { get; private set; } = PlanExecutorStatus.Idle;
 
+        private void FailCurrentAction(AgentContext ctx)
+        {
+            if (_entered && CurrentAction != null)
+                CurrentAction.OnAbort(ctx);
+            _entered = false;
+            Status = PlanExecutorStatus.Failed;
+        }
+
         // 当前正在执行的 Action（供外部只读展示）
         public IAction CurrentAction =>
             _plan != null && _index < _plan.Actions.Count ? _plan.Actions[_index] : null;
@@ -47,7 +55,7 @@ namespace GOAP
             // 执行前运行时检查：前置条件或 IsApplicable 不满足时触发重规划
             if (!ctx.WorldState.Satisfies(action.Preconditions) || !action.IsApplicable(ctx.WorldState))
             {
-                Status = PlanExecutorStatus.Failed;
+                FailCurrentAction(ctx);
                 return Status;
             }
 

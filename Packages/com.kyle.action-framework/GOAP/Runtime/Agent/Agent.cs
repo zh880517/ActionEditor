@@ -95,6 +95,8 @@ namespace GOAP
                 case PlanExecutorStatus.Done:
                     // 所有 Action 执行完毕，目标达成
                     CurrentPlan = null;
+                    CurrentGoal = null;
+                    _goalSelector.Reset();
                     Status = AgentStatus.Idle;
                     break;
 

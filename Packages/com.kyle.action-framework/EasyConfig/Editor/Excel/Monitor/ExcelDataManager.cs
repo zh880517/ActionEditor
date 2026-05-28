@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
@@ -14,7 +14,7 @@ namespace EasyConfig.Editor
 
         public static string ExcelPath;
         public IExcelExportFilter ExportFilter;
-        private static string CachePath => "/Library/ExcelCache/";
+        private static string CachePath => Path.Combine(Directory.GetCurrentDirectory(), "Library", "ExcelCache");
         private FileSystemWatcher watcher;
         private bool waitRefresh;
         public void OnDataCollectorCreate(ExcelDataCollector collector)

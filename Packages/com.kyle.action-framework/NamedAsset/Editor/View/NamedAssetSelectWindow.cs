@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine;
@@ -87,6 +87,12 @@ namespace NamedAsset.Editor
         }
         public static void Show(Rect activatorRect, string selected, float width = 0, float height = 0)
         {
+            instance.onSelectAsset = null;
+            if (assetLimitType != null)
+            {
+                assetLimitType = null;
+                instance.version = 0;
+            }
             controlID = GetControlID(activatorRect);
             selectAsset = selected;
             Vector2 pos = activatorRect.position;

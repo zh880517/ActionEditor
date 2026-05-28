@@ -1,4 +1,4 @@
-﻿// 此文件由脚本基于 CommandBuilder API 自动生成。
+// 此文件由脚本基于 CommandBuilder API 自动生成。
 // 此文件为 CommandBuilder API 添加带有颜色等便捷参数的额外重载。
 using Unity.Burst;
 using UnityEngine;
@@ -346,11 +346,16 @@ namespace VisualShape
             // 使用 Burst 编译的函数绘制线条
             // 这比纯 C# 快很多（约 5 倍）。
             var meshDataArray = Mesh.AcquireReadOnlyMeshData(mesh);
-            var meshData = meshDataArray[0];
-
-            JobWireMesh.JobWireMeshFunctionPointer(ref meshData, ref this);
-            meshDataArray.Dispose();
-            PopColor();
+            try
+            {
+                var meshData = meshDataArray[0];
+                JobWireMesh.JobWireMeshFunctionPointer(ref meshData, ref this);
+            }
+            finally
+            {
+                meshDataArray.Dispose();
+                PopColor();
+            }
         }
         /// <summary>\copydocref{WireMesh(NativeArray&lt;float3&gt;,NativeArray&lt;int&gt;)}</summary>
         public void WireMesh(NativeArray<float3> vertices, NativeArray<int> triangles, Color color)
@@ -365,6 +370,7 @@ namespace VisualShape
         /// <summary>\copydocref{SolidMesh(Mesh)}</summary>
         public void SolidMesh(Mesh mesh, Color color)
         {
+            if (mesh == null) throw new System.ArgumentNullException();
             SolidMeshInternal(mesh, false, color);
         }
 

@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using UnityEngine.Playables;
 
 namespace LiteAnim
@@ -26,7 +26,7 @@ namespace LiteAnim
 
         public static MotionState CreateState(LiteAnimMotion motion)
         {
-            if(!motion.IsValid())
+            if(!motion || !motion.IsValid())
                 return null;
             MotionState state = null;
             switch (motion.Type)

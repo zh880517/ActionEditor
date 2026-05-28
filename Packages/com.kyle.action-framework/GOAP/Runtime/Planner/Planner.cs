@@ -38,7 +38,7 @@ namespace GOAP
             startNode.Depth = 0;
             _openList.Push(startNode);
 
-            Plan result = GOAP.Plan.Empty;
+            Plan result = GOAP.Plan.Invalid;
 
             while (_openList.Count > 0)
             {
@@ -68,6 +68,8 @@ namespace GOAP
                         continue;
 
                     var childState = BuildChildState(current.State, action);
+                    if (childState == null)
+                        continue;
 
                     if (_closedSet.Contains(childState))
                     {
@@ -117,6 +119,8 @@ namespace GOAP
                 node = node.Parent;
             }
             _planBuffer.Reverse();
+            if (_planBuffer.Count == 0)
+                return global::GOAP.Plan.Empty;
             return new Plan(new List<IAction>(_planBuffer), cost);
         }
 
@@ -132,7 +136,7 @@ namespace GOAP
                     if (effKey != reqKey) continue;
 
                     // Add 效果：同 key 即视为相关（乐观）
-                    if (effMode == EffectMode.Add)
+                    if (effMode == EffectMode.Add && effValue != 0)
                         return true;
 
                     // Assign 效果：检查赋值后是否满足条件
@@ -158,7 +162,7 @@ namespace GOAP
                 if (effMode == EffectMode.Add)
                 {
                     // 增减效果：乐观移除条件，运行时由 PlanExecutor 验证
-                    child.Remove(effKey);
+                    child.Set(effKey, condValue - effValue, condOp);
                 }
                 else
                 {
@@ -167,9 +171,115 @@ namespace GOAP
                         child.Remove(effKey);
                 }
             }
-            child.Apply(action.Preconditions);
+            if (!ApplyRequirements(child, action.Preconditions))
+            {
+                ReturnState(child);
+                return null;
+            }
             return child;
         }
+
+        private static bool ApplyRequirements(WorldState target, WorldState requirements)
+        {
+            for (int i = 0; i < requirements.Count; i++)
+            {
+                var (key, value, op, mode) = requirements.GetFullEntry(i);
+                if (!target.TryGetFull(key, out var existingValue, out var existingOp, out var existingMode))
+                {
+                    target.Set(key, value, op, mode);
+                    continue;
+                }
+
+                if (TryMergeRequirements(existingValue, existingOp, value, op, out var mergedValue, out var mergedOp))
+                    target.Set(key, mergedValue, mergedOp, existingMode);
+                else
+                    return false;
+            }
+            return true;
+        }
+
+        private static bool TryMergeRequirements(
+            int leftValue,
+            CompareOp leftOp,
+            int rightValue,
+            CompareOp rightOp,
+            out int value,
+            out CompareOp op)
+        {
+            value = leftValue;
+            op = leftOp;
+
+            if (leftOp == CompareOp.Equal)
+            {
+                if (!WorldState.CompareValues(leftValue, rightOp, rightValue))
+                    return false;
+                return true;
+            }
+
+            if (rightOp == CompareOp.Equal)
+            {
+                if (!WorldState.CompareValues(rightValue, leftOp, leftValue))
+                    return false;
+                value = rightValue;
+                op = rightOp;
+                return true;
+            }
+
+            if (IsLowerBound(leftOp) && IsLowerBound(rightOp))
+            {
+                if (rightValue > leftValue || (rightValue == leftValue && rightOp == CompareOp.Greater))
+                {
+                    value = rightValue;
+                    op = rightOp;
+                }
+                else if (rightValue == leftValue && leftOp == CompareOp.Greater)
+                {
+                    op = leftOp;
+                }
+                return true;
+            }
+
+            if (IsUpperBound(leftOp) && IsUpperBound(rightOp))
+            {
+                if (rightValue < leftValue || (rightValue == leftValue && rightOp == CompareOp.Less))
+                {
+                    value = rightValue;
+                    op = rightOp;
+                }
+                else if (rightValue == leftValue && leftOp == CompareOp.Less)
+                {
+                    op = leftOp;
+                }
+                return true;
+            }
+
+            if (IsLowerBound(leftOp) && IsUpperBound(rightOp))
+                return BoundsOverlap(leftValue, leftOp, rightValue, rightOp);
+
+            if (IsUpperBound(leftOp) && IsLowerBound(rightOp))
+                return BoundsOverlap(rightValue, rightOp, leftValue, leftOp);
+
+            return false;
+        }
+
+        private static bool BoundsOverlap(
+            int lowerValue,
+            CompareOp lowerOp,
+            int upperValue,
+            CompareOp upperOp)
+        {
+            if (lowerValue < upperValue)
+                return true;
+            if (lowerValue > upperValue)
+                return false;
+            return lowerOp == CompareOp.GreaterOrEqual && upperOp == CompareOp.LessOrEqual;
+        }
+
+        private static bool IsLowerBound(CompareOp op)
+            => op == CompareOp.Greater || op == CompareOp.GreaterOrEqual;
+
+        private static bool IsUpperBound(CompareOp op)
+            => op == CompareOp.Less || op == CompareOp.LessOrEqual;
 
         private static PlannerNode RentNode()
         {

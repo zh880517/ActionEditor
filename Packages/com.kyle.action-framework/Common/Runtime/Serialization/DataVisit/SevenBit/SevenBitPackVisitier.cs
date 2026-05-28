@@ -219,6 +219,11 @@ namespace DataVisit
         {
             if (value == 0 && !IsRequired(flag))
                 return;
+            PackLong(tag, value);
+        }
+
+        private void PackLong(uint tag, long value)
+        {
             if (value >= 0)
             {
                 PackHeader(tag, SevenBitDataType.Positive);
@@ -227,7 +232,7 @@ namespace DataVisit
             else
             {
                 PackHeader(tag, SevenBitDataType.Negative);
-                PackNumber((ulong)(-value));
+                PackNumber(unchecked((ulong)(-(value + 1)) + 1UL));
             }
         }
 
@@ -280,19 +285,21 @@ namespace DataVisit
 
         public void VisitEnum<T>(uint tag, string name, uint flag, ref T value) where T : Enum
         {
-            long v = Convert.ToInt64(value);
-            if (v == 0 && !IsRequired(flag))
-                return;
-            if (v >= 0)
+            var underlyingType = Enum.GetUnderlyingType(typeof(T));
+            if (underlyingType == typeof(ulong))
             {
+                ulong unsignedValue = Convert.ToUInt64(value);
+                if (unsignedValue == 0 && !IsRequired(flag))
+                    return;
                 PackHeader(tag, SevenBitDataType.Positive);
-                PackNumber((ulong)v);
+                PackNumber(unsignedValue);
+                return;
             }
-            else
-            {
-                PackHeader(tag, SevenBitDataType.Negative);
-                PackNumber((ulong)(-v));
-            }
+
+            long signedValue = Convert.ToInt64(value);
+            if (signedValue == 0 && !IsRequired(flag))
+                return;
+            PackLong(tag, signedValue);
         }
 
         public void VisitStruct<T>(uint tag, string name, uint flag, ref T value) where T : struct

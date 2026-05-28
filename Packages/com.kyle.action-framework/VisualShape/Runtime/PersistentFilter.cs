@@ -123,6 +123,9 @@ namespace VisualShape
 
                 *buffer = bufferPersist;
             }
+
+            stackPersist.Dispose();
+            stackScope.Dispose();
         }
     }
 }

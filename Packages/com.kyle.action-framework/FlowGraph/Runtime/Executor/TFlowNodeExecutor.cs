@@ -77,6 +77,7 @@
             if(nodeContext == null)
             {
                 nodeContext = CreateNodeContext();
+                context.SetNodeContext(nodeContext);
                 OnEnter(context, data, nodeContext);
             }
             if (OnUpdate(context, data, nodeContext))
@@ -112,6 +113,7 @@
             if (nodeContext == null)
             {
                 nodeContext = CreateNodeContext();
+                context.SetNodeContext(nodeContext);
                 OnEnter(context, data, nodeContext);
             }
             var result = OnUpdate(context, data, nodeContext);
@@ -146,6 +148,7 @@
             if (nodeContext == null)
             {
                 nodeContext = CreateNodeContext();
+                context.SetNodeContext(nodeContext);
                 OnEnter(context, data, nodeContext);
             }
             var portIndex = OnUpdate(context, data, nodeContext);

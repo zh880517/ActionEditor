@@ -8,13 +8,14 @@ namespace EasyConfig.Editor
     {
         public static IConvert ToConvert(FieldInfo field)
         {
+            var fieldSeparator = field.GetCustomAttribute<FieldSeparatorAttribute>();
             if (field.FieldType.IsArray || typeof(IList).IsAssignableFrom(field.FieldType))
             {
-                var sep = field.GetCustomAttribute<FieldSeparatorAttribute>();
-                if (sep == null)
+                if (fieldSeparator == null)
                 {
                     throw new Exception($"List类型字段必须使用FieldSeparatorAttribute设置分隔符 {field.DeclaringType}.{field.Name}");
                 }
+                return ToConvert(field.FieldType, fieldSeparator.Separator);
             }
             else if (typeof(IDictionary).IsAssignableFrom(field.FieldType))
             {
@@ -24,6 +25,10 @@ namespace EasyConfig.Editor
                     throw new Exception($"Dictionary类型字段必须使用DictionarySeparatorAttribute设置分隔符 {field.DeclaringType}.{field.Name}");
                 }
                 return new DictionaryConvert(field.FieldType, sep.Element, sep.KeyValue);
+            }
+            if (fieldSeparator != null)
+            {
+                return ToConvert(field.FieldType, fieldSeparator.Separator);
             }
             return ToConvert(field.FieldType);
         }

@@ -12,7 +12,7 @@ namespace CodeGen.StructSequence
         public static void GenerateAll()
         {
             var catalogs = StructSequenceTypeCollector.CollectAllCatalogs();
-            if (catalogs.Count == 0)
+            if (catalogs == null || catalogs.Count == 0)
                 return;
 
             var modifiedFiles = new HashSet<string>();
@@ -271,7 +271,9 @@ namespace CodeGen.StructSequence
                         break;
                     case SSFieldKind.Struct:
                         var nested = catalog.Structs.Find(s => s.Type == field.FieldType);
-                        size += nested != null ? ComputePayloadSize(nested, catalog) : sizeof(int);
+                        if (nested == null)
+                            throw new InvalidOperationException($"Nested struct {field.FieldType.FullName} was not collected for StructSequence.");
+                        size += ComputePayloadSize(nested, catalog);
                         break;
                     default:
                         size += sizeof(int);

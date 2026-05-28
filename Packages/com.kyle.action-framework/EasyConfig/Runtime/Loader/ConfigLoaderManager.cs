@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 
 namespace EasyConfig
 {
@@ -19,9 +19,17 @@ namespace EasyConfig
 
         public void RegisterLoader(IConfigLoader loader)
         {
-            if (loaders.ContainsKey(loader.TypeName))
+            if (loader == null)
                 return;
-            loaders.Add(loader.TypeName, loader);
+            loaders[loader.TypeName] = loader;
+        }
+
+        public void UnregisterLoader(IConfigLoader loader)
+        {
+            if (loader == null)
+                return;
+            if (loaders.TryGetValue(loader.TypeName, out var current) && ReferenceEquals(current, loader))
+                loaders.Remove(loader.TypeName);
         }
 
         public static void OnDataModify(string type, string name, byte[] data)

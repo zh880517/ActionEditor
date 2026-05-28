@@ -10,6 +10,7 @@ namespace NamedAsset
     {
         internal string PoolKey;
         internal Resetable Head;
+        internal bool InPool;
 
         internal void Register(Resetable node)
         {
@@ -39,6 +40,11 @@ namespace NamedAsset
                 current.OnReset();
                 current = current.Next;
             }
+        }
+
+        private void OnDestroy()
+        {
+            AssetManager.NotifyPoolableDestroyed(this);
         }
     }
 }

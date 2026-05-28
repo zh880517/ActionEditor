@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections.Generic;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Mathematics;
@@ -7,6 +7,9 @@ using Unity.Jobs;
 using Unity.Collections;
 using Unity.Burst;
 using UnityEngine.Rendering;
+#if UNITY_6000_0_OR_NEWER
+using UnityEngine.Rendering.RenderGraphModule;
+#endif
 using System.Diagnostics;
 using Unity.Jobs.LowLevel.Unsafe;
 using UnityEngine.Profiling;
@@ -1718,17 +1721,21 @@ namespace VisualShape
         {
             public CommandBuffer cmd;
             public bool allowDisablingWireframe;
+#if UNITY_6000_0_OR_NEWER
             public RasterCommandBuffer cmd2;
+#endif
             public void SetWireframe(bool enable)
             {
                 if (cmd != null)
                 {
                     cmd.SetWireframe(enable);
                 }
+#if UNITY_6000_0_OR_NEWER
                 else if (cmd2 != null)
                 {
                     if (allowDisablingWireframe) cmd2.SetWireframe(enable);
                 }
+#endif
             }
 
             public void DrawMesh(Mesh mesh, Matrix4x4 matrix, Material material, int submeshIndex, int shaderPass, MaterialPropertyBlock properties)
@@ -1737,10 +1744,12 @@ namespace VisualShape
                 {
                     cmd.DrawMesh(mesh, matrix, material, submeshIndex, shaderPass, properties);
                 }
+#if UNITY_6000_0_OR_NEWER
                 else if (cmd2 != null)
                 {
                     cmd2.DrawMesh(mesh, matrix, material, submeshIndex, shaderPass, properties);
                 }
+#endif
             }
         }
 
@@ -1801,10 +1810,12 @@ namespace VisualShape
 
             var settings = settingsRef;
 
-            bool skipDueToWireframe = false;
-            commandBuffer.SetWireframe(false);
-
-            if (!skipDueToWireframe)
+            bool restoreWireframe = Application.isEditor && (cam.cameraType & (CameraType.SceneView | CameraType.Preview)) != 0;
+            commandBuffer.allowDisablingWireframe |= restoreWireframe;
+            if (restoreWireframe)
+            {
+                commandBuffer.SetWireframe(false);
+            }
             {
                 MarkerBuildMeshes.Begin();
                 processedData.SubmitMeshes(this, cam, cameraRenderingRange.start, allowGizmos, allowCameraDefault);
@@ -1857,6 +1868,12 @@ namespace VisualShape
                             break;
                         default:
                             throw new System.InvalidOperationException("Invalid mesh type");
+                    }
+
+                    if (mat == null)
+                    {
+                        i = meshEndIndex;
+                        continue;
                     }
 
                     for (int pass = 0; pass < mat.passCount; pass++)
@@ -1935,5 +1952,3 @@ namespace VisualShape
         }
     }
 }
-
-

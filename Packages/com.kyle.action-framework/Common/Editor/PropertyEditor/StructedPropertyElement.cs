@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEditor;
@@ -46,6 +46,7 @@ namespace PropertyEditor
         protected string lable;
         protected string toolTip;
         protected object value;
+        protected readonly Type valueType;
         public override bool ReadOnly 
         { 
             get => readOnly; 
@@ -69,6 +70,7 @@ namespace PropertyEditor
 
         public StructedPropertyElement(Type type, bool expandedInParent = false, bool handleUndo = true)
         {
+            valueType = type;
             SetExpandedInParent(expandedInParent);
             List<FieldInfo> fields = new List<FieldInfo>();
             var currentType = type;
@@ -174,9 +176,30 @@ namespace PropertyEditor
             this.value = value;
             foreach (var item in children)
             {
-                var v = item.Element.Field.GetValue(value);
+                var v = value == null ? GetDefaultValue(item.Element.Field.FieldType) : item.Element.Field.GetValue(value);
                 item.Element.SetValue(v);
             }
+        }
+
+        private static object GetDefaultValue(Type type)
+        {
+            return type.IsValueType ? Activator.CreateInstance(type) : null;
+        }
+
+        private bool EnsureValueInstance()
+        {
+            if (value != null)
+                return true;
+            if (valueType.IsValueType)
+            {
+                value = Activator.CreateInstance(valueType);
+                return true;
+            }
+            var ctor = valueType.GetConstructor(Type.EmptyTypes);
+            if (ctor == null)
+                return false;
+            value = ctor.Invoke(null);
+            return true;
         }
 
         public override PropertyElement Find(string name)
@@ -253,8 +276,11 @@ namespace PropertyEditor
             }
             if(evt.Field != null)
             {
+                bool createdValue = value == null;
+                if (!EnsureValueInstance())
+                    return;
                 evt.Field.SetValue(value, evt.Value);
-                if(Field != null && Field.FieldType.IsValueType)
+                if(Field != null && (Field.FieldType.IsValueType || createdValue))
                 {
                     using var e = PropertyValueChangedEvent.GetPooled(this, value, Field, Index);
                     SendEvent(e);

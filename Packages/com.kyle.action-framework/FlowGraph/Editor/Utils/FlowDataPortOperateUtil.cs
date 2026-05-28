@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using UnityEditor;
 
 namespace Flow.EditorView
 {
@@ -7,7 +9,18 @@ namespace Flow.EditorView
     {
         public static void OnNodeRemove(FlowNode node)
         {
-            node.Graph.DataEdges.RemoveAll(e => e.Input == node || e.Output == node);
+            var graph = node.Graph;
+            RegisterAffectedDataEdgeUndo(graph, e => e.Input == node || e.Output == node, "remove data port");
+            for (int i = graph.DataEdges.Count - 1; i >= 0; i--)
+            {
+                var e = graph.DataEdges[i];
+                if (e.Input == node || e.Output == node)
+                {
+                    ClearEdgeIDs(e);
+                    graph.DataEdges.RemoveAt(i);
+                }
+            }
+            MarkGraphAndNodesDirty(graph);
         }
         public static ulong ConnectDataPort(FlowNode output, string ouputFieldName, FlowNode input, string inputFieldName)
         {
@@ -15,10 +28,12 @@ namespace Flow.EditorView
             for (int i = 0; i < graph.DataEdges.Count; i++)
             {
                 var e = graph.DataEdges[i];
-                if (e.Input == input && e.InputSlot == inputFieldName)
+                if ((e.Input == input && e.InputSlot == inputFieldName)
+                    || (e.Output == output && e.OutputSlot == ouputFieldName))
                 {
                     graph.DataEdges.RemoveAt(i);
                     i--;
+                    ClearEdgeIDs(e);
                     continue;
                 }
             }
@@ -39,6 +54,7 @@ namespace Flow.EditorView
             SetNodeSlotID(output, ouputFieldName, edge.EdgeID);
             SetInputNodeSlotID(input, inputFieldName, edge.EdgeID);
             graph.DataEdges.Add(edge);
+            MarkGraphAndNodesDirty(graph);
             return edge.EdgeID;
         }
 
@@ -46,7 +62,13 @@ namespace Flow.EditorView
         {
             if (output == null || input == null)
                 return 0;
-            FlowGraphEditorUtil.RegisterUndo(output, undoName, true);
+            RegisterAffectedDataEdgeUndo(
+                output.Graph,
+                e => (e.Input == input && e.InputSlot == inputFieldName)
+                    || (e.Output == output && e.OutputSlot == ouputFieldName),
+                undoName,
+                output,
+                input);
             return ConnectDataPort(output, ouputFieldName, input, inputFieldName);
         }
 
@@ -60,10 +82,94 @@ namespace Flow.EditorView
                 {
                     graph.DataEdges.RemoveAt(i);
                     i--;
-                    SetNodeSlotID(e.Output, e.OutputSlot, 0);
-                    SetInputNodeSlotID(input, inputFieldName, 0);
+                    ClearEdgeIDs(e);
                     continue;
                 }
+            }
+            MarkGraphAndNodesDirty(graph);
+        }
+
+        private static bool RemoveDuplicateDataEdges(List<FlowDataEdge> edges)
+        {
+            var outputSlots = new HashSet<string>();
+            var inputSlots = new HashSet<string>();
+            bool changed = false;
+            for (int i = edges.Count - 1; i >= 0; i--)
+            {
+                var e = edges[i];
+                string outputKey = $"{e.Output.GetInstanceID()}:{e.OutputSlot}";
+                string inputKey = $"{e.Input.GetInstanceID()}:{e.InputSlot}";
+                bool duplicate = outputSlots.Contains(outputKey) || inputSlots.Contains(inputKey);
+                outputSlots.Add(outputKey);
+                inputSlots.Add(inputKey);
+                if (duplicate)
+                {
+                    ClearEdgeIDs(e);
+                    edges.RemoveAt(i);
+                    changed = true;
+                }
+            }
+            return changed;
+        }
+
+        private static void ClearEdgeIDs(FlowDataEdge e)
+        {
+            if (e.Output)
+                SetNodeSlotID(e.Output, e.OutputSlot, 0);
+            if (e.Input)
+                SetInputNodeSlotID(e.Input, e.InputSlot, 0);
+        }
+
+        private static void RegisterAffectedDataEdgeUndo(
+            FlowGraph graph,
+            Predicate<FlowDataEdge> match,
+            string undoName,
+            params FlowNode[] extraNodes)
+        {
+            if (graph == null)
+                return;
+
+            var objects = new List<UnityEngine.Object> { graph };
+            for (int i = 0; i < extraNodes.Length; i++)
+                AddObject(objects, extraNodes[i]);
+
+            for (int i = 0; i < graph.DataEdges.Count; i++)
+            {
+                var e = graph.DataEdges[i];
+                if (!match(e))
+                    continue;
+                AddObject(objects, e.Output);
+                AddObject(objects, e.Input);
+            }
+
+            Undo.RegisterCompleteObjectUndo(objects.ToArray(), undoName);
+            MarkObjectsDirty(objects);
+        }
+
+        private static void AddObject(List<UnityEngine.Object> objects, UnityEngine.Object obj)
+        {
+            if (obj != null && !objects.Contains(obj))
+                objects.Add(obj);
+        }
+
+        private static void MarkObjectsDirty(List<UnityEngine.Object> objects)
+        {
+            for (int i = 0; i < objects.Count; i++)
+            {
+                if (objects[i] != null)
+                    EditorUtility.SetDirty(objects[i]);
+            }
+        }
+
+        private static void MarkGraphAndNodesDirty(FlowGraph graph)
+        {
+            if (graph == null)
+                return;
+            EditorUtility.SetDirty(graph);
+            for (int i = 0; i < graph.Nodes.Count; i++)
+            {
+                if (graph.Nodes[i] != null)
+                    EditorUtility.SetDirty(graph.Nodes[i]);
             }
         }
 
@@ -121,7 +227,11 @@ namespace Flow.EditorView
         {
             if (input == null)
                 return;
-            FlowGraphEditorUtil.RegisterUndo(input, undoName, true);
+            RegisterAffectedDataEdgeUndo(
+                input.Graph,
+                e => e.Input == input && e.InputSlot == inputFieldName,
+                undoName,
+                input);
             DisconnectDataPort(input, inputFieldName);
         }
 
@@ -137,10 +247,7 @@ namespace Flow.EditorView
                 if (e.Input == null || e.Output == null
                     || !nodes.Contains(e.Input) || !nodes.Contains(e.Output))
                 {
-                    if(e.Output)
-                    {
-                        SetNodeSlotID(e.Output, e.OutputSlot, 0);
-                    }
+                    ClearEdgeIDs(e);
                     edges.RemoveAt(i);
                     continue;
                 }
@@ -149,8 +256,7 @@ namespace Flow.EditorView
                 var outputType = ResolveOutputSlotType(e.Output, e.OutputSlot);
                 if (outputType == null)
                 {
-                    if (e.Output)
-                        SetNodeSlotID(e.Output, e.OutputSlot, 0);
+                    ClearEdgeIDs(e);
                     edges.RemoveAt(i);
                     continue;
                 }
@@ -158,8 +264,7 @@ namespace Flow.EditorView
                 var inputType = ResolveInputSlotType(e.Input, e.InputSlot);
                 if (inputType == null)
                 {
-                    if (e.Output)
-                        SetNodeSlotID(e.Output, e.OutputSlot, 0);
+                    ClearEdgeIDs(e);
                     edges.RemoveAt(i);
                     continue;
                 }
@@ -169,8 +274,7 @@ namespace Flow.EditorView
                 {
                     if (!inputType.IsAssignableFrom(outputType))
                     {
-                        if (e.Output)
-                            SetNodeSlotID(e.Output, e.OutputSlot, 0);
+                        ClearEdgeIDs(e);
                         edges.RemoveAt(i);
                         continue;
                     }
@@ -184,11 +288,63 @@ namespace Flow.EditorView
                     var inputField = inputTypeInfo.InputFields.FirstOrDefault(f => f.Name == e.InputSlot || f.OldName == e.InputSlot);
                     var outputTypeInfo = FlowNodeTypeUtil.GetNodeTypeInfo(e.Output.GetType());
                     var outField = outputTypeInfo.OutputFields.FirstOrDefault(f => f.Name == e.OutputSlot || f.OldName == e.OutputSlot);
+                    bool changed = false;
                     if (inputField != null && inputField.OldName == e.InputSlot)
+                    {
                         e.InputSlot = inputField.Name;
+                        changed = true;
+                    }
                     if (outField != null && outField.OldName == e.OutputSlot)
+                    {
                         e.OutputSlot = outField.Name;
+                        changed = true;
+                    }
+                    if (changed)
+                        edges[i] = e;
                 }
+            }
+
+            RemoveDuplicateDataEdges(edges);
+            ClearAllDataEdgeIDs(graph);
+            for (int i = 0; i < edges.Count; i++)
+            {
+                var e = edges[i];
+                SetNodeSlotID(e.Output, e.OutputSlot, e.EdgeID);
+                SetInputNodeSlotID(e.Input, e.InputSlot, e.EdgeID);
+            }
+            MarkGraphAndNodesDirty(graph);
+        }
+
+        private static void ClearAllDataEdgeIDs(FlowGraph graph)
+        {
+            for (int i = 0; i < graph.Nodes.Count; i++)
+            {
+                var node = graph.Nodes[i];
+                if (node == null)
+                    continue;
+
+                if (node is SubGraphNode subNode)
+                {
+                    subNode.InputEdges.Clear();
+                    subNode.OutputEdges.Clear();
+                    continue;
+                }
+                if (node is SubGraphInputNode inputNode)
+                {
+                    inputNode.PortEdges.Clear();
+                    continue;
+                }
+                if (node is SubGraphOutputNode outputNode)
+                {
+                    outputNode.PortEdges.Clear();
+                    continue;
+                }
+
+                var typeInfo = FlowNodeTypeUtil.GetNodeTypeInfo(node.GetType());
+                if (typeInfo == null)
+                    continue;
+                for (int j = 0; j < typeInfo.OutputFields.Count; j++)
+                    SetNodeSlotID(node, typeInfo.OutputFields[j].Name, 0);
             }
         }
 

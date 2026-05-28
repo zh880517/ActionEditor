@@ -24,7 +24,14 @@ namespace EasyConfig.Editor
             if (title == null)
                 return null;
             var row = Data[rowIndex];
-            return row.Data[title.Index];
+            int dataIndex = Titiles.IndexOf(title);
+            if (row.Data == null)
+                return null;
+            if (row.Data.Length == Titiles.Count && dataIndex >= 0 && dataIndex < row.Data.Length)
+                return row.Data[dataIndex];
+            if (title.Index >= 0 && title.Index < row.Data.Length)
+                return row.Data[title.Index];
+            return null;
         }
     }
 }

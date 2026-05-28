@@ -1,4 +1,4 @@
-﻿using UnityEngine.Animations;
+using UnityEngine.Animations;
 using UnityEngine.Playables;
 
 namespace LiteAnim
@@ -23,10 +23,12 @@ namespace LiteAnim
 
         public override void Connect(IConnectable destination, int inputPort)
         {
+            if (!playable.IsValid()) return;
             destination.Connect(playable, inputPort);
         }
         public override void Connect<V>(V playable, int index)
         {
+            if (!this.playable.IsValid()) return;
             playable.ConnectInput(index, this.playable, 0);
         }
         public override void Evaluate(double time)

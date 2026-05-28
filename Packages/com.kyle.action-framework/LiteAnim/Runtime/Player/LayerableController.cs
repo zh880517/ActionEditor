@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.Playables;
@@ -18,15 +18,24 @@ namespace LiteAnim
         private int rootIndex = -1;
         private List<LayerFade> layerFades = new List<LayerFade>();
 
+        private int LayerCount => Mathf.Max(1, asset?.Layers?.Count ?? 0);
+
+        private bool IsValidLayer(int layer)
+        {
+            return layer >= 0 && layer < LayerCount;
+        }
+
         public void Connect<V>(V playable, int index) where V : struct, IPlayable
         {
+            if (!layerMixerPlayable.IsValid() || !IsValidLayer(index)) return;
             layerMixerPlayable.ConnectInput(index, playable, 0);
         }
 
         protected override void OnInit()
         {
-            layerMixerPlayable = AnimationLayerMixerPlayable.Create(graph.Graph, asset.Layers.Count);
-            for (int i = 0; i < asset.Layers.Count; i++)
+            int layerCount = LayerCount;
+            layerMixerPlayable = AnimationLayerMixerPlayable.Create(graph.Graph, layerCount);
+            for (int i = 0; i < (asset.Layers?.Count ?? 0); i++)
             {
                 var layer = asset.Layers[i];
                 layerMixerPlayable.SetLayerAdditive((uint)i, layer.Additive);
@@ -42,6 +51,8 @@ namespace LiteAnim
             if (state == null)
                 return;
             int layer = state.LayerIndex;
+            if (!IsValidLayer(layer))
+                return;
             layerFades.RemoveAll(it=>it.LayerIndex == layer);
             for (int i = 0; i < transitions.Count; i++)
             {
@@ -85,6 +96,8 @@ namespace LiteAnim
                 InputIndex = layer,
                 Time = 0,
                 Loop = 0
+                ,
+                MaxLoop = state.Motion.Loop ? -1 : 1,
             };
             var pre = playingStates.Find(p => p.State.LayerIndex == layer);
             playingStates.Add(play);
@@ -118,6 +131,8 @@ namespace LiteAnim
 
         public override void StopLayer(int layer)
         {
+            if (!IsValidLayer(layer))
+                return;
             for (int i = 0; i < layerFades.Count; i++)
             {
                 if (layerFades[i].LayerIndex == layer)
@@ -137,7 +152,7 @@ namespace LiteAnim
             for (int i = 0; i < layerFades.Count; i++)
             {
                 var fade = layerFades[i];
-                if(fade.Time > fade.Duration)
+                if(fade.Duration <= 0 || fade.Time > fade.Duration)
                 {
                     for(int j = transitions.Count - 1; j >= 0; j--)
                     {
@@ -150,26 +165,31 @@ namespace LiteAnim
                         }
                     }
                     playingStates.RemoveAll(it => it.State.LayerIndex == fade.LayerIndex);
-                    layerMixerPlayable.DisconnectInput(fade.LayerIndex);
-                    layerMixerPlayable.SetInputWeight(fade.LayerIndex, 0);
+                    if (IsValidLayer(fade.LayerIndex))
+                    {
+                        layerMixerPlayable.DisconnectInput(fade.LayerIndex);
+                        layerMixerPlayable.SetInputWeight(fade.LayerIndex, 0);
+                    }
                     layerFades.RemoveAt(i);
                     --i;
                     continue;
                 }
                 fade.Time += dt;
-                float weight = 1 - Mathf.Clamp01(fade.Time / fade.Duration);
-                layerMixerPlayable.SetInputWeight(fade.LayerIndex, weight);
+                float weight = fade.Duration > 0 ? 1 - Mathf.Clamp01(fade.Time / fade.Duration) : 0;
+                if (IsValidLayer(fade.LayerIndex))
+                    layerMixerPlayable.SetInputWeight(fade.LayerIndex, weight);
                 layerFades[i] = fade;
             }
         }
 
         protected override void OnTransitionEnd(TransitionInfo transition)
         {
-            layerMixerPlayable.DisconnectInput(transition.LayerIndex);
+            if (IsValidLayer(transition.LayerIndex))
+                layerMixerPlayable.DisconnectInput(transition.LayerIndex);
             graph.RecycleMixerPlayable(transition.Mixer);
             if(transition.To != null)
                 transition.To.Connect(this, transition.LayerIndex);
-            else
+            else if (IsValidLayer(transition.LayerIndex))
                 layerMixerPlayable.SetInputWeight(transition.LayerIndex, 0);
         }
 
@@ -187,6 +207,8 @@ namespace LiteAnim
         protected override bool OnStateLoop(StatePlayInfo state)
         {
             int layerIndex = state.State.LayerIndex;
+            if (!IsValidLayer(layerIndex) || asset.Layers == null || layerIndex >= asset.Layers.Count)
+                return false;
             var layer = asset.Layers[layerIndex];
             if (layer.Additive)
             {

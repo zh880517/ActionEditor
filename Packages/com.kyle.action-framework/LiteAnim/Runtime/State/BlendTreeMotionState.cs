@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.Playables;
 
@@ -13,6 +13,8 @@ namespace LiteAnim
         public override void Create(PlayableGraph graph)
         {
             int count = Motion.Clips.Count;
+            if (count == 0)
+                return;
             mixerPlayable = AnimationMixerPlayable.Create(graph, count);
             playables = new AnimationClipPlayable[count];
             centers = new float[count];
@@ -42,11 +44,13 @@ namespace LiteAnim
 
         public override void Connect(IConnectable destination, int inputPort)
         {
+            if (!mixerPlayable.IsValid()) return;
             destination.Connect(mixerPlayable, inputPort);
         }
 
         public override void Connect<V>(V playable, int index)
         {
+            if (!mixerPlayable.IsValid()) return;
             playable.ConnectInput(index, mixerPlayable, 0);
         }
 
@@ -105,6 +109,8 @@ namespace LiteAnim
         {
             if (mixerPlayable.IsValid())
                 mixerPlayable.Destroy();
+            if (playables == null)
+                return;
             foreach (var playable in playables)
             {
                 if (playable.IsValid())

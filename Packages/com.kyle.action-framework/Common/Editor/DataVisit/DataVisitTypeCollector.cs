@@ -40,6 +40,7 @@ namespace CodeGen.DataVisit
                 if(data != null)
                     typeInfo.Fields.Add(data);
             }
+            typeInfo.Fields.Sort((a, b) => a.FieldIndex.CompareTo(b.FieldIndex));
             return typeInfo;
         }
 
@@ -163,7 +164,7 @@ namespace CodeGen.DataVisit
                 {
                     var typeInfo = catalog.Types[index];
                     var baseType = typeInfo.Type.BaseType;
-                    if (baseType != typeof(object))
+                    if (!typeInfo.IsStruct && baseType != typeof(object))
                     {
                         typeMap.TryGetValue(baseType, out typeInfo.Base);
                         if(typeInfo.Base == null)
@@ -179,6 +180,11 @@ namespace CodeGen.DataVisit
                 //分配动态类型ID
                 foreach (var typeInfo in catalog.Types)
                 {
+                    if (!typeInfo.IsStruct && !IsNewableClass(typeInfo.Type))
+                    {
+                        Debug.LogError($"Type {typeInfo.Type.FullName} must be a non-abstract class with a public parameterless constructor for DataVisit generation");
+                        return false;
+                    }
                     //检查FieldIndex冲突
                     for (int i = 0; i < typeInfo.Fields.Count; i++)
                     {
@@ -189,6 +195,8 @@ namespace CodeGen.DataVisit
                             Debug.LogError($"Type {typeInfo.Type.FullName} has conflicting FieldIndex {field.FieldIndex} for fields {field.Field.Name} and {typeInfo.Fields[nextSameIndex].Field.Name}");
                             return false;
                         }
+                        if (!ValidateFieldConstraints(typeInfo.Type, field))
+                            return false;
                     }
                     if(!typeInfo.IsStruct)
                     {
@@ -248,6 +256,94 @@ namespace CodeGen.DataVisit
                 }
             }
             return true;
+        }
+
+        private static bool ValidateFieldConstraints(Type ownerType, FieldData field)
+        {
+            Type fieldType = field.FieldType;
+            if (fieldType.IsInterface)
+            {
+                Debug.LogError($"Type {ownerType.FullName} field {field.Field.Name} uses unsupported interface field type {fieldType.FullName}");
+                return false;
+            }
+
+            bool containerType = fieldType.IsArray || fieldType.IsGenericType;
+            if (containerType && !ValidateContainerElementConstraints(ownerType, field))
+                return false;
+            if (fieldType.IsClass && fieldType != typeof(string) && !containerType && !IsNewableClass(fieldType))
+            {
+                Debug.LogError($"Type {ownerType.FullName} field {field.Field.Name} type {fieldType.FullName} must be a non-abstract class with a public parameterless constructor");
+                return false;
+            }
+
+            if (!field.IsDynamic)
+                return true;
+
+            Type dynamicType = fieldType;
+            if (fieldType.IsArray)
+                dynamicType = fieldType.GetElementType();
+            else if (fieldType.IsGenericType)
+            {
+                var args = fieldType.GetGenericArguments();
+                dynamicType = args.Length == 2 ? args[1] : args[0];
+            }
+
+            if (dynamicType == null || !IsNewableClass(dynamicType))
+            {
+                Debug.LogError($"Type {ownerType.FullName} dynamic field {field.Field.Name} element type must be a non-abstract class with a public parameterless constructor");
+                return false;
+            }
+            return true;
+        }
+
+        private static bool ValidateContainerElementConstraints(Type ownerType, FieldData field)
+        {
+            foreach (var elementType in GetContainerElementTypes(field.FieldType))
+            {
+                if (elementType == null || elementType == typeof(string))
+                    continue;
+                if (elementType.IsInterface)
+                {
+                    Debug.LogError($"Type {ownerType.FullName} field {field.Field.Name} uses unsupported interface container element type {elementType.FullName}");
+                    return false;
+                }
+                if (elementType.IsClass && !IsNewableClass(elementType))
+                {
+                    Debug.LogError($"Type {ownerType.FullName} field {field.Field.Name} container element type {elementType.FullName} must be a non-abstract class with a public parameterless constructor");
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        private static IEnumerable<Type> GetContainerElementTypes(Type fieldType)
+        {
+            if (fieldType.IsArray)
+            {
+                yield return fieldType.GetElementType();
+                yield break;
+            }
+            if (!fieldType.IsGenericType)
+                yield break;
+            var genericDef = fieldType.GetGenericTypeDefinition();
+            var args = fieldType.GetGenericArguments();
+            if (genericDef == typeof(Dictionary<,>))
+            {
+                yield return args[0];
+                yield return args[1];
+            }
+            else
+            {
+                yield return args[0];
+            }
+        }
+
+        private static bool IsNewableClass(Type type)
+        {
+            return type != null
+                && type.IsClass
+                && !type.IsAbstract
+                && type.GetConstructor(Type.EmptyTypes) != null;
         }
 
     }

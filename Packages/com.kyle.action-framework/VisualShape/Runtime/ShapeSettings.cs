@@ -1,5 +1,7 @@
 #pragma warning disable CS0169, CS0414 // The field 'ShapeSettings.version' is never used
+#if UNITY_EDITOR
 using UnityEditor;
+#endif
 using UnityEngine;
 
 namespace VisualShape

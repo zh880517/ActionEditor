@@ -13,6 +13,7 @@ public class InternalSequence : IDisposable
 
     public InternalSequence next;
 
+    public int Capacity => _capacity;
     public int Remaining => _capacity - _writeOffset;
     public int WriteOffset => _writeOffset;
 

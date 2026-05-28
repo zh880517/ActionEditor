@@ -185,10 +185,10 @@ namespace EasyConfig.Editor
                 }
                 else
                 {
-                    RowData rowData = new RowData() { RowIndex = rowIndex, Data = new string[sheetData.Titiles.Count] };
-                    for (int i=0; i< sheetData.Titiles.Count; ++i)
+                    RowData rowData = new RowData() { RowIndex = rowIndex, Data = new string[columnCount] };
+                    for (int i=0; i< columnCount; ++i)
                     {
-                        rowData.Data[i] = row[sheetData.Titiles[i].Index];
+                        rowData.Data[i] = row[i];
                     }
                     sheetData.Data.Add(rowData);
                 }

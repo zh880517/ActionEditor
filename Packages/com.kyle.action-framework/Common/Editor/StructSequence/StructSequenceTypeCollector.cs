@@ -51,6 +51,7 @@ namespace CodeGen.StructSequence
                 }
             }
 
+            ExpandNestedStructs(catalogs);
             BuildOffsets(catalogs);
             return catalogs;
         }
@@ -79,7 +80,9 @@ namespace CodeGen.StructSequence
                 catalog.Structs.Add(CreateStructData(type));
             }
 
-            BuildOffsets(new List<SSCatalogData> { catalog });
+            var catalogs = new List<SSCatalogData> { catalog };
+            ExpandNestedStructs(catalogs);
+            BuildOffsets(catalogs);
             return catalog;
         }
 
@@ -105,6 +108,8 @@ namespace CodeGen.StructSequence
         // 分析一个结构体类型，构建 SSStructData
         private static SSStructData CreateStructData(Type type)
         {
+            if (type.IsGenericType)
+                throw new InvalidOperationException($"StructSequence does not support generic struct type {type.FullName}.");
             var structData = new SSStructData
             {
                 Type = type,
@@ -131,6 +136,26 @@ namespace CodeGen.StructSequence
                 }
             }
             return structData;
+        }
+
+        private static void ExpandNestedStructs(List<SSCatalogData> catalogs)
+        {
+            foreach (var catalog in catalogs)
+            {
+                var knownTypes = new HashSet<Type>(catalog.Structs.Select(s => s.Type));
+                int index = 0;
+                while (index < catalog.Structs.Count)
+                {
+                    var structData = catalog.Structs[index++];
+                    foreach (var field in structData.Fields)
+                    {
+                        if (field.Kind != SSFieldKind.Struct)
+                            continue;
+                        if (knownTypes.Add(field.FieldType))
+                            catalog.Structs.Add(CreateStructData(field.FieldType));
+                    }
+                }
+            }
         }
 
         // 计算所有非 unmanaged 结构体每个字段的 ByteOffset（紧凑顺序，无对齐填充）
@@ -166,11 +191,9 @@ namespace CodeGen.StructSequence
                 case SSFieldKind.Unmanaged:
                     return field.UnmanagedSize;
                 case SSFieldKind.Struct:
-                    // 非 unmanaged struct：递归计算其 payload 大小
-                    if (structMap.TryGetValue(field.FieldType, out var nested))
-                        return ComputeStructPayloadSize(nested, structMap);
-                    // 未在 catalog 中注册的嵌套 struct，无法静态确定大小，回退为引用索引
-                    return sizeof(int);
+                    if (!structMap.TryGetValue(field.FieldType, out var nested))
+                        throw new InvalidOperationException($"Nested struct {field.FieldType.FullName} was not collected for StructSequence.");
+                    return ComputeStructPayloadSize(nested, structMap);
                 default:
                     // 引用类型：存 ref index（int = 4字节）
                     return sizeof(int);

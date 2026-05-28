@@ -59,6 +59,7 @@ namespace VisualShape
         {
             public NativeArray<SDFCharacter> characters;
             Dictionary<char, int> lookup;
+            int fallbackIndex;
             public Material material;
 
             public const System.UInt16 Newline = System.UInt16.MaxValue;
@@ -85,6 +86,7 @@ namespace VisualShape
                     characters[i] = questionMark;
                 }
                 lookup = new Dictionary<char, int>();
+                fallbackIndex = 0;
                 material = font.material;
 
                 nonAscii = 0;
@@ -99,6 +101,10 @@ namespace VisualShape
                     }
                     characters[targetIndex] = sdfChar;
                     lookup[sdfChar.codePoint] = targetIndex;
+                    if (sdfChar.codePoint == '?')
+                    {
+                        fallbackIndex = targetIndex;
+                    }
                 }
             }
 
@@ -111,7 +117,7 @@ namespace VisualShape
                 else
                 {
                     if (c == '\n') return Newline;
-                    return lookup['?'];
+                    return fallbackIndex;
                 }
             }
 
@@ -137,7 +143,7 @@ namespace VisualShape
                     width = 1024,
                     height = 128,
                     characters = null,
-                    material = UnityEngine.Resources.Load<UnityEngine.Material>("visualshape_text_mat") ?? throw new System.InvalidOperationException("Failed to load 'visualshape_text_mat' material from Resources folder")
+                    material = UnityEngine.Resources.Load<UnityEngine.Material>("visualshape_text_mat")
                 };
 
                 // 由 https://evanw.github.io/font-texture-generator/ 生成
