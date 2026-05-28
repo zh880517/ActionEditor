@@ -34,9 +34,10 @@ namespace GOAP
             _plan = plan;
             _index = 0;
             _entered = false;
-            Status = (plan != null && plan.IsValid)
-                ? PlanExecutorStatus.Executing
-                : PlanExecutorStatus.Idle;
+            if (plan == null || !plan.IsValid)
+                Status = PlanExecutorStatus.Idle;
+            else
+                Status = plan.HasActions ? PlanExecutorStatus.Executing : PlanExecutorStatus.Done;
         }
 
         // 每帧驱动，返回当前执行状态

@@ -23,29 +23,7 @@ namespace GOAP
         public void Set(int key, int value,
             CompareOp op = CompareOp.Equal, EffectMode mode = EffectMode.Assign)
         {
-            int idx = BinarySearch(key);
-            if (idx >= 0)
-            {
-                _values[idx] = value;
-                _ops[idx] = op;
-                _modes[idx] = mode;
-                return;
-            }
-            int insertAt = ~idx;
-            if (_count >= MaxKeys)
-                throw new InvalidOperationException($"WorldState capacity exceeded ({MaxKeys})");
-            if (insertAt < _count)
-            {
-                Array.Copy(_keys, insertAt, _keys, insertAt + 1, _count - insertAt);
-                Array.Copy(_values, insertAt, _values, insertAt + 1, _count - insertAt);
-                Array.Copy(_ops, insertAt, _ops, insertAt + 1, _count - insertAt);
-                Array.Copy(_modes, insertAt, _modes, insertAt + 1, _count - insertAt);
-            }
-            _keys[insertAt] = key;
-            _values[insertAt] = value;
-            _ops[insertAt] = op;
-            _modes[insertAt] = mode;
-            _count++;
+            SetValue(key, value, op, mode);
         }
 
         public bool TryGet(int key, out int value)
@@ -79,8 +57,14 @@ namespace GOAP
         public void SetBool(int enumValue, bool value)
             => Set(WorldStateKey.Encode(WorldStateValueType.Bool, enumValue), value ? 1 : 0);
 
+        public void SetBool<TEnum>(TEnum enumValue, bool value) where TEnum : struct, Enum
+            => SetBool(Convert.ToInt32(enumValue), value);
+
         public void SetInt(int enumValue, int value)
             => Set(WorldStateKey.Encode(WorldStateValueType.Int, enumValue), value);
+
+        public void SetInt<TEnum>(TEnum enumValue, int value) where TEnum : struct, Enum
+            => SetInt(Convert.ToInt32(enumValue), value);
 
         public bool GetBool(int enumValue)
         {
@@ -88,11 +72,37 @@ namespace GOAP
             return v != 0;
         }
 
+        public bool GetBool<TEnum>(TEnum enumValue) where TEnum : struct, Enum
+            => GetBool(Convert.ToInt32(enumValue));
+
         public int GetInt(int enumValue)
         {
             TryGet(WorldStateKey.Encode(WorldStateValueType.Int, enumValue), out int v);
             return v;
         }
+
+        public int GetInt<TEnum>(TEnum enumValue) where TEnum : struct, Enum
+            => GetInt(Convert.ToInt32(enumValue));
+
+        public bool TryGetBool(int enumValue, out bool value)
+        {
+            if (TryGet(WorldStateKey.Encode(WorldStateValueType.Bool, enumValue), out int rawValue))
+            {
+                value = rawValue != 0;
+                return true;
+            }
+            value = default;
+            return false;
+        }
+
+        public bool TryGetBool<TEnum>(TEnum enumValue, out bool value) where TEnum : struct, Enum
+            => TryGetBool(Convert.ToInt32(enumValue), out value);
+
+        public bool TryGetInt(int enumValue, out int value)
+            => TryGet(WorldStateKey.Encode(WorldStateValueType.Int, enumValue), out value);
+
+        public bool TryGetInt<TEnum>(TEnum enumValue, out int value) where TEnum : struct, Enum
+            => TryGetInt(Convert.ToInt32(enumValue), out value);
 
         public bool Contains(int key) => BinarySearch(key) >= 0;
 
@@ -148,14 +158,25 @@ namespace GOAP
         {
             for (int i = 0; i < effects._count; i++)
             {
+                int key = effects._keys[i];
+                int value = effects._values[i];
                 if (effects._modes[i] == EffectMode.Add)
                 {
-                    TryGet(effects._keys[i], out int existing);
-                    Set(effects._keys[i], existing + effects._values[i]);
+                    int idx = BinarySearch(key);
+                    if (idx >= 0)
+                    {
+                        _values[idx] += value;
+                        _ops[idx] = CompareOp.Equal;
+                        _modes[idx] = EffectMode.Assign;
+                    }
+                    else
+                    {
+                        SetValue(key, value, CompareOp.Equal, EffectMode.Assign, ~idx);
+                    }
                 }
                 else
                 {
-                    Set(effects._keys[i], effects._values[i]);
+                    SetValue(key, value, CompareOp.Equal, EffectMode.Assign);
                 }
             }
         }
@@ -218,5 +239,39 @@ namespace GOAP
         }
 
         private int BinarySearch(int key) => Array.BinarySearch(_keys, 0, _count, key);
+
+        private void SetValue(int key, int value, CompareOp op, EffectMode mode, int insertAt = -1)
+        {
+            if (insertAt < 0)
+            {
+                int idx = BinarySearch(key);
+                if (idx >= 0)
+                {
+                    _values[idx] = value;
+                    _ops[idx] = op;
+                    _modes[idx] = mode;
+                    return;
+                }
+                insertAt = ~idx;
+            }
+
+            if (_count >= MaxKeys)
+                throw new InvalidOperationException($"WorldState capacity exceeded ({MaxKeys})");
+
+            if (insertAt < _count)
+            {
+                int copyLength = _count - insertAt;
+                Array.Copy(_keys, insertAt, _keys, insertAt + 1, copyLength);
+                Array.Copy(_values, insertAt, _values, insertAt + 1, copyLength);
+                Array.Copy(_ops, insertAt, _ops, insertAt + 1, copyLength);
+                Array.Copy(_modes, insertAt, _modes, insertAt + 1, copyLength);
+            }
+
+            _keys[insertAt] = key;
+            _values[insertAt] = value;
+            _ops[insertAt] = op;
+            _modes[insertAt] = mode;
+            _count++;
+        }
     }
 }

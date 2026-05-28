@@ -20,6 +20,9 @@ namespace GOAP
             foreach (var goal in goals)
             {
                 if (!goal.IsValid(current)) continue;
+                var desiredState = goal.GetDesiredState();
+                if (desiredState == null || current.Satisfies(desiredState))
+                    continue;
                 float priority = goal.GetPriority(current);
                 if (priority > bestPriority)
                 {
@@ -35,7 +38,10 @@ namespace GOAP
             }
 
             // 滞后检查：当前目标仍有效时，新目标的优先级优势必须 > InsistenceBias 才切换
-            if (_currentGoal != null && _currentGoal != best && _currentGoal.IsValid(current))
+            if (_currentGoal != null
+                && _currentGoal != best
+                && _currentGoal.IsValid(current)
+                && !IsSatisfied(_currentGoal, current))
             {
                 float currentPriority = _currentGoal.GetPriority(current);
                 float advantage = bestPriority - currentPriority;
@@ -51,6 +57,12 @@ namespace GOAP
         public void Reset()
         {
             _currentGoal = null;
+        }
+
+        private static bool IsSatisfied(IGoal goal, WorldState current)
+        {
+            var desiredState = goal.GetDesiredState();
+            return desiredState == null || current.Satisfies(desiredState);
         }
     }
 }

@@ -2,29 +2,81 @@ using System.Collections.Generic;
 
 namespace GOAP
 {
-    public static class Planner
+    public struct PlannerOptions
     {
-        private static readonly Stack<PlannerNode> _nodePool = new Stack<PlannerNode>(64);
-        private static readonly Stack<WorldState> _statePool = new Stack<WorldState>(64);
-        private static readonly List<PlannerNode> _allocated = new List<PlannerNode>(64);
-        private static readonly List<WorldState> _allocatedStates = new List<WorldState>(64);
+        public int MaxDepth;
+        public int MaxExpandedNodes;
+        public bool CheckActionApplicability;
 
-        private static readonly MinHeap<PlannerNode> _openList =
+        public PlannerOptions(
+            int maxDepth,
+            int maxExpandedNodes = 512,
+            bool checkActionApplicability = false)
+        {
+            MaxDepth = maxDepth;
+            MaxExpandedNodes = maxExpandedNodes;
+            CheckActionApplicability = checkActionApplicability;
+        }
+
+        public static PlannerOptions Default => new PlannerOptions(10);
+    }
+
+    public sealed class Planner
+    {
+        [System.ThreadStatic]
+        private static Planner _shared;
+
+        private readonly Stack<PlannerNode> _nodePool = new Stack<PlannerNode>(64);
+        private readonly Stack<WorldState> _statePool = new Stack<WorldState>(64);
+        private readonly List<PlannerNode> _allocated = new List<PlannerNode>(64);
+        private readonly List<WorldState> _allocatedStates = new List<WorldState>(64);
+
+        private readonly MinHeap<PlannerNode> _openList =
             new MinHeap<PlannerNode>((a, b) => a.F.CompareTo(b.F));
 
-        private static readonly HashSet<WorldState> _closedSet =
+        private readonly HashSet<WorldState> _closedSet =
             new HashSet<WorldState>(WorldStateComparer.Instance);
 
-        private static readonly List<IAction> _planBuffer = new List<IAction>();
+        private readonly List<IAction> _planBuffer = new List<IAction>();
 
         public static Plan Plan(
             WorldState currentState,
             WorldState goalState,
             IReadOnlyList<IAction> availableActions,
             int maxDepth = 10)
+            => Shared.CreatePlan(currentState, goalState, availableActions, maxDepth);
+
+        public static Plan Plan(
+            WorldState currentState,
+            WorldState goalState,
+            IReadOnlyList<IAction> availableActions,
+            PlannerOptions options)
+            => Shared.CreatePlan(currentState, goalState, availableActions, options);
+
+        private static Planner Shared => _shared ?? (_shared = new Planner());
+
+        public Plan CreatePlan(
+            WorldState currentState,
+            WorldState goalState,
+            IReadOnlyList<IAction> availableActions,
+            int maxDepth = 10)
+            => CreatePlan(currentState, goalState, availableActions, new PlannerOptions(maxDepth));
+
+        public Plan CreatePlan(
+            WorldState currentState,
+            WorldState goalState,
+            IReadOnlyList<IAction> availableActions,
+            PlannerOptions options)
         {
+            if (currentState == null || goalState == null || availableActions == null)
+                return GOAP.Plan.Invalid;
+
+            if (currentState.Satisfies(goalState))
+                return GOAP.Plan.Empty;
+
             _openList.Clear();
             _closedSet.Clear();
+            options = Normalize(options);
 
             var startState = RentState();
             startState.CopyFrom(goalState);
@@ -39,60 +91,78 @@ namespace GOAP
             _openList.Push(startNode);
 
             Plan result = GOAP.Plan.Invalid;
+            int expandedNodes = 0;
 
-            while (_openList.Count > 0)
+            try
             {
-                var current = _openList.Pop();
-
-                if (_closedSet.Contains(current.State))
-                    continue;
-                _closedSet.Add(current.State);
-
-                if (currentState.Satisfies(current.State))
+                while (_openList.Count > 0)
                 {
-                    result = BuildPlan(current);
-                    break;
-                }
+                    if (expandedNodes++ >= options.MaxExpandedNodes)
+                        break;
 
-                if (current.Depth >= maxDepth)
-                    continue;
+                    var current = _openList.Pop();
 
-                for (int a = 0; a < availableActions.Count; a++)
-                {
-                    var action = availableActions[a];
-
-                    if (!action.IsApplicable(currentState))
+                    if (_closedSet.Contains(current.State))
                         continue;
+                    _closedSet.Add(current.State);
 
-                    if (!HasRelevantEffect(action, current.State))
-                        continue;
-
-                    var childState = BuildChildState(current.State, action);
-                    if (childState == null)
-                        continue;
-
-                    if (_closedSet.Contains(childState))
+                    if (currentState.Satisfies(current.State))
                     {
-                        ReturnState(childState);
-                        continue;
+                        result = BuildPlan(current);
+                        break;
                     }
 
-                    float g = current.G + action.Cost;
-                    float h = Heuristic(currentState, childState);
+                    if (current.Depth >= options.MaxDepth)
+                        continue;
 
-                    var childNode = RentNode();
-                    childNode.Parent = current;
-                    childNode.Action = action;
-                    childNode.State = childState;
-                    childNode.G = g;
-                    childNode.H = h;
-                    childNode.Depth = current.Depth + 1;
-                    _openList.Push(childNode);
+                    for (int a = 0; a < availableActions.Count; a++)
+                    {
+                        var action = availableActions[a];
+                        if (action == null)
+                            continue;
+
+                        if (options.CheckActionApplicability && !action.IsApplicable(currentState))
+                            continue;
+
+                        if (!HasRelevantEffect(action, current.State))
+                            continue;
+
+                        var childState = BuildChildState(current.State, action);
+                        if (childState == null)
+                            continue;
+
+                        if (_closedSet.Contains(childState))
+                            continue;
+
+                        float g = current.G + action.Cost;
+                        float h = Heuristic(currentState, childState);
+
+                        var childNode = RentNode();
+                        childNode.Parent = current;
+                        childNode.Action = action;
+                        childNode.State = childState;
+                        childNode.G = g;
+                        childNode.H = h;
+                        childNode.Depth = current.Depth + 1;
+                        _openList.Push(childNode);
+                    }
                 }
-            }
 
-            ReturnAll();
-            return result;
+                return result;
+            }
+            finally
+            {
+                ReturnAll();
+            }
+        }
+
+        private static PlannerOptions Normalize(PlannerOptions options)
+        {
+            if (options.MaxDepth < 0)
+                options.MaxDepth = 0;
+            if (options.MaxExpandedNodes <= 0)
+                options.MaxExpandedNodes = 512;
+            return options;
         }
 
         private static float Heuristic(WorldState current, WorldState needed)
@@ -107,7 +177,7 @@ namespace GOAP
             return unmet;
         }
 
-        private static Plan BuildPlan(PlannerNode goalNode)
+        private Plan BuildPlan(PlannerNode goalNode)
         {
             _planBuffer.Clear();
             float cost = 0f;
@@ -147,7 +217,7 @@ namespace GOAP
             return false;
         }
 
-        private static WorldState BuildChildState(WorldState parentState, IAction action)
+        private WorldState BuildChildState(WorldState parentState, IAction action)
         {
             var child = RentState();
             child.CopyFrom(parentState);
@@ -173,7 +243,6 @@ namespace GOAP
             }
             if (!ApplyRequirements(child, action.Preconditions))
             {
-                ReturnState(child);
                 return null;
             }
             return child;
@@ -254,25 +323,12 @@ namespace GOAP
             }
 
             if (IsLowerBound(leftOp) && IsUpperBound(rightOp))
-                return BoundsOverlap(leftValue, leftOp, rightValue, rightOp);
+                return false;
 
             if (IsUpperBound(leftOp) && IsLowerBound(rightOp))
-                return BoundsOverlap(rightValue, rightOp, leftValue, leftOp);
+                return false;
 
             return false;
-        }
-
-        private static bool BoundsOverlap(
-            int lowerValue,
-            CompareOp lowerOp,
-            int upperValue,
-            CompareOp upperOp)
-        {
-            if (lowerValue < upperValue)
-                return true;
-            if (lowerValue > upperValue)
-                return false;
-            return lowerOp == CompareOp.GreaterOrEqual && upperOp == CompareOp.LessOrEqual;
         }
 
         private static bool IsLowerBound(CompareOp op)
@@ -281,14 +337,14 @@ namespace GOAP
         private static bool IsUpperBound(CompareOp op)
             => op == CompareOp.Less || op == CompareOp.LessOrEqual;
 
-        private static PlannerNode RentNode()
+        private PlannerNode RentNode()
         {
             var node = _nodePool.Count > 0 ? _nodePool.Pop() : new PlannerNode();
             _allocated.Add(node);
             return node;
         }
 
-        private static WorldState RentState()
+        private WorldState RentState()
         {
             var state = _statePool.Count > 0 ? _statePool.Pop() : new WorldState();
             state.Clear();
@@ -296,14 +352,7 @@ namespace GOAP
             return state;
         }
 
-        private static void ReturnState(WorldState state)
-        {
-            _allocatedStates.Remove(state);
-            state.Clear();
-            _statePool.Push(state);
-        }
-
-        private static void ReturnAll()
+        private void ReturnAll()
         {
             _openList.Clear();
             _closedSet.Clear();

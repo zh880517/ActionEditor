@@ -23,7 +23,23 @@ namespace GOAP
         public List<IAction> Actions { get; } = new List<IAction>();
 
         // 规划最大深度（反向 A* 搜索层数上限）
-        public int MaxPlanDepth { get; set; } = 10;
+        public int MaxPlanDepth
+        {
+            get => _plannerOptions.MaxDepth;
+            set => _plannerOptions.MaxDepth = value;
+        }
+
+        public int MaxExpandedPlanNodes
+        {
+            get => _plannerOptions.MaxExpandedNodes;
+            set => _plannerOptions.MaxExpandedNodes = value;
+        }
+
+        public bool CheckActionApplicabilityDuringPlanning
+        {
+            get => _plannerOptions.CheckActionApplicability;
+            set => _plannerOptions.CheckActionApplicability = value;
+        }
 
         public IGoal CurrentGoal { get; private set; }
         public Plan CurrentPlan { get; private set; }
@@ -36,7 +52,9 @@ namespace GOAP
         // --- 内部组件 ---
         private readonly GoalSelector _goalSelector = new GoalSelector();
         private readonly PlanExecutor _planExecutor = new PlanExecutor();
+        private readonly Planner _planner = new Planner();
         private readonly AgentContext _context;
+        private PlannerOptions _plannerOptions = PlannerOptions.Default;
         private bool _replanRequested;
 
         public Agent()
@@ -67,7 +85,7 @@ namespace GOAP
 
                 // 3. 规划（同步，本帧内完成）
                 Status = AgentStatus.Planning;
-                CurrentPlan = Planner.Plan(WorldState, bestGoal.GetDesiredState(), Actions, MaxPlanDepth);
+                CurrentPlan = _planner.CreatePlan(WorldState, bestGoal.GetDesiredState(), Actions, _plannerOptions);
                 _planExecutor.SetPlan(CurrentPlan);
 
                 if (goalChanged) OnGoalChanged(bestGoal);
@@ -82,7 +100,7 @@ namespace GOAP
 
             if (CurrentPlan == null || !CurrentPlan.IsValid)
             {
-                Status = AgentStatus.Idle;
+                Status = CurrentGoal == null ? AgentStatus.Idle : AgentStatus.Failed;
                 return;
             }
 
@@ -103,8 +121,53 @@ namespace GOAP
                 case PlanExecutorStatus.Failed:
                     // 执行失败，下帧触发重规划
                     RequestReplan();
+                    Status = AgentStatus.Failed;
                     break;
             }
+        }
+
+        public Agent AddGoal(IGoal goal)
+        {
+            if (goal != null)
+                Goals.Add(goal);
+            return this;
+        }
+
+        public Agent AddAction(IAction action)
+        {
+            if (action != null)
+                Actions.Add(action);
+            return this;
+        }
+
+        public bool RemoveGoal(IGoal goal)
+        {
+            if (goal == null)
+                return false;
+            if (goal == CurrentGoal)
+                RequestReplan();
+            return Goals.Remove(goal);
+        }
+
+        public bool RemoveAction(IAction action)
+        {
+            if (action == null)
+                return false;
+            if (action == CurrentAction)
+                RequestReplan();
+            return Actions.Remove(action);
+        }
+
+        public void Reset(bool clearWorldState = false)
+        {
+            _planExecutor.Abort(_context);
+            _goalSelector.Reset();
+            CurrentGoal = null;
+            CurrentPlan = null;
+            Status = AgentStatus.Idle;
+            _replanRequested = false;
+            if (clearWorldState)
+                WorldState.Clear();
         }
 
         // 请求在下一帧重新规划（外部事件驱动：受伤、发现敌人、资源消耗等）
