@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -7,6 +8,7 @@ namespace DataVisit
 {
     public class RawBitPackVisitier : IVisitier
     {
+        private const int StackallocByteLimit = 256;
         private readonly MemoryStream _memory;
 
         public RawBitPackVisitier(MemoryStream memory)
@@ -45,16 +47,40 @@ namespace DataVisit
         private unsafe void WriteSingle(float value) => WriteRaw(&value, sizeof(float));
         private unsafe void WriteDouble(double value) => WriteRaw(&value, sizeof(double));
 
-        private void WriteString(string value)
+        private unsafe void WriteString(string value)
         {
             if (value == null)
             {
                 WriteInt32(-1);
                 return;
             }
-            var bytes = Encoding.UTF8.GetBytes(value);
-            WriteInt32(bytes.Length);
-            WriteBytes(bytes);
+
+            int byteCount = Encoding.UTF8.GetByteCount(value);
+            WriteInt32(byteCount);
+            if (byteCount == 0)
+                return;
+
+            if (byteCount <= StackallocByteLimit)
+            {
+                byte* bytes = stackalloc byte[byteCount];
+                fixed (char* chars = value)
+                {
+                    int written = Encoding.UTF8.GetBytes(chars, value.Length, bytes, byteCount);
+                    WriteRaw(bytes, written);
+                }
+                return;
+            }
+
+            var rented = ArrayPool<byte>.Shared.Rent(byteCount);
+            try
+            {
+                int written = Encoding.UTF8.GetBytes(value, 0, value.Length, rented, 0);
+                WriteBytes(rented, 0, written);
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(rented);
+            }
         }
 
         private void WriteBytesWithLength(byte[] value)
@@ -92,7 +118,7 @@ namespace DataVisit
             }
         }
 
-        private void WriteBoolsWithLength(bool[] value)
+        private unsafe void WriteBoolsWithLength(bool[] value)
         {
             if (value == null)
             {
@@ -105,12 +131,31 @@ namespace DataVisit
                 return;
             }
             WriteInt32(value.Length);
-            var bytes = new byte[value.Length];
-            for (int i = 0; i < value.Length; i++)
+
+            if (value.Length <= StackallocByteLimit)
             {
-                bytes[i] = value[i] ? (byte)1 : (byte)0;
+                byte* bytes = stackalloc byte[value.Length];
+                for (int i = 0; i < value.Length; i++)
+                {
+                    bytes[i] = value[i] ? (byte)1 : (byte)0;
+                }
+                WriteRaw(bytes, value.Length);
+                return;
             }
-            WriteBytes(bytes);
+
+            var rented = ArrayPool<byte>.Shared.Rent(value.Length);
+            try
+            {
+                for (int i = 0; i < value.Length; i++)
+                {
+                    rented[i] = value[i] ? (byte)1 : (byte)0;
+                }
+                WriteBytes(rented, 0, value.Length);
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(rented);
+            }
         }
 
         public void Visit(uint tag, string name, uint flag, ref bool value)

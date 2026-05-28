@@ -6,7 +6,7 @@ namespace DataVisit
 {
     public class RawBitUnPackVisitier : IVisitier
     {
-        private readonly ArraySegment<byte> _data;
+        private ArraySegment<byte> _data;
         private int _pos;
 
         public RawBitUnPackVisitier(byte[] data)
@@ -15,6 +15,16 @@ namespace DataVisit
         }
 
         public RawBitUnPackVisitier(ArraySegment<byte> data)
+        {
+            Reset(data);
+        }
+
+        public void Reset(byte[] data)
+        {
+            Reset(new ArraySegment<byte>(data));
+        }
+
+        public void Reset(ArraySegment<byte> data)
         {
             _data = data;
             _pos = 0;
@@ -38,6 +48,16 @@ namespace DataVisit
         {
             EnsureSize(count);
             Array.Copy(_data.Array, _data.Offset + _pos, buffer, offset, count);
+            _pos += count;
+        }
+
+        private unsafe void ReadRaw(void* buffer, int count)
+        {
+            EnsureSize(count);
+            fixed (byte* ptr = &_data.Array[_data.Offset + _pos])
+            {
+                Buffer.MemoryCopy(ptr, buffer, count, count);
+            }
             _pos += count;
         }
 
@@ -142,47 +162,72 @@ namespace DataVisit
             return value;
         }
 
-        private byte[] ReadBytesWithLength()
+        private void ReadBytesWithLength(ref byte[] value)
         {
             int length = ReadInt32();
             if (length < 0)
-                return null;
+            {
+                value = null;
+                return;
+            }
             if (length == 0)
-                return Array.Empty<byte>();
-            var value = new byte[length];
+            {
+                value = Array.Empty<byte>();
+                return;
+            }
+            if (value == null || value.Length != length)
+            {
+                value = new byte[length];
+            }
             ReadBytes(value, 0, length);
-            return value;
         }
 
-        private sbyte[] ReadSBytesWithLength()
+        private unsafe void ReadSBytesWithLength(ref sbyte[] value)
         {
             int length = ReadInt32();
             if (length < 0)
-                return null;
+            {
+                value = null;
+                return;
+            }
             if (length == 0)
-                return Array.Empty<sbyte>();
-            var bytes = new byte[length];
-            ReadBytes(bytes, 0, length);
-            var value = new sbyte[length];
-            Buffer.BlockCopy(bytes, 0, value, 0, length);
-            return value;
+            {
+                value = Array.Empty<sbyte>();
+                return;
+            }
+            if (value == null || value.Length != length)
+            {
+                value = new sbyte[length];
+            }
+            fixed (sbyte* ptr = value)
+            {
+                ReadRaw(ptr, length);
+            }
         }
 
-        private bool[] ReadBoolsWithLength()
+        private void ReadBoolsWithLength(ref bool[] value)
         {
             int length = ReadInt32();
             if (length < 0)
-                return null;
+            {
+                value = null;
+                return;
+            }
             if (length == 0)
-                return Array.Empty<bool>();
-            var value = new bool[length];
+            {
+                value = Array.Empty<bool>();
+                return;
+            }
+            if (value == null || value.Length != length)
+            {
+                value = new bool[length];
+            }
             EnsureSize(length);
             for (int i = 0; i < length; i++)
             {
                 value[i] = _data.Array[_data.Offset + _pos + i] != 0;
             }
             _pos += length;
-            return value;
         }
 
         public void Visit(uint tag, string name, uint flag, ref bool value)
@@ -192,7 +237,7 @@ namespace DataVisit
 
         public void Visit(uint tag, string name, uint flag, ref bool[] value)
         {
-            value = ReadBoolsWithLength();
+            ReadBoolsWithLength(ref value);
         }
 
         public void Visit(uint tag, string name, uint flag, ref byte value)
@@ -202,7 +247,7 @@ namespace DataVisit
 
         public void Visit(uint tag, string name, uint flag, ref byte[] value)
         {
-            value = ReadBytesWithLength();
+            ReadBytesWithLength(ref value);
         }
 
         public void Visit(uint tag, string name, uint flag, ref sbyte value)
@@ -212,7 +257,7 @@ namespace DataVisit
 
         public void Visit(uint tag, string name, uint flag, ref sbyte[] value)
         {
-            value = ReadSBytesWithLength();
+            ReadSBytesWithLength(ref value);
         }
 
         public void Visit(uint tag, string name, uint flag, ref short value)
@@ -323,7 +368,24 @@ namespace DataVisit
                 throw new Exception($"RawBitUnPack invalid dynamic marker: {marker}");
             int typeId = ReadInt32();
             var visitier = TypeVisit.GetVisit(typeId);
-            object obj = value ?? visitier.New();
+            object obj = value;
+            bool canReuse = false;
+            if (obj != null)
+            {
+                try
+                {
+                    canReuse = TypeVisit.GetTypeId(obj) == typeId;
+                }
+                catch
+                {
+                    // 旧对象可能来自未注册类型，不能复用。
+                    canReuse = false;
+                }
+            }
+            if (!canReuse)
+            {
+                obj = visitier.New();
+            }
             visitier.Visit(this, 0, string.Empty, 0, ref obj);
             value = (T)obj;
         }
@@ -341,10 +403,14 @@ namespace DataVisit
                 value = Array.Empty<T>();
                 return;
             }
-            value = new T[length];
+            bool reuseItems = value != null && value.Length == length;
+            if (!reuseItems)
+            {
+                value = new T[length];
+            }
             for (int i = 0; i < length; i++)
             {
-                T item = default;
+                T item = reuseItems ? value[i] : TypeVisitT<T>.New();
                 TypeVisitT<T>.Visit(this, 0, string.Empty, 0, ref item);
                 value[i] = item;
             }
@@ -363,10 +429,13 @@ namespace DataVisit
                 value = Array.Empty<T>();
                 return;
             }
-            value = new T[length];
+            if (value == null || value.Length != length)
+            {
+                value = new T[length];
+            }
             for (int i = 0; i < length; i++)
             {
-                T item = default;
+                T item = value[i];
                 VisitDynamicClass(0, string.Empty, 0, ref item);
                 value[i] = item;
             }
@@ -381,15 +450,28 @@ namespace DataVisit
                 return;
             }
             value ??= new List<T>(count);
-            value.Clear();
+            if (value.Capacity < count)
+            {
+                value.Capacity = count;
+            }
             if (count == 0)
+            {
+                value.Clear();
                 return;
-            value.Capacity = Math.Max(value.Capacity, count);
+            }
+            int oldCount = value.Count;
             for (int i = 0; i < count; i++)
             {
-                T item = default;
+                T item = i < oldCount ? value[i] : TypeVisitT<T>.New();
                 TypeVisitT<T>.Visit(this, 0, string.Empty, 0, ref item);
-                value.Add(item);
+                if (i < oldCount)
+                    value[i] = item;
+                else
+                    value.Add(item);
+            }
+            if (value.Count > count)
+            {
+                value.RemoveRange(count, value.Count - count);
             }
         }
 
@@ -402,15 +484,28 @@ namespace DataVisit
                 return;
             }
             value ??= new List<T>(count);
-            value.Clear();
+            if (value.Capacity < count)
+            {
+                value.Capacity = count;
+            }
             if (count == 0)
+            {
+                value.Clear();
                 return;
-            value.Capacity = Math.Max(value.Capacity, count);
+            }
+            int oldCount = value.Count;
             for (int i = 0; i < count; i++)
             {
-                T item = default;
+                T item = i < oldCount ? value[i] : default;
                 VisitDynamicClass(0, string.Empty, 0, ref item);
-                value.Add(item);
+                if (i < oldCount)
+                    value[i] = item;
+                else
+                    value.Add(item);
+            }
+            if (value.Count > count)
+            {
+                value.RemoveRange(count, value.Count - count);
             }
         }
 
@@ -428,8 +523,8 @@ namespace DataVisit
                 return;
             for (int i = 0; i < count; i++)
             {
-                TKey key = default;
-                TValue val = default;
+                TKey key = TypeVisitT<TKey>.New();
+                TValue val = TypeVisitT<TValue>.New();
                 TypeVisitT<TKey>.Visit(this, 0, string.Empty, 0, ref key);
                 TypeVisitT<TValue>.Visit(this, 1, string.Empty, 0, ref val);
                 value.Add(key, val);
@@ -451,7 +546,7 @@ namespace DataVisit
                 return;
             for (int i = 0; i < count; i++)
             {
-                TKey key = default;
+                TKey key = TypeVisitT<TKey>.New();
                 TValue val = default;
                 TypeVisitT<TKey>.Visit(this, 0, string.Empty, 0, ref key);
                 VisitDynamicClass(1, string.Empty, 0, ref val);
@@ -473,7 +568,7 @@ namespace DataVisit
                 return;
             for (int i = 0; i < count; i++)
             {
-                T item = default;
+                T item = TypeVisitT<T>.New();
                 TypeVisitT<T>.Visit(this, 0, string.Empty, 0, ref item);
                 value.Add(item);
             }

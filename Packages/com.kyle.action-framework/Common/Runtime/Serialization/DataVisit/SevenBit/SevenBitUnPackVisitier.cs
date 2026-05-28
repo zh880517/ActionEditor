@@ -10,11 +10,21 @@ namespace DataVisit
 
         public SevenBitUnPackVisitier(ArraySegment<byte> data)
         {
-            _data = data;
-            _pos = 0;
+            Reset(data);
         }
 
         public SevenBitUnPackVisitier(byte[] data) : this(new ArraySegment<byte>(data)) { }
+
+        public void Reset(byte[] data)
+        {
+            Reset(new ArraySegment<byte>(data));
+        }
+
+        public void Reset(ArraySegment<byte> data)
+        {
+            _data = data;
+            _pos = 0;
+        }
 
         private void EnsureIndex(int index)
         {
@@ -248,6 +258,17 @@ namespace DataVisit
                 }
             }
             return 0;
+        }
+
+        private static T CreateOrResetValue<T>(T value)
+        {
+            if (value == null)
+            {
+                return TypeVisitT<T>.New();
+            }
+
+            TypeVisitT<T>.Visit(ResetVisitier.Default, 0, string.Empty, 0, ref value);
+            return value;
         }
 
         public void Visit(uint tag, string name, uint flag, ref bool value)
@@ -529,7 +550,29 @@ namespace DataVisit
                     }
                     if (structType != SevenBitDataType.StructBegin)
                         ThrowIncompatibleType(structType);
-                    object obj = value ?? visititer.New();
+                    object obj = value;
+                    bool canReuse = false;
+                    if (obj != null)
+                    {
+                        try
+                        {
+                            canReuse = TypeVisit.GetTypeId(obj) == typeId;
+                        }
+                        catch
+                        {
+                            // 旧对象可能来自未注册类型，不能复用。
+                            canReuse = false;
+                        }
+                    }
+                    if (!canReuse)
+                    {
+                        obj = visititer.New();
+                    }
+                    else
+                    {
+                        // SevenBit 会跳过默认字段，复用动态对象前先清理旧状态。
+                        visititer.Visit(ResetVisitier.Default, 1, string.Empty, flag & UnRequiredFlag, ref obj);
+                    }
                     visititer.Visit(this, 1, string.Empty, flag & UnRequiredFlag, ref obj);
                     value = (T)obj;
                     SkipToStructEnd();
@@ -562,6 +605,7 @@ namespace DataVisit
                     }
                     for (uint i = 0; i < size; i++)
                     {
+                        value[i] = CreateOrResetValue(value[i]);
                         if (TypeVisitT<T>.IsCustomStruct)
                         {
                             UnPackHeader(out uint _, out SevenBitDataType fieldType);
@@ -595,6 +639,13 @@ namespace DataVisit
                     }
                     for (uint i = 0; i < size; i++)
                     {
+                        PeekHeader(out uint _, out SevenBitDataType fieldType);
+                        if (fieldType == SevenBitDataType.StructEnd)
+                        {
+                            UnPackHeader(out uint _, out SevenBitDataType _);
+                            value[i] = null;
+                            continue;
+                        }
                         VisitDynamicClass(0, string.Empty, flag & UnRequiredFlag, ref value[i]);
                     }
                     return;
@@ -615,14 +666,14 @@ namespace DataVisit
                 UnPackHeader(out uint _, out SevenBitDataType type);
                 if(type == SevenBitDataType.Vector)
                 {
-                    value ??= new Dictionary<TKey, TValue>();
                     UnPackNumber(out uint size);
+                    value ??= new Dictionary<TKey, TValue>(checked((int)size));
                     for (uint i = 0; i < size; i++)
                     {
                         UnPackHeader(out uint _, out SevenBitDataType t);
                         if (t == SevenBitDataType.StructBegin)
                         {
-                            TKey key = default;
+                            TKey key = TypeVisitT<TKey>.New();
                             TValue val = TypeVisitT<TValue>.New();
                             TypeVisitT<TKey>.Visit(this, 0, string.Empty, flag & UnRequiredFlag, ref key);
                             if (TypeVisitT<TValue>.IsCustomStruct)
@@ -653,14 +704,14 @@ namespace DataVisit
                 UnPackHeader(out uint _, out SevenBitDataType type);
                 if (type == SevenBitDataType.Vector)
                 {
-                    value ??= new Dictionary<TKey, TValue>();
                     UnPackNumber(out uint size);
+                    value ??= new Dictionary<TKey, TValue>(checked((int)size));
                     for (uint i = 0; i < size; i++)
                     {
                         UnPackHeader(out uint _, out SevenBitDataType t);
                         if (t == SevenBitDataType.StructBegin)
                         {
-                            TKey key = default;
+                            TKey key = TypeVisitT<TKey>.New();
                             TypeVisitT<TKey>.Visit(this, 0, string.Empty, flag & UnRequiredFlag, ref key);
                             TValue val = default;
                             VisitDynamicClass(1, string.Empty, flag & UnRequiredFlag, ref val);
@@ -719,8 +770,13 @@ namespace DataVisit
                 if (type == SevenBitDataType.Vector)
                 {
                     UnPackNumber(out uint size);
-                    value ??= new List<T>();
-                    for (uint i = 0; i < size; i++)
+                    int count = checked((int)size);
+                    value ??= new List<T>(count);
+                    if (value.Capacity < count)
+                    {
+                        value.Capacity = count;
+                    }
+                    for (int i = 0; i < count; i++)
                     {
                         if (TypeVisitT<T>.IsCustomStruct)
                         {
@@ -751,8 +807,13 @@ namespace DataVisit
                 if (type == SevenBitDataType.Vector)
                 {
                     UnPackNumber(out uint size);
-                    value ??= new List<T>();
-                    for (uint i = 0; i < size; i++)
+                    int count = checked((int)size);
+                    value ??= new List<T>(count);
+                    if (value.Capacity < count)
+                    {
+                        value.Capacity = count;
+                    }
+                    for (int i = 0; i < count; i++)
                     {
                         T item = default;
                         VisitDynamicClass(0, string.Empty, flag & UnRequiredFlag, ref item);

@@ -237,10 +237,10 @@ MyModuleVisit.Init();
 var player = new PlayerData { id = 1, name = "Alice", hp = 100f };
 
 // Pack（序列化）
-var memory = new MemoryStream();
+var memory = new MemoryStream(4096);
 var packer = new SevenBitPackVisitier(memory);
 TypeVisitT<PlayerData>.Visit(packer, 0, "", 0, ref player);
-byte[] bytes = memory.ToArray();
+var bytes = new ArraySegment<byte>(memory.GetBuffer(), 0, (int)memory.Length);
 
 // UnPack（反序列化）
 var unpacker = new SevenBitUnPackVisitier(bytes);
@@ -248,10 +248,10 @@ var loaded = new PlayerData();
 TypeVisitT<PlayerData>.Visit(unpacker, 0, "", 0, ref loaded);
 
 // ========== RawBit 序列化 ==========
-var rawMemory = new MemoryStream();
+var rawMemory = new MemoryStream(4096);
 var rawPacker = new RawBitPackVisitier(rawMemory);
 TypeVisitT<PlayerData>.Visit(rawPacker, 0, "", 0, ref player);
-byte[] rawBytes = rawMemory.ToArray();
+var rawBytes = new ArraySegment<byte>(rawMemory.GetBuffer(), 0, (int)rawMemory.Length);
 
 var rawUnpacker = new RawBitUnPackVisitier(rawBytes);
 var rawLoaded = new PlayerData();
@@ -509,10 +509,10 @@ AnotherModuleVisit.Init();
 
 ```csharp
 // 序列化
-var stream = new MemoryStream();
+var stream = new MemoryStream(4096);
 var packer = new SevenBitPackVisitier(stream);
 TypeVisitT<MyType>.Visit(packer, 0, "", 0, ref data);
-byte[] result = stream.ToArray();
+var result = new ArraySegment<byte>(stream.GetBuffer(), 0, (int)stream.Length);
 
 // 反序列化
 var unpacker = new SevenBitUnPackVisitier(result);
@@ -524,10 +524,10 @@ TypeVisitT<MyType>.Visit(unpacker, 0, "", 0, ref output);
 
 ```csharp
 // 序列化
-var stream = new MemoryStream();
+var stream = new MemoryStream(4096);
 var packer = new RawBitPackVisitier(stream);
 TypeVisitT<MyType>.Visit(packer, 0, "", 0, ref data);
-byte[] result = stream.ToArray();
+var result = new ArraySegment<byte>(stream.GetBuffer(), 0, (int)stream.Length);
 
 // 反序列化
 var unpacker = new RawBitUnPackVisitier(result);
@@ -543,6 +543,43 @@ TypeVisitT<MyType>.Visit(unpacker, 0, "", 0, ref output);
 var segment = new ArraySegment<byte>(buffer, offset, length);
 var unpacker = new SevenBitUnPackVisitier(segment);
 ```
+
+#### 高频序列化用法
+
+频繁序列化时应复用 `MemoryStream`、Pack 访问器、UnPack 访问器和反序列化目标对象，避免每次 `new MemoryStream()`、`ToArray()` 和重新创建对象：
+
+```csharp
+// 初始化阶段只注册一次
+InnerTypeVisit.Register();
+MyModuleVisit.Init();
+
+// 热路径复用这些对象
+var stream = new MemoryStream(4096);
+var packer = new SevenBitPackVisitier(stream);
+var unpacker = new SevenBitUnPackVisitier(new ArraySegment<byte>(Array.Empty<byte>()));
+var output = new MyType();
+
+// 每次写入前清空流，但保留底层缓冲区
+stream.Position = 0;
+stream.SetLength(0);
+TypeVisitT<MyType>.Visit(packer, 0, "", 0, ref data);
+
+// 使用 GetBuffer + ArraySegment，避免 ToArray 复制
+var payload = new ArraySegment<byte>(stream.GetBuffer(), 0, (int)stream.Length);
+
+// 重置 UnPack 访问器并复用 output
+unpacker.Reset(payload);
+TypeVisitT<MyType>.Visit(ResetVisitier.Default, 0, "", 0, ref output);
+TypeVisitT<MyType>.Visit(unpacker, 0, "", 0, ref output);
+```
+
+注意事项：
+
+- `MemoryStream.GetBuffer()` 暴露的是完整底层数组，传输或写文件时必须配合 `stream.Length` 或 `ArraySegment<byte>` 使用。
+- `SevenBitUnPackVisitier.Reset(...)` 和 `RawBitUnPackVisitier.Reset(...)` 只重置读取源和位置，不会清理业务对象。
+- SevenBit 会省略默认字段，复用反序列化目标对象前建议先使用 `ResetVisitier` 清理旧状态；RawBit 会写入所有字段，通常不需要额外重置目标对象。
+- 字符串反序列化一定会创建新的 `string`；字符串字段在高频热路径中仍应谨慎使用。
+- `List<T>` 会复用容器容量；SevenBit 的列表元素会重新创建以避免省略字段残留，数组元素会在复用前清理旧状态。
 
 #### 数据重置
 

@@ -1,11 +1,14 @@
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 
 namespace DataVisit
 {
     public class SevenBitPackVisitier : SevenBitBase, IVisitier
     {
+        private const int StackallocByteLimit = 256;
         private readonly MemoryStream _memory;
         private unsafe void Write(byte* bytes, int size)
         {
@@ -14,12 +17,69 @@ namespace DataVisit
 
         private unsafe void Write(bool[] v)
         {
-            var bytes = stackalloc byte[v.Length];
-            for (int i = 0; i < v.Length; i++)
+            if (v.Length == 0)
+                return;
+
+            if (v.Length <= StackallocByteLimit)
             {
-                bytes[i] = v[i] ? (byte)1 : (byte)0;
+                byte* bytes = stackalloc byte[v.Length];
+                for (int i = 0; i < v.Length; i++)
+                {
+                    bytes[i] = v[i] ? (byte)1 : (byte)0;
+                }
+                Write(bytes, v.Length);
+                return;
             }
-            Write(bytes, v.Length);
+
+            var rented = ArrayPool<byte>.Shared.Rent(v.Length);
+            try
+            {
+                for (int i = 0; i < v.Length; i++)
+                {
+                    rented[i] = v[i] ? (byte)1 : (byte)0;
+                }
+                fixed (byte* bytes = rented)
+                {
+                    Write(bytes, v.Length);
+                }
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(rented);
+            }
+        }
+
+        private unsafe void PackStringBytes(string value)
+        {
+            int byteCount = Encoding.UTF8.GetByteCount(value);
+            PackNumber((uint)byteCount);
+            if (byteCount == 0)
+                return;
+
+            if (byteCount <= StackallocByteLimit)
+            {
+                byte* bytes = stackalloc byte[byteCount];
+                fixed (char* chars = value)
+                {
+                    int written = Encoding.UTF8.GetBytes(chars, value.Length, bytes, byteCount);
+                    Write(bytes, written);
+                }
+                return;
+            }
+
+            var rented = ArrayPool<byte>.Shared.Rent(byteCount);
+            try
+            {
+                int written = Encoding.UTF8.GetBytes(value, 0, value.Length, rented, 0);
+                fixed (byte* bytes = rented)
+                {
+                    Write(bytes, written);
+                }
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(rented);
+            }
         }
 
         private unsafe void PackHeader(uint tag, SevenBitDataType type)
@@ -272,15 +332,7 @@ namespace DataVisit
                 return;
             }
             PackHeader(tag, SevenBitDataType.String);
-            var bytes = System.Text.Encoding.UTF8.GetBytes(value);
-            PackNumber((uint)bytes.Length);
-            unsafe
-            {
-                fixed (byte* b = bytes)
-                {
-                    Write(b, bytes.Length);
-                }
-            }
+            PackStringBytes(value);
         }
 
         public void VisitEnum<T>(uint tag, string name, uint flag, ref T value) where T : Enum
