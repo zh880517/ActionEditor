@@ -109,6 +109,17 @@ namespace GOAP
             AgentFactoryOptions options,
             AgentFactoryResult result)
         {
+            if (GOAPRuntimeRegistry.TryBuildAction(
+                    data,
+                    options.RequireActionRunner,
+                    out var registeredAction,
+                    out var registryDiagnostic))
+            {
+                if (!string.IsNullOrEmpty(registryDiagnostic))
+                    result.AddDiagnostic(registryDiagnostic);
+                return registeredAction;
+            }
+
             var type = data.GetType();
 
             if (!_builders.TryGetValue(type, out var actionBuilder))

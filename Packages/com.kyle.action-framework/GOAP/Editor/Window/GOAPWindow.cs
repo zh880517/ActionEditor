@@ -280,6 +280,7 @@ namespace GOAP.EditorView
             }
             AssetDatabase.SaveAssets();
             Exporter.Export(_currentConfig);
+            GOAPRegistryGenerator.Generate();
         }
     }
 }

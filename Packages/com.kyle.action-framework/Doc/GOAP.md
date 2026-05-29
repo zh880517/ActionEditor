@@ -77,21 +77,23 @@ public class MeleeAttackRunner : TActionRunner<MeleeAttackData>
 }
 ```
 
-### 第四步：在游戏启动时注册 Runner，并用 `AgentFactory` 创建 Agent
+### 第四步：生成 Registry，并用 `AgentFactory` 创建 Agent
 
 ```csharp
 void Awake()
 {
-    // 1. 注册所有 Runner（每种数据类型注册一次）
-    ActionRunner<MeleeAttackData>.Runner = MeleeAttackRunner.Instance;
+    // 1. 在 Editor 中通过 Tools/GOAP/Generate Registry 生成注册表
+    //    GOAP Editor 的“保存/导出”也会自动触发生成。
 
     // 2. 加载导出的运行时数据（JSON/ScriptableObject，自行序列化）
     GOAPRuntimeData runtimeData = LoadRuntimeData();
 
-    // 3. 工厂构建 Agent（自动填充 Actions 和 Goals）
+    // 3. 工厂构建 Agent（自动填充 Actions 和 Goals，并通过生成注册表绑定 Runner）
     _agent = AgentFactory.Create(runtimeData);
 }
 ```
+
+兼容旧流程时，仍可以手动设置 `ActionRunner<T>.Runner`，但推荐使用生成注册表，让类型发现和 Runner 绑定发生在 Editor/Generated 层。
 
 ### 第五步：每帧驱动
 
@@ -114,6 +116,31 @@ void Update()
 ### 打开编辑器
 
 菜单：`Tools → GOAP Editor`
+
+### 生成运行时注册表
+
+菜单：`Tools → GOAP → Generate Registry`
+
+生成器会扫描：
+
+- 所有继承 `TActionData<T>` 的 Action 编辑器数据类型。
+- 与 `T` 对应的 `TActionRunner<T>` 实现。
+
+输出文件：
+
+```text
+Assets/GOAP/Generated/GOAPGeneratedRegistry.g.cs
+```
+
+生成文件位于 `Assets` 下，和业务 Action / Runner 类型处于同一侧程序集或用户自定义程序集，避免包内 `GOAP.Runtime` 反向引用业务代码。生成类会在 Editor 加载和 Play Mode 启动前注册到 `GOAPRuntimeRegistry`。
+
+运行时 `AgentFactory` 会优先使用该注册表构造 `RuntimeAction<T>`，避免常规路径中通过反射创建 Action。没有生成文件、生成类尚未初始化或某个类型未注册时，`AgentFactory` 会退回旧反射路径以保持兼容。
+
+Runner 发现规则：
+
+- 优先使用 Runner 类型上的公开静态 `Instance` 字段或属性。
+- 如果没有 `Instance`，并且 Runner 有公开无参构造函数，则生成 `new RunnerType()`。
+- 如果没有可用 Runner，生成器仍会注册 Action 构造委托；当 `AgentFactoryOptions.RequireActionRunner = true` 时会输出诊断。
 
 ### 创建 ConfigAsset
 
@@ -313,7 +340,7 @@ GOAP/
       IAction.cs          — 行动接口（规划数据 + 执行生命周期）
       IActionData.cs      — 执行 struct 标记接口（仅含 Id）
       TActionExecutor.cs  — TActionRunner<T> 泛型基类（子类重写点）
-      ActionExecutor.cs   — ActionRunner<T> 静态注册槽
+      ActionExecutor.cs   — ActionRunner<T> 静态 Runner 槽（兼容手动注册）
       Action.cs           — RuntimeAction<T>（持有规划数据 + 分发 Runner）
       Agent.cs            — AI 主驱动器
       AgentContext.cs     — 传入 Action 生命周期的上下文（readonly struct）
@@ -330,6 +357,7 @@ GOAP/
       MinHeap.cs          — 最小堆（Planner 内部使用）
     Factory/
       AgentFactory.cs     — 从 GOAPRuntimeData 构造 Agent
+      GOAPRuntimeRegistry.cs — 运行时注册表，供生成代码注册 Action 构造委托和 Runner
   Editor/
     Asset/
       ConfigAsset.cs      — 配置资产基类（ScriptableObject）
@@ -340,6 +368,8 @@ GOAP/
       ActionGroupAttribute.cs — 分组与 GOAPTag Attribute 定义
     Export/
       Exporter.cs         — 将 ConfigAsset 导出为 GOAPRuntimeData
+    CodeGen/
+      GOAPRegistryGenerator.cs — 扫描 Editor 类型并生成 Runtime 注册表
     Window/
       GOAPWindow.cs       — 编辑器主窗口（Tools/GOAP Editor）
 ```
