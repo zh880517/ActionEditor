@@ -1,0 +1,4 @@
+interface:
+  display_name: "Develop Design"
+  short_description: "Collaborative PRD and architecture design workflow"
+  default_prompt: "Use $develop-design to explore the repository and design a PRD or module architecture with me before implementation."
