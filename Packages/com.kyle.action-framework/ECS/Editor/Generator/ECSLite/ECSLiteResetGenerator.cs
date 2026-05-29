@@ -54,7 +54,7 @@ namespace ECSEditor
                 }
                 if (WriteReset(writer, field, "Clear"))
                     continue;
-                if (WriteReset(writer, field, "Reset()"))
+                if (WriteReset(writer, field, "Reset"))
                     continue;
                 if (field.FieldType.Name.Contains("Quaternion") && field.FieldType.IsValueType)
                 {

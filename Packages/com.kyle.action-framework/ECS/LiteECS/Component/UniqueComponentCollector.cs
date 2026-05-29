@@ -11,9 +11,9 @@
             {
                 return Component.Component;
             }
-            else
+            if (Component.EntityIdx >= 0)
             {
-                Remove(entityID);
+                Component.Reset();
             }
             Component.EntityIdx = entityID;
             return Component.Component;

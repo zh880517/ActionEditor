@@ -3,7 +3,7 @@
     internal class ComponentEntity<T> where T : class, IComponent, new()
     {
         public T Component = new T();
-        public int EntityIdx;
+        public int EntityIdx = -1;
         public int Index;
         public ulong Version;
 

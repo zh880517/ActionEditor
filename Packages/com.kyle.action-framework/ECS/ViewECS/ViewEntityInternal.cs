@@ -26,14 +26,19 @@ namespace VECS
         public T AddComponent<T>(bool forceModify) where T : class, IViewComponent, new()
         {
             var component = Owner.AddComponent<T>(this, forceModify);
+            int componentId = ViewComponentIdentity<T>.Id;
             if (!ViewComponentIdentity<T>.Unique)
-                ComponentFlag[ViewComponentIdentity<T>.Id] = true;
+                ComponentFlag[componentId] = true;
             return component;
         }
 
         public T GetComponent<T>() where T : class, IViewComponent, new()
         {
             int componentId = ViewComponentIdentity<T>.Id;
+            if (ViewComponentIdentity<T>.Unique)
+            {
+                return Owner.GetComponent<T>(this) as T;
+            }
             if (ComponentFlag[componentId])
             {
                 return Owner.GetComponent<T>(this) as T;
@@ -44,6 +49,10 @@ namespace VECS
         public T ModifyComponent<T>() where T : class, IViewComponent, new()
         {
             int componentId = ViewComponentIdentity<T>.Id;
+            if (ViewComponentIdentity<T>.Unique)
+            {
+                return Owner.ModifyComponent<T>(this) as T;
+            }
             if (ComponentFlag[componentId])
             {
                 return Owner.ModifyComponent<T>(this) as T;
@@ -61,6 +70,11 @@ namespace VECS
         public void RemoveComponent<T>() where T : class, IViewComponent, new()
         {
             int componentId = ViewComponentIdentity<T>.Id;
+            if (ViewComponentIdentity<T>.Unique)
+            {
+                Owner.RemoveComponent<T>(this);
+                return;
+            }
             if (ComponentFlag[componentId])
             {
                 Owner.RemoveComponent<T>(this);

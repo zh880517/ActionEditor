@@ -348,6 +348,7 @@ ECSGenerator.ViewECSGen(
 - 组件 ID 由生成代码写入静态泛型类型，新增、删除或重命名组件后需要重新生成。
 - 组件对象会被复用，移除组件后不要继续持有并读取旧组件引用。
 - Flag 组件没有独立数据实例，只适合表达标签状态。
-- Unique 组件同一时间只挂在一个实体上，再次添加会替换原持有实体。
+- Unique 组件同一时间只挂在一个实体上，再次添加会替换原持有实体，并对旧组件执行移除与重置逻辑。
+- `AddToAllEntity<T>()` 只会对当前有效实体添加组件，不会处理已销毁且等待复用的实体槽。
 - `LiteECS` 程序集配置了 `noEngineReferences: true`，核心运行时代码不依赖 UnityEngine；业务组件是否依赖 Unity 类型由业务程序集决定。
 - `ViewECS` 的方法名目前保留源码中的拼写：`CreatGroup`、`CreatMatchGroup`。

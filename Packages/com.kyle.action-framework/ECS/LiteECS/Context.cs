@@ -149,6 +149,8 @@ namespace ECSLite
             for (int i=0; i<entities.Count; ++i)
             {
                 var entity = entities[i];
+                if (!entity.Used)
+                    continue;
                 var component = collector.Add(i) as T;
                 if (component != null && !ComponentIdentity<T>.Unique)
                 {

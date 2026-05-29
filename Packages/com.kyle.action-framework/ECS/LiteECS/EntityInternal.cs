@@ -12,14 +12,19 @@ namespace ECSLite
         public T AddComponent<T>() where T : class, IComponent, new()
         {
             var component = Owner.AddComponent<T>(ID.Index);
+            int componentId = ComponentIdentity<T>.Id;
             if (!ComponentIdentity<T>.Unique)
-                ComponentFlag[ComponentIdentity<T>.Id] = true;
+                ComponentFlag[componentId] = true;
             return component;
         }
 
         public T GetComponent<T>() where T : class, IComponent, new()
         {
             int componentId = ComponentIdentity<T>.Id;
+            if (ComponentIdentity<T>.Unique)
+            {
+                return Owner.GetComponent<T>(ID.Index) as T;
+            }
             if (ComponentFlag[componentId])
             {
                 return Owner.GetComponent<T>(ID.Index) as T;
@@ -37,6 +42,11 @@ namespace ECSLite
         public void RemoveComponent<T>() where T : class, IComponent, new()
         {
             int componentId = ComponentIdentity<T>.Id;
+            if (ComponentIdentity<T>.Unique)
+            {
+                Owner.RemoveComponent<T>(ID.Index);
+                return;
+            }
             if (ComponentFlag[componentId])
             {
                 Owner.RemoveComponent<T>(ID.Index);

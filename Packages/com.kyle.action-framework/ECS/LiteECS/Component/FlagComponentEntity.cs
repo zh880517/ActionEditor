@@ -2,12 +2,12 @@
 {
     internal class FlagComponentEntity<T> where T : class, IComponent, new()
     {
-        public int EntityIdx;
+        public int EntityIdx = -1;
         public int Index;
 
         public void Reset()
         {
-            EntityIdx = default;
+            EntityIdx = -1;
         }
     }
 }

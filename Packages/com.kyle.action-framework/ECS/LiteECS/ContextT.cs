@@ -70,7 +70,7 @@ namespace ECSLite
             return new EntityFindResult<IContext, T>
             {
                 Component = result.Component,
-                Entity = IndexToEntity(result.EntityIndex),
+                Entity = result.Component != null ? IndexToEntity(result.EntityIndex) : default,
                 Index = result.Index,
             };
         }
@@ -80,7 +80,7 @@ namespace ECSLite
             return new EntityFindResult<IContext, T>
             {
                 Component = result.Component,
-                Entity = IndexToEntity(result.EntityIndex),
+                Entity = result.Component != null ? IndexToEntity(result.EntityIndex) : default,
                 Index = result.Index,
             };
         }

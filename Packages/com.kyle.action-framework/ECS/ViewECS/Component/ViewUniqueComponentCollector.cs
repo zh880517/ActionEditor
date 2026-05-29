@@ -14,9 +14,10 @@ namespace VECS
                     Component.Version = version;
                 return Component.Component;
             }
-            else
+            if (Component.Owner != null)
             {
-                Remove(entity);
+                onRemove(Component.Owner.ToEntity(), Component.Component);
+                Component.Reset();
             }
             Component.Owner = entity;
             Component.Version = version;

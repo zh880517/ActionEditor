@@ -102,7 +102,7 @@ namespace CodeGen
                 {
                     if (WriteReset(writer, field, "Clear"))
                         continue;
-                    if (WriteReset(writer, field, "Reset()"))
+                    if (WriteReset(writer, field, "Reset"))
                         continue;
                 }
                 if (field.FieldType == typeof(UnityEngine.Quaternion))
