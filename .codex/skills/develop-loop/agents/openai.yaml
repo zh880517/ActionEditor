@@ -2,3 +2,6 @@ interface:
   display_name: "Develop Loop"
   short_description: "Coordinate dev/review agents with per-task commits."
   default_prompt: "Use $develop-loop to complete the tasks in this todo markdown with isolated developer and reviewer agents, committing once per completed task."
+
+policy:
+  allow_implicit_invocation: false
