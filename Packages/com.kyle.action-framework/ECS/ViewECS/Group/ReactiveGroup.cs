@@ -22,7 +22,7 @@ namespace VECS
         public bool MoveNext()
         {
             Result = Context.Find<TComponent>(Result.Index, Version, IncludeDisable, GroupIndex);
-            return Result.Entity != null;
+            return Result.Component != null;
         }
 
         public void Reset()

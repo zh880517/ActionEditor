@@ -6,23 +6,39 @@ namespace VECS
     {
         private ulong mVersion;
         private readonly List<FlagComponentEntity<T>> mUnits = new List<FlagComponentEntity<T>>();
-        private readonly Queue<int> mUnUsedIdxs = new Queue<int>();
+        private readonly Stack<FlagComponentEntity<T>> mUnUsedUnits = new Stack<FlagComponentEntity<T>>();
         private readonly Dictionary<int, int> mIdIdxMap = new Dictionary<int, int>();//EntityId => 数组索引
         private T Component = new T();
         public int Count => mIdIdxMap.Count;
 
         private FlagComponentEntity<T> Create()
         {
-            if (mUnUsedIdxs.Count > 0)
+            if (mUnUsedUnits.Count > 0)
             {
-                var index = mUnUsedIdxs.Dequeue();
-                return mUnits[index];
+                return mUnUsedUnits.Pop();
             }
-            var unit = new FlagComponentEntity<T>();
-            unit.Index = mUnits.Count;
-            mUnits.Add(unit);
-            return unit;
+            return new FlagComponentEntity<T>();
         }
+
+        private void RemoveAt(int idx, int entityIndex)
+        {
+            var unit = mUnits[idx];
+            mIdIdxMap.Remove(entityIndex);
+
+            int lastIdx = mUnits.Count - 1;
+            if (idx != lastIdx)
+            {
+                var last = mUnits[lastIdx];
+                mUnits[idx] = last;
+                last.Index = idx;
+                mIdIdxMap[last.Owner.Index] = idx;
+            }
+
+            mUnits.RemoveAt(lastIdx);
+            unit.Reset();
+            mUnUsedUnits.Push(unit);
+        }
+
         public IViewComponent Add(ViewEntityInternal entity, ulong version, bool forceModify)
         {
             if (mIdIdxMap.TryGetValue(entity.Index, out int idx))
@@ -36,6 +52,8 @@ namespace VECS
                 return Component;
             }
             var unit = Create();
+            unit.Index = mUnits.Count;
+            mUnits.Add(unit);
             mIdIdxMap.Add(entity.Index, unit.Index);
             unit.Owner = entity;
             unit.Version = version;
@@ -65,20 +83,18 @@ namespace VECS
         {
             if (mIdIdxMap.TryGetValue(entity.Index, out int idx))
             {
-                var unit = mUnits[idx];
-                unit.Reset();
-                mUnUsedIdxs.Enqueue(idx);
-                mIdIdxMap.Remove(entity.Index);
+                RemoveAt(idx, entity.Index);
             }
         }
         public void RemoveAll()
         {
-            foreach (var kv in mIdIdxMap)
+            for (int i = 0; i < mUnits.Count; ++i)
             {
-                var unit = mUnits[kv.Value];
-                mUnUsedIdxs.Enqueue(kv.Value);
+                var unit = mUnits[i];
                 unit.Reset();
+                mUnUsedUnits.Push(unit);
             }
+            mUnits.Clear();
             mIdIdxMap.Clear();
         }
         public EntityFindResult<T> Find(int startIndex, ulong version, bool includeDisable)
@@ -88,11 +104,9 @@ namespace VECS
                 for (int i = startIndex; i < mUnits.Count; ++i)
                 {
                     var unit = mUnits[i];
-                    if (unit.Owner == null)
-                        continue;
-                    if (!includeDisable && unit.Owner.State != ViewEntityInternal.EntityState.Loaded)
-                        continue;
-                    if (unit.Version > version)
+                    if (unit.Owner != null
+                        && (includeDisable || unit.Owner.State == ViewEntityInternal.EntityState.Loaded)
+                        && unit.Version > version)
                     {
                         return new EntityFindResult<T>()
                         {
@@ -114,11 +128,10 @@ namespace VECS
                 for (int i = startIndex; i < mUnits.Count; ++i)
                 {
                     var unit = mUnits[i];
-                    if (unit.Owner == null)
-                        continue;
-                    if (!includeDisable && unit.Owner.State != ViewEntityInternal.EntityState.Loaded)
-                        continue;
-                    if (unit.Version > version && matcher.Match(unit.Owner.ToEntity(), Component))
+                    if (unit.Owner != null
+                        && (includeDisable || unit.Owner.State == ViewEntityInternal.EntityState.Loaded)
+                        && unit.Version > version
+                        && matcher.Match(unit.Owner.ToEntity(), Component))
                     {
                         return new EntityFindResult<T>()
                         {

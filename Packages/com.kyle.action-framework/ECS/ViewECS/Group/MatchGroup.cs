@@ -24,7 +24,7 @@
         public bool MoveNext()
         {
             Result = Context.MatchFind<TComponent, TMatcher>(Matcher, Result.Index, 0, InCludeDisable);
-            return Result.Entity != null;
+            return Result.Component != null;
         }
 
         public void Reset()

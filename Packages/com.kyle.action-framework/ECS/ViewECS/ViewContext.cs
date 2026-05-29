@@ -106,9 +106,9 @@ namespace VECS
             if (!entity.Valid)
                 return;
 
-            for (int i = 0; i < collectors.Length; ++i)
+            for (int i = 0; i < entity.entity.ComponentIds.Count; ++i)
             {
-                collectors[i].Remove(entity.entity);
+                collectors[entity.entity.ComponentIds[i]]?.Remove(entity.entity);
             }
             entity.entity.Clear();
             unUsedEntityCount++;
@@ -140,9 +140,10 @@ namespace VECS
         {
             if (!entity.Valid)
                 return;
-            foreach(var collector in collectors)
+            ulong currentVersion = GetVersion();
+            for (int i = 0; i < entity.entity.ComponentIds.Count; ++i)
             {
-                collector.Modify(entity.entity, GetVersion());
+                collectors[entity.entity.ComponentIds[i]]?.Modify(entity.entity, currentVersion);
             }
         }
 
@@ -175,7 +176,19 @@ namespace VECS
 
         public void RemoveAll<T>() where T : class, IViewComponent, new()
         {
-            collectors[ViewComponentIdentity<T>.Id].RemoveAll();
+            int componentId = ViewComponentIdentity<T>.Id;
+            collectors[componentId].RemoveAll();
+            for (int i = 0; i < entities.Count; ++i)
+            {
+                var entity = entities[i];
+                if (entity.State == ViewEntityInternal.EntityState.None)
+                    continue;
+                if (!ViewComponentIdentity<T>.Unique)
+                {
+                    entity.ComponentFlag[componentId] = false;
+                }
+                entity.RemoveComponentId(componentId);
+            }
         }
 
         public void AddToAll<T>(bool forceModify = false) where T : class, IViewComponent, new()

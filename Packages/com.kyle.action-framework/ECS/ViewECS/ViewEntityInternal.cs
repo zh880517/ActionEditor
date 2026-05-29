@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace VECS
@@ -17,6 +18,7 @@ namespace VECS
         public ViewContext Owner;
         public GameObject Object;
         public BitArray ComponentFlag;
+        public readonly List<int> ComponentIds = new List<int>();
 
         public ViewEntity ToEntity()
         {
@@ -27,8 +29,15 @@ namespace VECS
         {
             var component = Owner.AddComponent<T>(this, forceModify);
             int componentId = ViewComponentIdentity<T>.Id;
-            if (!ViewComponentIdentity<T>.Unique)
+            if (ViewComponentIdentity<T>.Unique)
+            {
+                AddComponentId(componentId);
+            }
+            else if (!ComponentFlag[componentId])
+            {
                 ComponentFlag[componentId] = true;
+                AddComponentId(componentId);
+            }
             return component;
         }
 
@@ -72,14 +81,32 @@ namespace VECS
             int componentId = ViewComponentIdentity<T>.Id;
             if (ViewComponentIdentity<T>.Unique)
             {
-                Owner.RemoveComponent<T>(this);
+                if (Owner.GetComponent<T>(this) != null)
+                {
+                    Owner.RemoveComponent<T>(this);
+                }
+                RemoveComponentId(componentId);
                 return;
             }
             if (ComponentFlag[componentId])
             {
                 Owner.RemoveComponent<T>(this);
                 ComponentFlag[componentId] = false;
+                RemoveComponentId(componentId);
             }
+        }
+
+        public void AddComponentId(int componentId)
+        {
+            if (!ComponentIds.Contains(componentId))
+            {
+                ComponentIds.Add(componentId);
+            }
+        }
+
+        public void RemoveComponentId(int componentId)
+        {
+            ComponentIds.Remove(componentId);
         }
 
         public void Clear()
@@ -88,6 +115,7 @@ namespace VECS
             Version++;
             Object = null;
             ComponentFlag.SetAll(false);
+            ComponentIds.Clear();
         }
     }
 }

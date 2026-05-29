@@ -9,6 +9,8 @@ namespace ECSLite
         private readonly Queue<int> mUnUsedIdxs = new Queue<int>();
         private readonly Dictionary<int, int> mIdIdxMap = new Dictionary<int, int>();//EntityId => 数组索引
         private T Component = new T();
+        private int mHeadIdx = -1;
+        private int mTailIdx = -1;
         public int Count => mIdIdxMap.Count;
 
         private FlagComponentEntity<T> Create()
@@ -24,6 +26,42 @@ namespace ECSLite
             return unit;
         }
 
+        private void LinkLast(FlagComponentEntity<T> unit)
+        {
+            unit.PreviousIndex = mTailIdx;
+            unit.NextIndex = -1;
+            if (mTailIdx >= 0)
+            {
+                mUnits[mTailIdx].NextIndex = unit.Index;
+            }
+            else
+            {
+                mHeadIdx = unit.Index;
+            }
+            mTailIdx = unit.Index;
+        }
+
+        private void Unlink(FlagComponentEntity<T> unit)
+        {
+            if (unit.PreviousIndex >= 0)
+            {
+                mUnits[unit.PreviousIndex].NextIndex = unit.NextIndex;
+            }
+            else
+            {
+                mHeadIdx = unit.NextIndex;
+            }
+
+            if (unit.NextIndex >= 0)
+            {
+                mUnits[unit.NextIndex].PreviousIndex = unit.PreviousIndex;
+            }
+            else
+            {
+                mTailIdx = unit.PreviousIndex;
+            }
+        }
+
         public IComponent Add(int entityIdx)
         {
             if (mIdIdxMap.ContainsKey(entityIdx))
@@ -33,41 +71,40 @@ namespace ECSLite
             var unit = Create();
             mIdIdxMap.Add(entityIdx, unit.Index);
             unit.EntityIdx = entityIdx;
+            LinkLast(unit);
             return Component;
         }
 
         public ComponentFindResult<T> Find(int startIndex)
         {
-            for (int i = startIndex; i < mUnits.Count; ++i)
+            int idx = startIndex == 0 ? mHeadIdx : startIndex - 1;
+            if (idx >= 0)
             {
-                var unit = mUnits[i];
-                if (unit.EntityIdx < 0)
-                    continue;
+                var unit = mUnits[idx];
                 return new ComponentFindResult<T>()
                 {
                     EntityIndex = unit.EntityIdx,
-                    Index = i + 1,
+                    Index = unit.NextIndex >= 0 ? unit.NextIndex + 1 : -1,
                     Component = Component
                 };
             }
-            return new ComponentFindResult<T>(){ Index = mUnits.Count};
+            return new ComponentFindResult<T>(){ Index = -1};
         }
 
         public ComponentFindResult<T> MatchFind<TMatcher>(int startIndex, TMatcher matcher) where TMatcher : IComponentMatcher<T>
         {
-            for (int i = startIndex; i < mUnits.Count; ++i)
+            int idx = startIndex == 0 ? mHeadIdx : startIndex - 1;
+            if (idx >= 0)
             {
-                var unit = mUnits[i];
-                if (unit.EntityIdx < 0)
-                    continue;
+                var unit = mUnits[idx];
                 return new ComponentFindResult<T>()
                 {
                     EntityIndex = unit.EntityIdx,
-                    Index = i + 1,
+                    Index = unit.NextIndex >= 0 ? unit.NextIndex + 1 : -1,
                     Component = Component
                 };
             }
-            return new ComponentFindResult<T>() { Index = mUnits.Count };
+            return new ComponentFindResult<T>() { Index = -1 };
         }
         public IComponent Get(int entityIdx)
         {
@@ -83,6 +120,7 @@ namespace ECSLite
             if (mIdIdxMap.TryGetValue(entityIdx, out int idx))
             {
                 var unit = mUnits[idx];
+                Unlink(unit);
                 unit.Reset();
                 mUnUsedIdxs.Enqueue(idx);
                 mIdIdxMap.Remove(entityIdx);
@@ -97,6 +135,8 @@ namespace ECSLite
                 mUnUsedIdxs.Enqueue(kv.Value);
                 unit.Reset();
             }
+            mHeadIdx = -1;
+            mTailIdx = -1;
             mIdIdxMap.Clear();
         }
 

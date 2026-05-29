@@ -25,7 +25,7 @@ namespace VECS
         public bool MoveNext()
         {
             Result = Context.Find<TComponent>(Result.Index, 0, InCludeDisable);
-            return Result.Entity != null;
+            return Result.Component != null;
         }
 
         public void Reset()

@@ -99,9 +99,9 @@ namespace ECSLite
             var entity = entities[entityID.Index];
             if (entity.ID.Version == entityID.Version)
             {
-                for (int i = 0; i < collectors.Length; ++i)
+                for (int i = 0; i < entity.ComponentIds.Count; ++i)
                 {
-                    collectors[i].Remove(entityID.Index);
+                    collectors[entity.ComponentIds[i]]?.Remove(entityID.Index);
                 }
                 entity.Clear();
                 unUsedEntityCount++;
@@ -155,6 +155,7 @@ namespace ECSLite
                 if (component != null && !ComponentIdentity<T>.Unique)
                 {
                     entity.ComponentFlag[componentId] = true;
+                    entity.AddComponentId(componentId);
                 }
             }
         }
@@ -175,7 +176,19 @@ namespace ECSLite
 
         internal void RemoveAll<T>() where T : class, IComponent, new()
         {
-            collectors[ComponentIdentity<T>.Id].RemoveAll();
+            int componentId = ComponentIdentity<T>.Id;
+            collectors[componentId].RemoveAll();
+            for (int i = 0; i < entities.Count; ++i)
+            {
+                var entity = entities[i];
+                if (!entity.Used)
+                    continue;
+                if (!ComponentIdentity<T>.Unique)
+                {
+                    entity.ComponentFlag[componentId] = false;
+                }
+                entity.RemoveComponentId(componentId);
+            }
         }
     }
 }

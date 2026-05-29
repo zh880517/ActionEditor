@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using System.Collections.Generic;
 
 namespace ECSLite
 {
@@ -8,13 +9,21 @@ namespace ECSLite
         public bool Used;
         public Context Owner;
         public BitArray ComponentFlag;
+        public readonly List<int> ComponentIds = new List<int>();
 
         public T AddComponent<T>() where T : class, IComponent, new()
         {
             var component = Owner.AddComponent<T>(ID.Index);
             int componentId = ComponentIdentity<T>.Id;
-            if (!ComponentIdentity<T>.Unique)
+            if (ComponentIdentity<T>.Unique)
+            {
+                AddComponentId(componentId);
+            }
+            else if (!ComponentFlag[componentId])
+            {
                 ComponentFlag[componentId] = true;
+                AddComponentId(componentId);
+            }
             return component;
         }
 
@@ -44,14 +53,32 @@ namespace ECSLite
             int componentId = ComponentIdentity<T>.Id;
             if (ComponentIdentity<T>.Unique)
             {
-                Owner.RemoveComponent<T>(ID.Index);
+                if (Owner.GetComponent<T>(ID.Index) != null)
+                {
+                    Owner.RemoveComponent<T>(ID.Index);
+                }
+                RemoveComponentId(componentId);
                 return;
             }
             if (ComponentFlag[componentId])
             {
                 Owner.RemoveComponent<T>(ID.Index);
                 ComponentFlag[componentId] = false;
+                RemoveComponentId(componentId);
             }
+        }
+
+        public void AddComponentId(int componentId)
+        {
+            if (!ComponentIds.Contains(componentId))
+            {
+                ComponentIds.Add(componentId);
+            }
+        }
+
+        public void RemoveComponentId(int componentId)
+        {
+            ComponentIds.Remove(componentId);
         }
 
         public void Clear()
@@ -59,6 +86,7 @@ namespace ECSLite
             Used = false;
             ID.Version++;
             ComponentFlag.SetAll(false);
+            ComponentIds.Clear();
         }
     }
 }

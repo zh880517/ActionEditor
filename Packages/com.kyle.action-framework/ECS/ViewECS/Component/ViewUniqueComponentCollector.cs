@@ -17,6 +17,7 @@ namespace VECS
             if (Component.Owner != null)
             {
                 onRemove(Component.Owner.ToEntity(), Component.Component);
+                Component.Owner.RemoveComponentId(ViewComponentIdentity<T>.Id);
                 Component.Reset();
             }
             Component.Owner = entity;
