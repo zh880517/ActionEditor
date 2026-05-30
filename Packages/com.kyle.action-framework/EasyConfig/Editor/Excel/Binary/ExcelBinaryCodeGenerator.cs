@@ -4,11 +4,11 @@ using UnityEditor;
 
 namespace EasyConfig.Editor
 {
-    public static class ConfigBinaryCodeGenerator
+    public static class ExcelBinaryCodeGenerator
     {
         public static void GenerateAll()
         {
-            var groups = ConfigBinaryTypeCollector.Collect();
+            var groups = ExcelBinaryTypeCollector.Collect();
             bool anyWritten = false;
             foreach (var group in groups)
             {

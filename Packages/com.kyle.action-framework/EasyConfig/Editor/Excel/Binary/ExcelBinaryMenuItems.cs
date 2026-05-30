@@ -2,12 +2,12 @@ using UnityEditor;
 
 namespace EasyConfig.Editor
 {
-    public static class ConfigBinaryMenuItems
+    public static class ExcelBinaryMenuItems
     {
         [MenuItem("Tools/EasyConfig/Generate Binary Registries")]
         public static void GenerateBinaryRegistries()
         {
-            ConfigBinaryCodeGenerator.GenerateAll();
+            ExcelBinaryCodeGenerator.GenerateAll();
         }
     }
 }

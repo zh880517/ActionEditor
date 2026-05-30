@@ -21,7 +21,7 @@ namespace EasyConfig.Editor
         public List<ConfigTypeData> Types = new List<ConfigTypeData>();
     }
 
-    public static class ConfigBinaryTypeCollector
+    public static class ExcelBinaryTypeCollector
     {
         private static readonly Type ListConfigOpenType = typeof(ListConfig<>);
         private static readonly Type DictionaryConfigOpenType = typeof(DictionaryConfig<,>);
@@ -52,27 +52,27 @@ namespace EasyConfig.Editor
                     continue;
                 if (groupCount > 1)
                 {
-                    Debug.LogError($"[ConfigBinaryTypeCollector] Type {type.FullName} has multiple ConfigGroupAttribute annotations. Skipping.");
+                    Debug.LogError($"[ExcelBinaryTypeCollector] Type {type.FullName} has multiple ConfigGroupAttribute annotations. Skipping.");
                     continue;
                 }
                 if (string.IsNullOrEmpty(groupAttr.GeneratePath))
                 {
-                    Debug.LogError($"[ConfigBinaryTypeCollector] Type {type.FullName} group attribute {groupAttrType.Name} has empty GeneratePath. Skipping.");
+                    Debug.LogError($"[ExcelBinaryTypeCollector] Type {type.FullName} group attribute {groupAttrType.Name} has empty GeneratePath. Skipping.");
                     continue;
                 }
                 if (string.IsNullOrEmpty(groupAttr.Namespace))
                 {
-                    Debug.LogError($"[ConfigBinaryTypeCollector] Type {type.FullName} group attribute {groupAttrType.Name} has empty Namespace. Skipping.");
+                    Debug.LogError($"[ExcelBinaryTypeCollector] Type {type.FullName} group attribute {groupAttrType.Name} has empty Namespace. Skipping.");
                     continue;
                 }
                 if (string.IsNullOrEmpty(groupAttr.ClassName))
                 {
-                    Debug.LogError($"[ConfigBinaryTypeCollector] Type {type.FullName} group attribute {groupAttrType.Name} has empty ClassName. Skipping.");
+                    Debug.LogError($"[ExcelBinaryTypeCollector] Type {type.FullName} group attribute {groupAttrType.Name} has empty ClassName. Skipping.");
                     continue;
                 }
                 if (string.IsNullOrEmpty(groupAttr.ExportSubFolder))
                 {
-                    Debug.LogError($"[ConfigBinaryTypeCollector] Type {type.FullName} group attribute {groupAttrType.Name} has empty ExportSubFolder. Skipping.");
+                    Debug.LogError($"[ExcelBinaryTypeCollector] Type {type.FullName} group attribute {groupAttrType.Name} has empty ExportSubFolder. Skipping.");
                     continue;
                 }
 
@@ -92,7 +92,7 @@ namespace EasyConfig.Editor
                             if (genericArg == type)
                                 isListConfig = true;
                             else
-                                Debug.LogWarning($"[ConfigBinaryTypeCollector] Type {type.FullName} extends ListConfig<{genericArg.Name}> but expected ListConfig<{type.Name}>.");
+                                Debug.LogWarning($"[ExcelBinaryTypeCollector] Type {type.FullName} extends ListConfig<{genericArg.Name}> but expected ListConfig<{type.Name}>.");
                             break;
                         }
                         else if (genericDef == DictionaryConfigOpenType)
@@ -105,7 +105,7 @@ namespace EasyConfig.Editor
                             }
                             else
                             {
-                                Debug.LogWarning($"[ConfigBinaryTypeCollector] Type {type.FullName} extends DictionaryConfig<{genericArgs[0].Name}, {genericArgs[1].Name}> but expected DictionaryConfig<TKey, {type.Name}>.");
+                                Debug.LogWarning($"[ExcelBinaryTypeCollector] Type {type.FullName} extends DictionaryConfig<{genericArgs[0].Name}, {genericArgs[1].Name}> but expected DictionaryConfig<TKey, {type.Name}>.");
                             }
                             break;
                         }
@@ -115,7 +115,7 @@ namespace EasyConfig.Editor
 
                 if (!isListConfig && !isDictConfig)
                 {
-                    Debug.LogError($"[ConfigBinaryTypeCollector] Type {type.FullName} has ConfigGroupAttribute [{groupAttrType.Name}] but does not inherit ListConfig<{type.Name}> or DictionaryConfig<TKey, {type.Name}>. Skipping.");
+                    Debug.LogError($"[ExcelBinaryTypeCollector] Type {type.FullName} has ConfigGroupAttribute [{groupAttrType.Name}] but does not inherit ListConfig<{type.Name}> or DictionaryConfig<TKey, {type.Name}>. Skipping.");
                     continue;
                 }
 
@@ -149,7 +149,7 @@ namespace EasyConfig.Editor
                     string fileName = groupData.Types[i].Type.Name.ToLowerInvariant() + ".bytes";
                     if (!fileNames.Add(fileName))
                     {
-                        Debug.LogError($"[ConfigBinaryTypeCollector] Duplicate config file name '{fileName}' in group [{groupData.GroupAttributeType.Name}] from type {groupData.Types[i].Type.FullName}. Skipping.");
+                        Debug.LogError($"[ExcelBinaryTypeCollector] Duplicate config file name '{fileName}' in group [{groupData.GroupAttributeType.Name}] from type {groupData.Types[i].Type.FullName}. Skipping.");
                         groupData.Types.RemoveAt(i);
                     }
                 }

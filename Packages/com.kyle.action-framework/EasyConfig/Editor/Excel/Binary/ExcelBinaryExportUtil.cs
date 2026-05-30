@@ -6,11 +6,11 @@ using UnityEngine;
 
 namespace EasyConfig.Editor
 {
-    public static class ConfigBinaryExportUtil
+    public static class ExcelBinaryExportUtil
     {
         public static void ExportAll(string rootFolder, IConfigSerializer serializer)
         {
-            var groups = ConfigBinaryTypeCollector.Collect();
+            var groups = ExcelBinaryTypeCollector.Collect();
             foreach (var group in groups)
             {
                 ExportGroupData(rootFolder, serializer, group);
@@ -20,7 +20,7 @@ namespace EasyConfig.Editor
         public static void ExportGroup<TGroup>(string rootFolder, IConfigSerializer serializer)
             where TGroup : ConfigGroupAttribute
         {
-            var groups = ConfigBinaryTypeCollector.Collect();
+            var groups = ExcelBinaryTypeCollector.Collect();
             foreach (var group in groups)
             {
                 if (group.GroupAttributeType == typeof(TGroup))
@@ -78,7 +78,7 @@ namespace EasyConfig.Editor
             }
             catch (Exception ex)
             {
-                UnityEngine.Debug.LogError($"[ConfigBinaryExportUtil] Failed to serialize {typeData.Type.Name}: {ex}");
+                UnityEngine.Debug.LogError($"[ExcelBinaryExportUtil] Failed to serialize {typeData.Type.Name}: {ex}");
                 return null;
             }
         }
