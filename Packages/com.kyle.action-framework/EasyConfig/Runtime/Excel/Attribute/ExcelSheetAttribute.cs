@@ -5,9 +5,12 @@ namespace EasyConfig
     public class ExcelSheetAttribute : Attribute
     {
         public string Name { get; private set; }
-        public ExcelSheetAttribute(string name)
+        public bool MultiFile { get; private set; }
+
+        public ExcelSheetAttribute(string name, bool multiFile = false)
         {
             Name = name;
+            MultiFile = multiFile;
         }
     }
 }

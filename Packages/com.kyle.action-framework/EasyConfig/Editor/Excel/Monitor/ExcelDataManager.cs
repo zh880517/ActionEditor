@@ -22,11 +22,9 @@ namespace EasyConfig.Editor
             if (!collectors.Contains(collector))
             {
                 collectors.Add(collector);
-                string path = $"{CachePath}/{collector.SheetName}.json";
-                if (File.Exists(path))
-                {
-                    collector.ReadFromFile(path);
-                }
+                var files = GetSheetFiles(collector);
+                if (files.Length > 0)
+                    collector.ReadFromFiles(files);
             }
         }
 
@@ -60,9 +58,24 @@ namespace EasyConfig.Editor
             foreach (var collector in collectors)
             {
                 if (modifySheets.Contains(collector.SheetName))
-                    collector.ReadFromFile($"{CachePath}/{collector.SheetName}.json");
+                {
+                    var files = GetSheetFiles(collector);
+                    if (files.Length > 0)
+                        collector.ReadFromFiles(files);
+                }
             }
             modifySheets.Clear();
+        }
+
+        private string[] GetSheetFiles(ExcelDataCollector collector)
+        {
+            var all = Directory.GetFiles(CachePath, $"*_{collector.SheetName}.json", SearchOption.TopDirectoryOnly);
+            if (!collector.MultiFile && all.Length > 1)
+            {
+                Debug.LogWarning($"页签 \"{collector.SheetName}\" 存在多个来源文件，但未启用分表（MultiFile=false），只读取第一个：{all[0]}");
+                return new[] { all[0] };
+            }
+            return all;
         }
 
         private void OnEnable()

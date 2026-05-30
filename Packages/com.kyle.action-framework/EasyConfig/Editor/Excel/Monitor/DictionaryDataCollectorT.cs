@@ -92,6 +92,7 @@ namespace EasyConfig.Editor
             if (keyInfo == null)
                 throw new Exception($"导出类型必须使用 KeyColumnAttribute 标记需要导出Key对应的列名字 : {typeof(TItem).Name}");
             SheetName = sheetAttribute.Name;
+            MultiFile = sheetAttribute.MultiFile;
             KeyName = keyInfo.Name;
             ExcelDataManager.instance.OnDataCollectorCreate(this);
         }
@@ -101,10 +102,14 @@ namespace EasyConfig.Editor
             instance = null;
         }
 
-        internal override void ReadFromFile(string filePath)
+        internal override void ClearData()
         {
             items.Clear();
             searchList = null;
+        }
+
+        internal override void ReadFromFile(string filePath)
+        {
             string json = System.IO.File.ReadAllText(filePath);
             var sheet = JsonUtility.FromJson<SheetData>(json);
             IColumnReader reader = ColumnReaderUtil.ToRead<TItem>();

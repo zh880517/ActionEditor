@@ -36,8 +36,6 @@ namespace EasyConfig.Editor
             if (!Directory.Exists(CachePath))
                 Directory.CreateDirectory(CachePath);
             var files = Directory.GetFiles(ExcelPath, "*.xlsx");
-            //当前读取过的页签
-            HashSet<string> hasExportSheets = new HashSet<string>();
             //当前有效的Excel表格
             HashSet<string> excels = new HashSet<string>();
             foreach (var file in files)
@@ -61,16 +59,15 @@ namespace EasyConfig.Editor
 
                     using (var reader = ExcelReaderFactory.CreateReader(stream))
                     {
-                        do 
+                        do
                         {
                             if (!ExportFilter.CheckSheetName(reader.Name))
                                 continue;
                             sheets.Add(reader.Name);
-                            hasExportSheets.Add(reader.Name);
                             EditorUtility.DisplayProgressBar("读取Excel", file, (float)++step / files.Length);
 
                             SheetData sheetData = ReadSheet(reader);
-                            string exportFilePath = Path.Combine(CachePath, $"{reader.Name}.json");
+                            string exportFilePath = Path.Combine(CachePath, $"{fileName}_{reader.Name}.json");
                             string writeJson = JsonUtility.ToJson(sheetData, true);
                             if (File.Exists(exportFilePath))
                             {
@@ -86,7 +83,7 @@ namespace EasyConfig.Editor
                 EditorUtility.ClearProgressBar();
                 if (cacheInfo == null)
                 {
-                    cacheInfo = new ExcelReadCache.ExcelInfo() { LastReadTime = lastWriteTime, Name = fileName, Sheets  = sheets};
+                    cacheInfo = new ExcelReadCache.ExcelInfo() { LastReadTime = lastWriteTime, Name = fileName, Sheets = sheets };
                     CacheData.Excels.Add(cacheInfo);
                 }
                 else
@@ -94,9 +91,9 @@ namespace EasyConfig.Editor
                     //清理不存在的页签
                     foreach (var sheet in cacheInfo.Sheets)
                     {
-                        if (!sheets.Contains(sheet) && !hasExportSheets.Contains(sheet))
+                        if (!sheets.Contains(sheet))
                         {
-                            string exportFilePath = Path.Combine(CachePath, sheet + ".json");
+                            string exportFilePath = Path.Combine(CachePath, $"{fileName}_{sheet}.json");
                             if (File.Exists(exportFilePath))
                                 File.Delete(exportFilePath);
                         }
@@ -106,7 +103,7 @@ namespace EasyConfig.Editor
                 }
             }
             //清理已经不存在的Excel表格的导出内容
-            for (int i=0; i<CacheData.Excels.Count; ++i)
+            for (int i = 0; i < CacheData.Excels.Count; ++i)
             {
                 var excel = CacheData.Excels[i];
                 if (!excels.Contains(excel.Name))
@@ -115,12 +112,9 @@ namespace EasyConfig.Editor
                     --i;
                     foreach (var sheet in excel.Sheets)
                     {
-                        if (!hasExportSheets.Contains(sheet))
-                        {
-                            string exportFilePath = Path.Combine(CachePath, sheet + ".json");
-                            if (File.Exists(exportFilePath))
-                                File.Delete(exportFilePath);
-                        }
+                        string exportFilePath = Path.Combine(CachePath, $"{excel.Name}_{sheet}.json");
+                        if (File.Exists(exportFilePath))
+                            File.Delete(exportFilePath);
                     }
                 }
             }

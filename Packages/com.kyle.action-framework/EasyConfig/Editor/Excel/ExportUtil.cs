@@ -15,7 +15,7 @@ namespace EasyConfig.Editor
             if (sheetInfo == null)
                 throw new Exception($"导出类型必须使用 ExcelSheetAttribute 标记需要导出的页签名字规则 : {type.Name}");
 
-            var sheets = Read(path, sheetInfo.Name);
+            var sheets = Read(path, sheetInfo.Name, sheetInfo.MultiFile);
             IColumnReader reader = ColumnReaderUtil.ToRead<T>();
             foreach (var sheet in sheets)
             {
@@ -48,7 +48,7 @@ namespace EasyConfig.Editor
             var keyRead = new ColumnReader(ConvertUtil.ToConvert(typeof(TKey)), keyInfo.Name);
             IColumnReader reader = ColumnReaderUtil.ToRead<T>();
 
-            var sheets = Read(path, sheetInfo.Name);
+            var sheets = Read(path, sheetInfo.Name, sheetInfo.MultiFile);
             foreach (var sheet in sheets)
             {
                 for (int i = 0; i < sheet.Data.Count; ++i)
@@ -67,15 +67,18 @@ namespace EasyConfig.Editor
                 }
             }
         }
-        private static List<SheetData> Read(string path, string name)
+        private static List<SheetData> Read(string path, string name, bool multiFile)
         {
-            var files = Directory.GetFiles(path, $"{name}.json", SearchOption.TopDirectoryOnly);
+            var files = Directory.GetFiles(path, $"*_{name}.json", SearchOption.TopDirectoryOnly);
+            if (!multiFile && files.Length > 1)
+                Debug.LogWarning($"页签 \"{name}\" 存在多个来源文件，但未启用分表（MultiFile=false），只读取第一个：{files[0]}");
             List<SheetData> results = new List<SheetData>();
-            foreach (var file in files)
+            int count = multiFile ? files.Length : Mathf.Min(files.Length, 1);
+            for (int i = 0; i < count; i++)
             {
-                var json = File.ReadAllText(file);
+                var json = File.ReadAllText(files[i]);
                 var data = JsonUtility.FromJson<SheetData>(json);
-                data.Name = Path.GetFileNameWithoutExtension(file);
+                data.Name = Path.GetFileNameWithoutExtension(files[i]);
                 results.Add(data);
             }
             return results;
