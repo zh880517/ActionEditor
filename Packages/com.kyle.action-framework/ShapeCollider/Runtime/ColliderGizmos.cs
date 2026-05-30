@@ -24,6 +24,11 @@ namespace ShapeCollider
             Gizmos.matrix = matrix;
         }
 
+        public static void DrawAABB(ShapeAABB box)
+        {
+            Gizmos.DrawWireCube(box.Center, box.Extents * 2);
+        }
+
         public static void DrawLine(ShapeRay ray)
         {
             if (ray.Direction.sqrMagnitude <= 0.000001f || ray.Length <= 0)
@@ -32,9 +37,42 @@ namespace ShapeCollider
             Gizmos.DrawLine(ray.Position, ray.Position + ray.Direction.normalized * ray.Length);
         }
 
+        public static void DrawSegment(ShapeSegment segment)
+        {
+            Gizmos.DrawLine(segment.Start, segment.End);
+        }
+
         public static void DrawCylinder(ShapeCylinder cylinder)
         {
             DrawCylinder(cylinder.Position, cylinder.Radius, cylinder.Height);
+        }
+
+        public static void DrawCapsule(ShapeCapsule capsule)
+        {
+            if (capsule.Radius <= 0.001f)
+                return;
+
+            Vector3 start = capsule.Position;
+            Vector3 end = start;
+            if (capsule.Direction.sqrMagnitude > 0.000001f && capsule.Length > 0)
+                end = start + capsule.Direction.normalized * capsule.Length;
+
+            Gizmos.DrawWireSphere(start, capsule.Radius);
+            Gizmos.DrawWireSphere(end, capsule.Radius);
+            if ((end - start).sqrMagnitude <= 0.000001f)
+                return;
+
+            Vector3 axis = (end - start).normalized;
+            Vector3 right = Vector3.Cross(axis, Vector3.up);
+            if (right.sqrMagnitude <= 0.000001f)
+                right = Vector3.Cross(axis, Vector3.right);
+
+            right.Normalize();
+            Vector3 forward = Vector3.Cross(axis, right).normalized;
+            Gizmos.DrawLine(start + right * capsule.Radius, end + right * capsule.Radius);
+            Gizmos.DrawLine(start - right * capsule.Radius, end - right * capsule.Radius);
+            Gizmos.DrawLine(start + forward * capsule.Radius, end + forward * capsule.Radius);
+            Gizmos.DrawLine(start - forward * capsule.Radius, end - forward * capsule.Radius);
         }
 
         public static void DrawPie(ShapePie pie)

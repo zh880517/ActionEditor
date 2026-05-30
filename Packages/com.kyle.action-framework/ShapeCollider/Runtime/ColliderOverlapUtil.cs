@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 namespace ShapeCollider
 {
     public static class ColliderOverlapUtil
@@ -27,6 +27,504 @@ namespace ShapeCollider
 
             direction = ray.Direction / Mathf.Sqrt(sqrMagnitude);
             return true;
+        }
+
+        private static bool TryGetCapsuleSegment(in ShapeCapsule capsule, out Vector3 start, out Vector3 end)
+        {
+            start = capsule.Position;
+            float length = Mathf.Max(0, capsule.Length);
+            float sqrMagnitude = capsule.Direction.sqrMagnitude;
+            if (sqrMagnitude < Epsilon || length <= Epsilon)
+            {
+                end = start;
+                return false;
+            }
+
+            end = start + capsule.Direction / Mathf.Sqrt(sqrMagnitude) * length;
+            return true;
+        }
+
+        private static float SqrDistancePointAABB(Vector3 point, in ShapeAABB aabb)
+        {
+            Vector3 extents = new Vector3(Mathf.Abs(aabb.Extents.x), Mathf.Abs(aabb.Extents.y), Mathf.Abs(aabb.Extents.z));
+            Vector3 d = new Vector3(
+                Mathf.Max(Mathf.Abs(point.x - aabb.Center.x) - extents.x, 0),
+                Mathf.Max(Mathf.Abs(point.y - aabb.Center.y) - extents.y, 0),
+                Mathf.Max(Mathf.Abs(point.z - aabb.Center.z) - extents.z, 0));
+            return d.sqrMagnitude;
+        }
+
+        private static bool IsPointInAABB(Vector3 point, in ShapeAABB aabb)
+        {
+            Vector3 extents = new Vector3(Mathf.Abs(aabb.Extents.x), Mathf.Abs(aabb.Extents.y), Mathf.Abs(aabb.Extents.z));
+            Vector3 offset = point - aabb.Center;
+            return Mathf.Abs(offset.x) <= extents.x && Mathf.Abs(offset.y) <= extents.y && Mathf.Abs(offset.z) <= extents.z;
+        }
+
+        private static Vector3 Abs(Vector3 vector)
+        {
+            return new Vector3(Mathf.Abs(vector.x), Mathf.Abs(vector.y), Mathf.Abs(vector.z));
+        }
+
+        private static Vector3 ToBoxLocal(Vector3 point, in ShapeBox box)
+        {
+            Vector3 offset = point - box.Position;
+            Vector2 xz = ShapeSDFUtil.Rotate(offset.ToV2(), -box.YDegree);
+            return new Vector3(xz.x, offset.y, xz.y);
+        }
+
+        private static Vector3 ToBoxLocalDirection(Vector3 direction, in ShapeBox box)
+        {
+            Vector2 xz = ShapeSDFUtil.Rotate(direction.ToV2(), -box.YDegree);
+            return new Vector3(xz.x, direction.y, xz.y);
+        }
+
+        private static ShapeAABB BoxLocalAABB(in ShapeBox box)
+        {
+            return new ShapeAABB { Center = Vector3.zero, Extents = Abs(box.Extern) };
+        }
+
+        private static Vector2[] GetBoxCorners2D(in ShapeBox box)
+        {
+            Vector3 extents = Abs(box.Extern);
+            Vector2 right = ShapeSDFUtil.Rotate(new Vector2(1, 0), box.YDegree) * extents.x;
+            Vector2 forward = ShapeSDFUtil.Rotate(new Vector2(0, 1), box.YDegree) * extents.z;
+            Vector2 center = box.Position.ToV2();
+            return new[]
+            {
+                center - right - forward,
+                center + right - forward,
+                center + right + forward,
+                center - right + forward,
+            };
+        }
+
+        private static bool OverlapOBB2D(in ShapeBox c1, in ShapeBox c2)
+        {
+            Vector2[] corners1 = GetBoxCorners2D(c1);
+            Vector2[] corners2 = GetBoxCorners2D(c2);
+            return OverlapOnBoxAxes(corners1, c1.YDegree, corners2)
+                && OverlapOnBoxAxes(corners1, c2.YDegree, corners2);
+        }
+
+        private static bool OverlapOnBoxAxes(Vector2[] corners1, float yDegree, Vector2[] corners2)
+        {
+            Vector2 axisX = ShapeSDFUtil.Rotate(new Vector2(1, 0), yDegree);
+            Vector2 axisZ = ShapeSDFUtil.Rotate(new Vector2(0, 1), yDegree);
+            return OverlapProjection(corners1, corners2, axisX) && OverlapProjection(corners1, corners2, axisZ);
+        }
+
+        private static bool OverlapProjection(Vector2[] corners1, Vector2[] corners2, Vector2 axis)
+        {
+            Project(corners1, axis, out float min1, out float max1);
+            Project(corners2, axis, out float min2, out float max2);
+            return max1 >= min2 && min1 <= max2;
+        }
+
+        private static void Project(Vector2[] corners, Vector2 axis, out float min, out float max)
+        {
+            min = Vector2.Dot(corners[0], axis);
+            max = min;
+            for (int i = 1; i < corners.Length; i++)
+            {
+                float value = Vector2.Dot(corners[i], axis);
+                min = Mathf.Min(min, value);
+                max = Mathf.Max(max, value);
+            }
+        }
+
+        private static bool OverlapHeight(float min1, float max1, float min2, float max2)
+        {
+            return max1 >= min2 && min1 <= max2;
+        }
+
+        private static bool IsPointInSector(Vector2 point, in ShapePie pie)
+        {
+            return ShapeSDFUtil.SectorSDF(point, pie.Position.ToV2(), pie.YDegree, pie.Angle, pie.Radius) <= Epsilon;
+        }
+
+        private static bool SegmentIntersectsSector(Vector2 start, Vector2 end, in ShapePie pie)
+        {
+            if (IsPointInSector(start, pie) || IsPointInSector(end, pie))
+                return true;
+
+            Vector2 center = pie.Position.ToV2();
+            if (SegmentSDFSqr(center, start, end) <= Epsilon && IsPointInSector(center, pie))
+                return true;
+
+            float halfAngle = pie.Angle * 0.5f;
+            Vector2 leftDir = ShapeSDFUtil.Rotate(new Vector2(0, 1), pie.YDegree - halfAngle);
+            Vector2 rightDir = ShapeSDFUtil.Rotate(new Vector2(0, 1), pie.YDegree + halfAngle);
+            Vector2 leftEnd = center + leftDir * pie.Radius;
+            Vector2 rightEnd = center + rightDir * pie.Radius;
+            if (SegmentSegmentSqrDistance2D(start, end, center, leftEnd) <= Epsilon)
+                return true;
+            if (SegmentSegmentSqrDistance2D(start, end, center, rightEnd) <= Epsilon)
+                return true;
+
+            return SegmentIntersectsSectorArc(start, end, pie);
+        }
+
+        private static bool SegmentIntersectsSectorArc(Vector2 start, Vector2 end, in ShapePie pie)
+        {
+            Vector2 center = pie.Position.ToV2();
+            Vector2 d = end - start;
+            float a = Vector2.Dot(d, d);
+            if (a <= Epsilon)
+                return false;
+
+            Vector2 f = start - center;
+            float b = 2 * Vector2.Dot(f, d);
+            float c = Vector2.Dot(f, f) - pie.Radius * pie.Radius;
+            float discriminant = b * b - 4 * a * c;
+            if (discriminant < 0)
+                return false;
+
+            float sqrt = Mathf.Sqrt(discriminant);
+            float inv = 1 / (2 * a);
+            float t1 = (-b - sqrt) * inv;
+            float t2 = (-b + sqrt) * inv;
+            if (t1 >= 0 && t1 <= 1 && IsPointInSector(start + d * t1, pie))
+                return true;
+
+            return t2 >= 0 && t2 <= 1 && IsPointInSector(start + d * t2, pie);
+        }
+
+        private static float SegmentSegmentSqrDistance2D(Vector2 p1, Vector2 q1, Vector2 p2, Vector2 q2)
+        {
+            Vector2 d1 = q1 - p1;
+            Vector2 d2 = q2 - p2;
+            Vector2 r = p1 - p2;
+            float a = Vector2.Dot(d1, d1);
+            float e = Vector2.Dot(d2, d2);
+            float f = Vector2.Dot(d2, r);
+
+            float s;
+            float t;
+            if (a <= Epsilon && e <= Epsilon)
+                return (p1 - p2).sqrMagnitude;
+
+            if (a <= Epsilon)
+            {
+                s = 0;
+                t = Mathf.Clamp01(f / e);
+            }
+            else
+            {
+                float c = Vector2.Dot(d1, r);
+                if (e <= Epsilon)
+                {
+                    t = 0;
+                    s = Mathf.Clamp01(-c / a);
+                }
+                else
+                {
+                    float b = Vector2.Dot(d1, d2);
+                    float denom = a * e - b * b;
+                    s = denom > Epsilon ? Mathf.Clamp01((b * f - c * e) / denom) : 0;
+                    t = (b * s + f) / e;
+
+                    if (t < 0)
+                    {
+                        t = 0;
+                        s = Mathf.Clamp01(-c / a);
+                    }
+                    else if (t > 1)
+                    {
+                        t = 1;
+                        s = Mathf.Clamp01((b - c) / a);
+                    }
+                }
+            }
+
+            Vector2 c1 = p1 + d1 * s;
+            Vector2 c2 = p2 + d2 * t;
+            return (c1 - c2).sqrMagnitude;
+        }
+
+        private static bool OverlapSectorAABB2D(in ShapePie pie, Vector2 min, Vector2 max)
+        {
+            Vector2 p0 = new Vector2(min.x, min.y);
+            Vector2 p1 = new Vector2(max.x, min.y);
+            Vector2 p2 = new Vector2(max.x, max.y);
+            Vector2 p3 = new Vector2(min.x, max.y);
+            if (IsPointInSector(p0, pie) || IsPointInSector(p1, pie) || IsPointInSector(p2, pie) || IsPointInSector(p3, pie))
+                return true;
+
+            Vector2 center = pie.Position.ToV2();
+            if (center.x >= min.x && center.x <= max.x && center.y >= min.y && center.y <= max.y)
+                return true;
+
+            return SegmentIntersectsSector(p0, p1, pie)
+                || SegmentIntersectsSector(p1, p2, pie)
+                || SegmentIntersectsSector(p2, p3, pie)
+                || SegmentIntersectsSector(p3, p0, pie);
+        }
+
+        private static bool OverlapSectorOBB2D(in ShapePie pie, in ShapeBox box)
+        {
+            Vector2[] corners = GetBoxCorners2D(box);
+            if (IsPointInSector(corners[0], pie) || IsPointInSector(corners[1], pie) || IsPointInSector(corners[2], pie) || IsPointInSector(corners[3], pie))
+                return true;
+
+            Vector3 extents = Abs(box.Extern);
+            Vector3 localPieCenter = ToBoxLocal(pie.Position, box);
+            if (Mathf.Abs(localPieCenter.x) <= extents.x && Mathf.Abs(localPieCenter.z) <= extents.z)
+                return true;
+
+            return SegmentIntersectsSector(corners[0], corners[1], pie)
+                || SegmentIntersectsSector(corners[1], corners[2], pie)
+                || SegmentIntersectsSector(corners[2], corners[3], pie)
+                || SegmentIntersectsSector(corners[3], corners[0], pie);
+        }
+
+        private static bool SectorArcIntersectsSectorArc(in ShapePie c1, in ShapePie c2)
+        {
+            Vector2 center1 = c1.Position.ToV2();
+            Vector2 center2 = c2.Position.ToV2();
+            Vector2 delta = center2 - center1;
+            float distance = delta.magnitude;
+            if (distance <= Epsilon)
+                return false;
+
+            float radius1 = c1.Radius;
+            float radius2 = c2.Radius;
+            if (distance > radius1 + radius2 || distance < Mathf.Abs(radius1 - radius2))
+                return false;
+
+            float a = (radius1 * radius1 - radius2 * radius2 + distance * distance) / (2 * distance);
+            float hSqr = radius1 * radius1 - a * a;
+            if (hSqr < 0)
+                return false;
+
+            Vector2 dir = delta / distance;
+            Vector2 basePoint = center1 + dir * a;
+            Vector2 perp = new Vector2(-dir.y, dir.x) * Mathf.Sqrt(hSqr);
+            Vector2 p1 = basePoint + perp;
+            Vector2 p2 = basePoint - perp;
+            return (IsPointInSector(p1, c1) && IsPointInSector(p1, c2))
+                || (IsPointInSector(p2, c1) && IsPointInSector(p2, c2));
+        }
+
+        private static bool OverlapPieCapsuleBySamples(in ShapePie pie, Vector3 start, Vector3 end, float radius)
+        {
+            Vector3 segment = end - start;
+            return OverlapPieCapsuleSample(pie, start, radius)
+                || OverlapPieCapsuleSample(pie, end, radius)
+                || OverlapPieCapsuleSample(pie, ClosestPoint(start, end, pie.Position), radius)
+                || OverlapPieCapsuleYBoundarySample(pie, start, segment, pie.Position.y, radius)
+                || OverlapPieCapsuleYBoundarySample(pie, start, segment, pie.Position.y + pie.Height, radius)
+                || OverlapPieCapsuleYBoundarySample(pie, start, segment, pie.Position.y - radius, radius)
+                || OverlapPieCapsuleYBoundarySample(pie, start, segment, pie.Position.y + pie.Height + radius, radius);
+        }
+
+        private static bool OverlapPieCapsuleYBoundarySample(in ShapePie pie, Vector3 start, Vector3 segment, float y, float radius)
+        {
+            if (Mathf.Abs(segment.y) <= Epsilon)
+                return false;
+
+            float t = (y - start.y) / segment.y;
+            if (t < 0 || t > 1)
+                return false;
+
+            return OverlapPieCapsuleSample(pie, start + segment * t, radius);
+        }
+
+        private static bool OverlapPieCapsuleSample(in ShapePie pie, Vector3 point, float radius)
+        {
+            float bottom = pie.Position.y;
+            float top = pie.Position.y + pie.Height;
+            float offsetY = 0;
+            if (point.y < bottom)
+                offsetY = bottom - point.y;
+            else if (point.y > top)
+                offsetY = point.y - top;
+
+            if (offsetY > radius)
+                return false;
+
+            float horizontalRadius = Mathf.Sqrt(Mathf.Max(0, radius * radius - offsetY * offsetY));
+            float sdf = ShapeSDFUtil.SectorSDF(point.ToV2(), pie.Position.ToV2(), pie.YDegree, pie.Angle, pie.Radius);
+            return sdf <= horizontalRadius;
+        }
+
+        private static float SegmentSegmentSqrDistance(Vector3 p1, Vector3 q1, Vector3 p2, Vector3 q2)
+        {
+            Vector3 d1 = q1 - p1;
+            Vector3 d2 = q2 - p2;
+            Vector3 r = p1 - p2;
+            float a = Vector3.Dot(d1, d1);
+            float e = Vector3.Dot(d2, d2);
+            float f = Vector3.Dot(d2, r);
+
+            float s;
+            float t;
+            if (a <= Epsilon && e <= Epsilon)
+                return Vector3.SqrMagnitude(p1 - p2);
+
+            if (a <= Epsilon)
+            {
+                s = 0;
+                t = Mathf.Clamp01(f / e);
+            }
+            else
+            {
+                float c = Vector3.Dot(d1, r);
+                if (e <= Epsilon)
+                {
+                    t = 0;
+                    s = Mathf.Clamp01(-c / a);
+                }
+                else
+                {
+                    float b = Vector3.Dot(d1, d2);
+                    float denom = a * e - b * b;
+                    s = denom > Epsilon ? Mathf.Clamp01((b * f - c * e) / denom) : 0;
+                    t = (b * s + f) / e;
+
+                    if (t < 0)
+                    {
+                        t = 0;
+                        s = Mathf.Clamp01(-c / a);
+                    }
+                    else if (t > 1)
+                    {
+                        t = 1;
+                        s = Mathf.Clamp01((b - c) / a);
+                    }
+                }
+            }
+
+            Vector3 c1 = p1 + d1 * s;
+            Vector3 c2 = p2 + d2 * t;
+            return Vector3.SqrMagnitude(c1 - c2);
+        }
+
+        private static float SqrDistanceSegmentAABB(Vector3 start, Vector3 end, in ShapeAABB aabb)
+        {
+            ShapeSegment segment = new ShapeSegment { Start = start, End = end };
+            if (Overlap(segment, aabb))
+                return 0;
+
+            float sqrDistance = Mathf.Min(SqrDistancePointAABB(start, aabb), SqrDistancePointAABB(end, aabb));
+            Vector3 extents = Abs(aabb.Extents);
+            Vector3 min = aabb.Center - extents;
+            Vector3 max = aabb.Center + extents;
+
+            Vector3 p000 = new Vector3(min.x, min.y, min.z);
+            Vector3 p001 = new Vector3(min.x, min.y, max.z);
+            Vector3 p010 = new Vector3(min.x, max.y, min.z);
+            Vector3 p011 = new Vector3(min.x, max.y, max.z);
+            Vector3 p100 = new Vector3(max.x, min.y, min.z);
+            Vector3 p101 = new Vector3(max.x, min.y, max.z);
+            Vector3 p110 = new Vector3(max.x, max.y, min.z);
+            Vector3 p111 = new Vector3(max.x, max.y, max.z);
+
+            sqrDistance = Mathf.Min(sqrDistance, SegmentSegmentSqrDistance(start, end, p000, p001));
+            sqrDistance = Mathf.Min(sqrDistance, SegmentSegmentSqrDistance(start, end, p010, p011));
+            sqrDistance = Mathf.Min(sqrDistance, SegmentSegmentSqrDistance(start, end, p100, p101));
+            sqrDistance = Mathf.Min(sqrDistance, SegmentSegmentSqrDistance(start, end, p110, p111));
+            sqrDistance = Mathf.Min(sqrDistance, SegmentSegmentSqrDistance(start, end, p000, p010));
+            sqrDistance = Mathf.Min(sqrDistance, SegmentSegmentSqrDistance(start, end, p001, p011));
+            sqrDistance = Mathf.Min(sqrDistance, SegmentSegmentSqrDistance(start, end, p100, p110));
+            sqrDistance = Mathf.Min(sqrDistance, SegmentSegmentSqrDistance(start, end, p101, p111));
+            sqrDistance = Mathf.Min(sqrDistance, SegmentSegmentSqrDistance(start, end, p000, p100));
+            sqrDistance = Mathf.Min(sqrDistance, SegmentSegmentSqrDistance(start, end, p001, p101));
+            sqrDistance = Mathf.Min(sqrDistance, SegmentSegmentSqrDistance(start, end, p010, p110));
+            sqrDistance = Mathf.Min(sqrDistance, SegmentSegmentSqrDistance(start, end, p011, p111));
+            return sqrDistance;
+        }
+
+        private static bool RaySphere(Vector3 center, float radius, in ShapeRay ray, out float t)
+        {
+            t = 0;
+            radius = Mathf.Max(0, radius);
+            float radiusSquare = radius * radius;
+            if (!TryNormalizeRay(ray, out Vector3 direction, out float length))
+                return Vector3.SqrMagnitude(center - ray.Position) <= radiusSquare;
+
+            Vector3 oc = center - ray.Position;
+            if (Vector3.Dot(oc, oc) <= radiusSquare)
+                return true;
+
+            if (length <= Epsilon)
+                return false;
+
+            float projection = Vector3.Dot(oc, direction);
+            if (projection < 0)
+                return false;
+
+            float distance2 = Vector3.Dot(oc, oc) - projection * projection;
+            if (distance2 > radiusSquare)
+                return false;
+
+            t = projection - Mathf.Sqrt(Mathf.Max(0, radiusSquare - distance2));
+            return t <= length;
+        }
+
+        private static bool RayCapsule(in ShapeRay ray, in ShapeCapsule capsule, out float t)
+        {
+            t = float.MaxValue;
+            TryGetCapsuleSegment(capsule, out Vector3 capsuleStart, out Vector3 capsuleEnd);
+            float radius = Mathf.Max(0, capsule.Radius);
+
+            if (!TryNormalizeRay(ray, out Vector3 rayDirection, out float rayLength))
+            {
+                float sqrDistance = SegmentSegmentSqrDistance(ray.Position, ray.Position, capsuleStart, capsuleEnd);
+                t = 0;
+                return sqrDistance <= radius * radius;
+            }
+
+            if (SegmentSegmentSqrDistance(ray.Position, ray.Position, capsuleStart, capsuleEnd) <= radius * radius)
+            {
+                t = 0;
+                return true;
+            }
+
+            if (rayLength <= Epsilon)
+                return false;
+
+            ShapeRay normalizedRay = new ShapeRay { Position = ray.Position, Direction = rayDirection, Length = rayLength };
+            if (RaySphere(capsuleStart, radius, normalizedRay, out float enterStart))
+                t = Mathf.Min(t, enterStart);
+            if (RaySphere(capsuleEnd, radius, normalizedRay, out float enterEnd))
+                t = Mathf.Min(t, enterEnd);
+
+            Vector3 axis = capsuleEnd - capsuleStart;
+            float axisLength = axis.magnitude;
+            if (axisLength > Epsilon)
+            {
+                Vector3 axisDirection = axis / axisLength;
+                Vector3 m = ray.Position - capsuleStart;
+                Vector3 d = rayDirection - axisDirection * Vector3.Dot(rayDirection, axisDirection);
+                Vector3 q = m - axisDirection * Vector3.Dot(m, axisDirection);
+                float a = Vector3.Dot(d, d);
+                float b = 2 * Vector3.Dot(q, d);
+                float c = Vector3.Dot(q, q) - radius * radius;
+                float discriminant = b * b - 4 * a * c;
+                if (a > Epsilon && discriminant >= 0)
+                {
+                    float sqrt = Mathf.Sqrt(discriminant);
+                    float inv = 1 / (2 * a);
+                    float enter = (-b - sqrt) * inv;
+                    float exit = (-b + sqrt) * inv;
+                    if (enter >= 0 && enter <= rayLength)
+                    {
+                        float axisT = Vector3.Dot(m + rayDirection * enter, axisDirection);
+                        if (axisT >= 0 && axisT <= axisLength)
+                            t = Mathf.Min(t, enter);
+                    }
+
+                    if (exit >= 0 && exit <= rayLength)
+                    {
+                        float axisT = Vector3.Dot(m + rayDirection * exit, axisDirection);
+                        if (axisT >= 0 && axisT <= axisLength)
+                            t = Mathf.Min(t, exit);
+                    }
+                }
+            }
+
+            return t <= rayLength;
         }
 
         public static Vector3 ClosestPoint(Vector3 start, Vector3 end, Vector3 point)
@@ -59,36 +557,7 @@ namespace ShapeCollider
         }
         public static bool Overlap(in ShapeSphere c1, in ShapeRay c2, out float t)
         {
-            t = 0;
-            if (!TryNormalizeRay(c2, out Vector3 direction, out float length))
-                return Vector3.SqrMagnitude(c1.Position - c2.Position) <= c1.Radius * c1.Radius;
-
-            Vector3 oc = c1.Position - c2.Position;
-            float radiusSquare = c1.Radius * c1.Radius;
-            if (Vector3.Dot(oc, oc) <= radiusSquare)
-                return true;
-
-            if (length <= Epsilon)
-                return false;
-
-            float projection = Vector3.Dot(oc, direction);
-            if (projection < 0)
-                return false;
-            float oc2 = Vector3.Dot(oc, oc);
-            float distance2 = oc2 - projection * projection;
-            if (distance2 > radiusSquare)
-                return false;
-            float discriminant = radiusSquare - distance2;
-            if (discriminant < float.Epsilon)
-            {
-                t = projection;
-            }
-            else
-            {
-                discriminant = Mathf.Sqrt(discriminant);
-                t = projection - discriminant;
-            }
-            return t <= length;
+            return RaySphere(c1.Position, c1.Radius, c2, out t);
         }
         //判断圆与
         public static bool Overlap(in ShapeSphere c1, in ShapeCylinder c2)
@@ -159,10 +628,87 @@ namespace ShapeCollider
             float sdf = ShapeSDFUtil.SectorSDF(c1.Position.ToV2(), c2.Position.ToV2(), c2.YDegree, c2.Angle, c2.Radius);
             return sdf <= radius;
         }
+        public static bool Overlap(in ShapeSphere c1, in ShapeCapsule c2)
+        {
+            TryGetCapsuleSegment(c2, out Vector3 start, out Vector3 end);
+            float radius = c1.Radius + c2.Radius;
+            return Vector3.SqrMagnitude(ClosestPoint(start, end, c1.Position) - c1.Position) <= radius * radius;
+        }
+        public static bool Overlap(in ShapeSphere c1, in ShapeSegment c2)
+        {
+            return Vector3.SqrMagnitude(ClosestPoint(c2.Start, c2.End, c1.Position) - c1.Position) <= c1.Radius * c1.Radius;
+        }
+        public static bool Overlap(in ShapeSphere c1, in ShapeAABB c2)
+        {
+            return SqrDistancePointAABB(c1.Position, c2) <= c1.Radius * c1.Radius;
+        }
 
         public static bool Overlap(in ShapeBox c1, in ShapeSphere c2) { return Overlap(c2, c1); }
         public static bool Overlap(in ShapePie c1, in ShapeSphere c2) { return Overlap(c2, c1); }
         public static bool Overlap(in ShapeRay c1, in ShapeSphere c2, out float t) { return Overlap(c2, c1, out t); }
+        public static bool Overlap(in ShapeCapsule c1, in ShapeSphere c2) { return Overlap(c2, c1); }
+        public static bool Overlap(in ShapeSegment c1, in ShapeSphere c2) { return Overlap(c2, c1); }
+        public static bool Overlap(in ShapeAABB c1, in ShapeSphere c2) { return Overlap(c2, c1); }
+        #endregion
+
+        #region 盒体
+        public static bool Overlap(in ShapeBox c1, in ShapeBox c2)
+        {
+            if (!OverlapHeight(c1.Position.y - Mathf.Abs(c1.Extern.y), c1.Position.y + Mathf.Abs(c1.Extern.y),
+                c2.Position.y - Mathf.Abs(c2.Extern.y), c2.Position.y + Mathf.Abs(c2.Extern.y)))
+                return false;
+
+            return OverlapOBB2D(c1, c2);
+        }
+        public static bool Overlap(in ShapeBox c1, in ShapeCapsule c2)
+        {
+            TryGetCapsuleSegment(c2, out Vector3 start, out Vector3 end);
+            ShapeAABB localBox = BoxLocalAABB(c1);
+            Vector3 localStart = ToBoxLocal(start, c1);
+            Vector3 localEnd = ToBoxLocal(end, c1);
+            float radius = Mathf.Max(0, c2.Radius);
+            return SqrDistanceSegmentAABB(localStart, localEnd, localBox) <= radius * radius;
+        }
+        public static bool Overlap(in ShapeBox c1, in ShapeSegment c2)
+        {
+            ShapeAABB localBox = BoxLocalAABB(c1);
+            ShapeSegment localSegment = new ShapeSegment
+            {
+                Start = ToBoxLocal(c2.Start, c1),
+                End = ToBoxLocal(c2.End, c1),
+            };
+            return Overlap(localSegment, localBox);
+        }
+        public static bool Overlap(in ShapeBox c1, in ShapeAABB c2)
+        {
+            ShapeBox box = new ShapeBox { Position = c2.Center, Extern = Abs(c2.Extents), YDegree = 0 };
+            return Overlap(c1, box);
+        }
+        public static bool Overlap(in ShapeBox c1, in ShapePie c2)
+        {
+            if (!OverlapHeight(c1.Position.y - Mathf.Abs(c1.Extern.y), c1.Position.y + Mathf.Abs(c1.Extern.y),
+                c2.Position.y, c2.Position.y + c2.Height))
+                return false;
+
+            return OverlapSectorOBB2D(c2, c1);
+        }
+        public static bool Overlap(in ShapeBox c1, in ShapeRay c2, out float t)
+        {
+            ShapeAABB localBox = BoxLocalAABB(c1);
+            ShapeRay localRay = new ShapeRay
+            {
+                Position = ToBoxLocal(c2.Position, c1),
+                Direction = ToBoxLocalDirection(c2.Direction, c1),
+                Length = c2.Length,
+            };
+            return Overlap(localBox, localRay, out t);
+        }
+
+        public static bool Overlap(in ShapeCapsule c1, in ShapeBox c2) { return Overlap(c2, c1); }
+        public static bool Overlap(in ShapeSegment c1, in ShapeBox c2) { return Overlap(c2, c1); }
+        public static bool Overlap(in ShapeAABB c1, in ShapeBox c2) { return Overlap(c2, c1); }
+        public static bool Overlap(in ShapePie c1, in ShapeBox c2) { return Overlap(c2, c1); }
+        public static bool Overlap(in ShapeRay c1, in ShapeBox c2, out float t) { return Overlap(c2, c1, out t); }
         #endregion
 
         #region 圆柱
@@ -298,6 +844,41 @@ namespace ShapeCollider
 
             return t <= length;
         }
+        public static bool Overlap(in ShapeCylinder c1, in ShapeCapsule c2)
+        {
+            TryGetCapsuleSegment(c2, out Vector3 start, out Vector3 end);
+            float radius = Mathf.Max(0, c2.Radius);
+            ShapeSphere startSphere = new ShapeSphere { Position = start, Radius = radius };
+            ShapeSphere endSphere = new ShapeSphere { Position = end, Radius = radius };
+            if (Overlap(startSphere, c1) || Overlap(endSphere, c1))
+                return true;
+
+            ShapeCylinder expanded = new ShapeCylinder
+            {
+                Position = c1.Position - Vector3.up * radius,
+                Radius = c1.Radius + radius,
+                Height = c1.Height + radius * 2,
+            };
+            ShapeRay segmentRay = new ShapeRay { Position = start, Direction = end - start, Length = (end - start).magnitude };
+            return Overlap(expanded, segmentRay, out _);
+        }
+        public static bool Overlap(in ShapeCylinder c1, in ShapeSegment c2)
+        {
+            Vector3 direction = c2.End - c2.Start;
+            ShapeRay ray = new ShapeRay { Position = c2.Start, Direction = direction, Length = direction.magnitude };
+            return Overlap(c1, ray, out _);
+        }
+        public static bool Overlap(in ShapeCylinder c1, in ShapeAABB c2)
+        {
+            Vector3 extents = Abs(c2.Extents);
+            if (!OverlapHeight(c1.Position.y, c1.Position.y + c1.Height, c2.Center.y - extents.y, c2.Center.y + extents.y))
+                return false;
+
+            Vector2 d = new Vector2(
+                Mathf.Max(Mathf.Abs(c1.Position.x - c2.Center.x) - extents.x, 0),
+                Mathf.Max(Mathf.Abs(c1.Position.z - c2.Center.z) - extents.z, 0));
+            return d.sqrMagnitude <= c1.Radius * c1.Radius;
+        }
 
         private static bool IsPointInCylinder(Vector3 point, in ShapeCylinder cylinder)
         {
@@ -311,6 +892,190 @@ namespace ShapeCollider
         public static bool Overlap(in ShapeBox c1, in ShapeCylinder c2) { return Overlap(c2, c1); }
         public static bool Overlap(in ShapePie c1, in ShapeCylinder c2) { return Overlap(c2, c1); }
         public static bool Overlap(in ShapeRay c1, in ShapeCylinder c2, out float t) { return Overlap(c2, c1, out t); }
+        public static bool Overlap(in ShapeCapsule c1, in ShapeCylinder c2) { return Overlap(c2, c1); }
+        public static bool Overlap(in ShapeSegment c1, in ShapeCylinder c2) { return Overlap(c2, c1); }
+        public static bool Overlap(in ShapeAABB c1, in ShapeCylinder c2) { return Overlap(c2, c1); }
+        #endregion
+
+        #region 扇形柱
+        public static bool Overlap(in ShapePie c1, in ShapePie c2)
+        {
+            if (!OverlapHeight(c1.Position.y, c1.Position.y + c1.Height, c2.Position.y, c2.Position.y + c2.Height))
+                return false;
+
+            Vector2 center1 = c1.Position.ToV2();
+            Vector2 center2 = c2.Position.ToV2();
+            if (IsPointInSector(center1, c2) || IsPointInSector(center2, c1))
+                return true;
+
+            float half1 = c1.Angle * 0.5f;
+            float half2 = c2.Angle * 0.5f;
+            Vector2 c1Left = center1 + ShapeSDFUtil.Rotate(new Vector2(0, 1), c1.YDegree - half1) * c1.Radius;
+            Vector2 c1Right = center1 + ShapeSDFUtil.Rotate(new Vector2(0, 1), c1.YDegree + half1) * c1.Radius;
+            Vector2 c2Left = center2 + ShapeSDFUtil.Rotate(new Vector2(0, 1), c2.YDegree - half2) * c2.Radius;
+            Vector2 c2Right = center2 + ShapeSDFUtil.Rotate(new Vector2(0, 1), c2.YDegree + half2) * c2.Radius;
+
+            return SegmentIntersectsSector(center1, c1Left, c2)
+                || SegmentIntersectsSector(center1, c1Right, c2)
+                || SegmentIntersectsSector(center2, c2Left, c1)
+                || SegmentIntersectsSector(center2, c2Right, c1)
+                || SectorArcIntersectsSectorArc(c1, c2);
+        }
+        public static bool Overlap(in ShapePie c1, in ShapeAABB c2)
+        {
+            Vector3 extents = new Vector3(Mathf.Abs(c2.Extents.x), Mathf.Abs(c2.Extents.y), Mathf.Abs(c2.Extents.z));
+            float pieBottom = c1.Position.y;
+            float pieTop = c1.Position.y + c1.Height;
+            if (!OverlapHeight(pieBottom, pieTop, c2.Center.y - extents.y, c2.Center.y + extents.y))
+                return false;
+
+            Vector2 min = new Vector2(c2.Center.x - extents.x, c2.Center.z - extents.z);
+            Vector2 max = new Vector2(c2.Center.x + extents.x, c2.Center.z + extents.z);
+            return OverlapSectorAABB2D(c1, min, max);
+        }
+
+        public static bool Overlap(in ShapePie c1, in ShapeCapsule c2)
+        {
+            TryGetCapsuleSegment(c2, out Vector3 start, out Vector3 end);
+            float radius = Mathf.Max(0, c2.Radius);
+            ShapeSphere startSphere = new ShapeSphere { Position = start, Radius = radius };
+            ShapeSphere endSphere = new ShapeSphere { Position = end, Radius = radius };
+            if (Overlap(startSphere, c1) || Overlap(endSphere, c1))
+                return true;
+
+            return OverlapPieCapsuleBySamples(c1, start, end, radius);
+        }
+        public static bool Overlap(in ShapePie c1, in ShapeSegment c2)
+        {
+            float minY = Mathf.Min(c2.Start.y, c2.End.y);
+            float maxY = Mathf.Max(c2.Start.y, c2.End.y);
+            if (!OverlapHeight(c1.Position.y, c1.Position.y + c1.Height, minY, maxY))
+                return false;
+
+            if (OverlapPieCapsuleSample(c1, c2.Start, 0) || OverlapPieCapsuleSample(c1, c2.End, 0))
+                return true;
+
+            Vector3 segment = c2.End - c2.Start;
+            if (OverlapPieCapsuleYBoundarySample(c1, c2.Start, segment, c1.Position.y, 0)
+                || OverlapPieCapsuleYBoundarySample(c1, c2.Start, segment, c1.Position.y + c1.Height, 0))
+                return true;
+
+            return SegmentIntersectsSector(c2.Start.ToV2(), c2.End.ToV2(), c1);
+        }
+
+        public static bool Overlap(in ShapeAABB c1, in ShapePie c2) { return Overlap(c2, c1); }
+        public static bool Overlap(in ShapeCapsule c1, in ShapePie c2) { return Overlap(c2, c1); }
+        public static bool Overlap(in ShapeSegment c1, in ShapePie c2) { return Overlap(c2, c1); }
+        #endregion
+
+        #region 胶囊体
+        public static bool Overlap(in ShapeCapsule c1, in ShapeCapsule c2)
+        {
+            TryGetCapsuleSegment(c1, out Vector3 start1, out Vector3 end1);
+            TryGetCapsuleSegment(c2, out Vector3 start2, out Vector3 end2);
+            float radius = c1.Radius + c2.Radius;
+            return SegmentSegmentSqrDistance(start1, end1, start2, end2) <= radius * radius;
+        }
+        public static bool Overlap(in ShapeCapsule c1, in ShapeSegment c2)
+        {
+            TryGetCapsuleSegment(c1, out Vector3 start, out Vector3 end);
+            return SegmentSegmentSqrDistance(start, end, c2.Start, c2.End) <= c1.Radius * c1.Radius;
+        }
+        public static bool Overlap(in ShapeCapsule c1, in ShapeRay c2, out float t)
+        {
+            return RayCapsule(c2, c1, out t);
+        }
+        public static bool Overlap(in ShapeCapsule c1, in ShapeAABB c2)
+        {
+            TryGetCapsuleSegment(c1, out Vector3 start, out Vector3 end);
+            float radius = Mathf.Max(0, c1.Radius);
+            return SqrDistanceSegmentAABB(start, end, c2) <= radius * radius;
+        }
+        public static bool Overlap(in ShapeSegment c1, in ShapeCapsule c2) { return Overlap(c2, c1); }
+        public static bool Overlap(in ShapeRay c1, in ShapeCapsule c2, out float t) { return Overlap(c2, c1, out t); }
+        public static bool Overlap(in ShapeAABB c1, in ShapeCapsule c2) { return Overlap(c2, c1); }
+        #endregion
+
+        #region 线段
+        public static bool Overlap(in ShapeSegment c1, in ShapeSegment c2)
+        {
+            return SegmentSegmentSqrDistance(c1.Start, c1.End, c2.Start, c2.End) <= Epsilon;
+        }
+        public static bool Overlap(in ShapeSegment c1, in ShapeAABB c2)
+        {
+            Vector3 direction = c1.End - c1.Start;
+            ShapeRay ray = new ShapeRay { Position = c1.Start, Direction = direction, Length = direction.magnitude };
+            return Overlap(c2, ray, out _);
+        }
+        public static bool Overlap(in ShapeSegment c1, in ShapeRay c2)
+        {
+            if (!TryNormalizeRay(c2, out Vector3 direction, out float length))
+                return Vector3.SqrMagnitude(ClosestPoint(c1.Start, c1.End, c2.Position) - c2.Position) <= Epsilon;
+
+            Vector3 rayEnd = c2.Position + direction * length;
+            return SegmentSegmentSqrDistance(c1.Start, c1.End, c2.Position, rayEnd) <= Epsilon;
+        }
+        public static bool Overlap(in ShapeAABB c1, in ShapeSegment c2) { return Overlap(c2, c1); }
+        public static bool Overlap(in ShapeRay c1, in ShapeSegment c2) { return Overlap(c2, c1); }
+        #endregion
+
+        #region AABB
+        public static bool Overlap(in ShapeAABB c1, in ShapeAABB c2)
+        {
+            Vector3 extents1 = new Vector3(Mathf.Abs(c1.Extents.x), Mathf.Abs(c1.Extents.y), Mathf.Abs(c1.Extents.z));
+            Vector3 extents2 = new Vector3(Mathf.Abs(c2.Extents.x), Mathf.Abs(c2.Extents.y), Mathf.Abs(c2.Extents.z));
+            Vector3 offset = c1.Center - c2.Center;
+            return Mathf.Abs(offset.x) <= extents1.x + extents2.x
+                && Mathf.Abs(offset.y) <= extents1.y + extents2.y
+                && Mathf.Abs(offset.z) <= extents1.z + extents2.z;
+        }
+        public static bool Overlap(in ShapeAABB c1, in ShapeRay c2, out float t)
+        {
+            t = 0;
+            if (IsPointInAABB(c2.Position, c1))
+                return true;
+
+            if (!TryNormalizeRay(c2, out Vector3 direction, out float length) || length <= Epsilon)
+                return false;
+
+            Vector3 extents = new Vector3(Mathf.Abs(c1.Extents.x), Mathf.Abs(c1.Extents.y), Mathf.Abs(c1.Extents.z));
+            Vector3 min = c1.Center - extents;
+            Vector3 max = c1.Center + extents;
+            float tMin = 0;
+            float tMax = length;
+
+            if (!ClipRaySlab(c2.Position.x, direction.x, min.x, max.x, ref tMin, ref tMax))
+                return false;
+            if (!ClipRaySlab(c2.Position.y, direction.y, min.y, max.y, ref tMin, ref tMax))
+                return false;
+            if (!ClipRaySlab(c2.Position.z, direction.z, min.z, max.z, ref tMin, ref tMax))
+                return false;
+
+            t = tMin;
+            return t <= length;
+        }
+
+        private static bool ClipRaySlab(float origin, float direction, float min, float max, ref float tMin, ref float tMax)
+        {
+            if (Mathf.Abs(direction) < Epsilon)
+                return origin >= min && origin <= max;
+
+            float inv = 1 / direction;
+            float enter = (min - origin) * inv;
+            float exit = (max - origin) * inv;
+            if (enter > exit)
+            {
+                float temp = enter;
+                enter = exit;
+                exit = temp;
+            }
+
+            tMin = Mathf.Max(tMin, enter);
+            tMax = Mathf.Min(tMax, exit);
+            return tMin <= tMax;
+        }
+
+        public static bool Overlap(in ShapeRay c1, in ShapeAABB c2, out float t) { return Overlap(c2, c1, out t); }
         #endregion
 
     }

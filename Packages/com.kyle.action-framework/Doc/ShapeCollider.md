@@ -9,12 +9,16 @@ ShapeCollider 是一组轻量级几何碰撞工具，用于在不依赖 Unity Ph
 | 类型 | 说明 |
 | --- | --- |
 | `ShapeSphere` | 球体，包含 `Position` 与 `Radius` |
+| `ShapeCapsule` | 任意方向胶囊体，`Position` 为起点球心，`Direction` 为轴向，`Length` 为两端球心距离 |
+| `ShapeSegment` | 有限线段，包含 `Start` 与 `End` |
+| `ShapeAABB` | 轴对齐包围盒，`Center` 为中心，`Extents` 为半尺寸 |
 | `ShapeCylinder` | 竖直圆柱，`Position` 表示底面中心，`Height` 沿世界 Y 轴向上 |
 | `ShapeBox` | 绕世界 Y 轴旋转的盒体，`Position` 为中心，`Extern` 为半尺寸 |
 | `ShapePie` | 带高度的 3D 扇形柱，`Position` 表示底面圆心，`YDegree` 控制朝向 |
 | `ShapeRay` | 有限长度射线，`Position` 为起点，`Direction` 为方向，`Length` 为世界距离 |
 
 > `ShapeRay.Direction` 会在碰撞检测和 Gizmos 绘制中归一化处理，调用侧应把 `Length` 当作实际世界长度，而不是方向向量的缩放倍数。
+> `ShapeCapsule.Direction` 同样会被归一化，`Length` 表示胶囊中轴上两个半球球心之间的距离。`Length` 为 `0` 时可退化为球体。
 
 ---
 
@@ -25,14 +29,39 @@ ShapeCollider 是一组轻量级几何碰撞工具，用于在不依赖 Unity Ph
 | 组合 | 说明 |
 | --- | --- |
 | 球体 / 球体 | 三维球体距离检测 |
+| 球体 / 胶囊体 | 球心到胶囊中轴线段的距离检测 |
+| 球体 / 线段 | 球心到线段最近点的距离检测 |
+| 球体 / AABB | 球心到轴对齐包围盒的距离检测 |
 | 球体 / 圆柱 | 先按高度裁剪球体截面，再做 XZ 平面圆形检测 |
 | 球体 / 盒体 | 高度裁剪后使用有向盒 SDF 做 XZ 平面检测 |
 | 球体 / 扇形柱 | 高度裁剪后使用扇形 SDF 做 XZ 平面检测 |
+| 盒体 / 盒体 | 高度区间和 XZ 平面 OBB 分离轴检测 |
+| 盒体 / 圆柱 | 高度区间和有向盒 SDF 检测 |
+| 盒体 / 胶囊体 | 胶囊中轴线段到盒体的最近距离检测 |
+| 盒体 / 线段 | 线段转到盒体局部空间后做 AABB 检测 |
+| 盒体 / AABB | AABB 视为未旋转盒体后做 OBB 检测 |
+| 盒体 / 扇形柱 | 高度区间和 XZ 平面扇形 / OBB 检测 |
+| 盒体 / 射线 | 射线转到盒体局部空间后做 AABB 检测 |
 | 圆柱 / 圆柱 | 高度区间和 XZ 平面圆形检测 |
-| 圆柱 / 盒体 | 高度区间和有向盒 SDF 检测 |
 | 圆柱 / 扇形柱 | 高度区间和扇形 SDF 检测 |
+| 圆柱 / 胶囊体 | 胶囊端点球体与中轴线段对扩展圆柱检测 |
+| 圆柱 / 线段 | 线段作为有限射线复用圆柱射线检测 |
+| 圆柱 / AABB | 高度区间和 XZ 圆 / AABB 矩形距离检测 |
+| 扇形柱 / AABB | 高度区间和 XZ 平面扇形 / 矩形检测 |
+| 扇形柱 / 胶囊体 | 胶囊端点球体与中轴关键点对扇形柱检测 |
+| 扇形柱 / 线段 | 高度区间和 XZ 平面线段 / 扇形检测 |
+| 扇形柱 / 扇形柱 | 高度区间和 XZ 平面扇形边界检测 |
+| 胶囊体 / 胶囊体 | 两条胶囊中轴线段的最近距离检测 |
+| 胶囊体 / 线段 | 线段到胶囊中轴线段的最近距离检测 |
+| 胶囊体 / AABB | 胶囊中轴线段到 AABB 的最近距离检测 |
+| 线段 / 线段 | 两条线段距离为 `0` 时视为相交 |
+| 线段 / AABB | 线段作为有限射线做 AABB 检测 |
+| 线段 / 射线 | 线段与有限射线线段的最近距离检测 |
+| AABB / AABB | 三轴投影区间检测 |
 | 球体 / 射线 | 有限射线命中球体，返回首次命中距离 `t` |
 | 圆柱 / 射线 | 有限射线命中竖直圆柱，返回首次命中距离 `t` |
+| 胶囊体 / 射线 | 有限射线命中胶囊体，返回首次命中距离 `t` |
+| AABB / 射线 | 有限射线命中轴对齐包围盒，返回首次命中距离 `t` |
 
 射线重载的 `out float t` 表示从射线起点沿归一化方向前进的世界距离。若射线起点已经在体积内部，`Overlap` 返回 `true` 且 `t` 为 `0`。
 
@@ -58,6 +87,26 @@ if (ColliderOverlapUtil.Overlap(body, ray, out float t))
 {
     Vector3 hit = ray.Position + ray.Direction.normalized * t;
 }
+```
+
+胶囊体适合做角色近身范围、武器扫掠或非竖直体积检测：
+
+```csharp
+var capsule = new ShapeCapsule
+{
+    Position = transform.position,
+    Direction = transform.forward,
+    Length = 1.5f,
+    Radius = 0.35f,
+};
+
+var target = new ShapeSphere
+{
+    Position = enemy.position,
+    Radius = 0.5f,
+};
+
+bool hit = ColliderOverlapUtil.Overlap(capsule, target);
 ```
 
 ---
@@ -91,6 +140,13 @@ void OnDrawGizmos()
     };
 
     ColliderGizmos.DrawBox(box);
+    ColliderGizmos.DrawCapsule(new ShapeCapsule
+    {
+        Position = transform.position,
+        Direction = transform.forward,
+        Length = 2f,
+        Radius = 0.4f,
+    });
 }
 ```
 
@@ -102,5 +158,6 @@ void OnDrawGizmos()
 
 - 所有圆柱和扇形柱都使用世界 Y 轴作为高度方向。
 - `ShapeCylinder.Position` 和 `ShapePie.Position` 表示底部中心，`ShapeBox.Position` 和 `ShapeSphere.Position` 表示几何中心。
-- `Radius`、`Height`、`Length` 建议传入非负值；射线检测会把负 `Length` 按 `0` 处理。
-- 当前模块只覆盖简单体积组合，不包含盒体 / 盒体、扇形 / 扇形等复杂组合。
+- `ShapeCapsule.Position` 表示起点球心，终点球心为 `Position + Direction.normalized * Length`。
+- `Radius`、`Height`、`Length` 建议传入非负值；射线和胶囊体检测会把负 `Length` 按 `0` 处理。
+- 当前模块不提供 `ShapePie / ShapeRay` 和 `ShapeRay / ShapeRay` 重载；这两类检测通常需要更明确的命中参数约定。

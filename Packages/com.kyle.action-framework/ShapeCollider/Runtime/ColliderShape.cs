@@ -26,6 +26,32 @@ namespace ShapeCollider
         public float Radius;
     }
 
+    //胶囊体，Position为起点球心，Direction为轴向，Length为两端球心距离
+    [System.Serializable]
+    public struct ShapeCapsule
+    {
+        public Vector3 Position;
+        public Vector3 Direction;
+        public float Length;
+        public float Radius;
+    }
+
+    //线段
+    [System.Serializable]
+    public struct ShapeSegment
+    {
+        public Vector3 Start;
+        public Vector3 End;
+    }
+
+    //轴对齐包围盒
+    [System.Serializable]
+    public struct ShapeAABB
+    {
+        public Vector3 Center;
+        public Vector3 Extents;
+    }
+
     //饼形，带高度的3D扇形
     [System.Serializable]
     public struct ShapePie
