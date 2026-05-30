@@ -113,7 +113,7 @@ namespace EasyConfig.Editor
                 groupData.Types.Add(typeData);
             }
 
-            // Check for duplicate file names within each group
+            // 检查同一分组内是否存在重复导出文件名。
             foreach (var groupData in groupMap.Values)
             {
                 var fileNames = new HashSet<string>();

@@ -33,13 +33,13 @@
 
 ## 收尾检查
 
-- [ ] 检查 `Doc/Readme.md` 是否需要增加设计文档入口。
-  - 执行情况：未执行；原因：收尾检查项没有独立任务文档，缺少 develop-loop 要求的任务说明和验收标准。
-- [ ] 检查所有新增注释和文档字符串使用中文。
-  - 执行情况：未执行；原因：收尾检查项没有独立任务文档，缺少 develop-loop 要求的任务说明和验收标准；前三项 Review 已覆盖对应任务范围。
-- [ ] 检查没有新增 `.asmdef` 文件。
-  - 执行情况：未执行；原因：收尾检查项没有独立任务文档，缺少 develop-loop 要求的任务说明和验收标准；前三项验证均确认未新增 `.asmdef` 文件。
-- [ ] 检查 Markdown 使用 LF line endings。
-  - 执行情况：未执行；原因：收尾检查项没有独立任务文档，缺少 develop-loop 要求的任务说明和验收标准；前三项验证均包含已编辑 Markdown 的 LF 检查。
-- [ ] 记录无法通过命令行验证的 Unity Editor 验证项。
-  - 执行情况：未执行；原因：收尾检查项没有独立任务文档，缺少 develop-loop 要求的任务说明和验收标准；前三项执行记录已分别记录未运行的 Unity Editor 验证项。
+- [x] 检查 `Doc/Readme.md` 是否需要增加设计文档入口。
+  - 执行情况：完成；验证：已在 `Doc/Readme.md` 的“框架设计”中增加三份 EasyConfig Excel 设计文档入口。
+- [x] 检查所有新增注释和文档字符串使用中文。
+  - 执行情况：完成；验证：扫描本轮 EasyConfig 相关 C# 注释，已将英文注释改为中文。
+- [x] 检查没有新增 `.asmdef` 文件。
+  - 执行情况：完成；验证：`git diff --name-only HEAD -- '*.asmdef'` 无输出。
+- [x] 检查 Markdown 使用 LF line endings。
+  - 执行情况：完成；验证：`Doc/Readme.md`、`Doc/EasyConfig.md`、本 TODO 和三份设计文档均为 LF。
+- [x] 记录无法通过命令行验证的 Unity Editor 验证项。
+  - 执行情况：完成；记录：Unity Editor 编译、真实 `Library/ExcelCache` JSON 读取、Excel 文件监听和缓存热刷新流程未在当前命令行环境运行，需在 Unity Editor 中手动验证。

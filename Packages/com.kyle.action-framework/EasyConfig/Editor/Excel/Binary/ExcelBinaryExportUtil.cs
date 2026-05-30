@@ -53,24 +53,24 @@ namespace EasyConfig.Editor
             {
                 if (typeData.Kind == ConfigKind.List || typeData.Kind == ConfigKind.LinkedList)
                 {
-                    // typeof(ConfigListCollector<>).MakeGenericType(configType)
+                    // 通过反射取得 ConfigListCollector<T>。
                     Type collectorType = typeof(ConfigListCollector<>).MakeGenericType(typeData.Type);
                     FieldInfo configsField = collectorType.GetField("Configs", BindingFlags.Public | BindingFlags.Static);
                     object configs = configsField.GetValue(null);
 
-                    // Call serializer.Serialize<List<T>>(configs)
+                    // 调用 serializer.Serialize<List<T>>(configs)。
                     Type listType = typeof(List<>).MakeGenericType(typeData.Type);
                     MethodInfo serializeMethod = GetSerializeMethod(listType);
                     return (byte[])serializeMethod.Invoke(serializer, new object[] { configs });
                 }
                 else
                 {
-                    // typeof(ConfigDictionaryCollector<,>).MakeGenericType(keyType, configType)
+                    // 通过反射取得 ConfigDictionaryCollector<TKey, T>。
                     Type collectorType = typeof(ConfigDictionaryCollector<,>).MakeGenericType(typeData.KeyType, typeData.Type);
                     FieldInfo configsField = collectorType.GetField("Configs", BindingFlags.Public | BindingFlags.Static);
                     object configs = configsField.GetValue(null);
 
-                    // Call serializer.Serialize<Dictionary<TKey,T>>(configs)
+                    // 调用 serializer.Serialize<Dictionary<TKey, T>>(configs)。
                     Type dictType = typeof(Dictionary<,>).MakeGenericType(typeData.KeyType, typeData.Type);
                     MethodInfo serializeMethod = GetSerializeMethod(dictType);
                     return (byte[])serializeMethod.Invoke(serializer, new object[] { configs });
@@ -85,7 +85,7 @@ namespace EasyConfig.Editor
 
         private static MethodInfo GetSerializeMethod(Type valueType)
         {
-            // Find Serialize<T> on the interface definition then make generic with valueType
+            // 在序列化接口上取得开放泛型方法，再按实际容器类型闭合。
             MethodInfo openMethod = typeof(IConfigSerializer).GetMethod("Serialize");
             return openMethod.MakeGenericMethod(valueType);
         }

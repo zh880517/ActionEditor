@@ -25,7 +25,7 @@ namespace EasyConfig.Editor
         {
             var writer = new CSharpCodeWriter(editorable: true);
 
-            writer.WriteLine("// Auto-generated — do not edit manually.");
+            writer.WriteLine("// 自动生成，请勿手动修改。");
             writer.WriteLine("using System.Collections.Generic;");
             writer.WriteLine("using EasyConfig;");
 

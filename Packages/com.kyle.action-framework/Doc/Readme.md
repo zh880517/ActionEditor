@@ -11,6 +11,9 @@
 | 文档 | 简介 |
 |------|------|
 | [Action Framework 架构设计指南（AI Agent 版）](DesignPhilosophy.md) | 供 AI Agent 设计架构文档时使用的跨模块设计原则、取舍框架和文档模板 |
+| [EasyConfig Excel 关联配置拆分设计](Design/EasyConfigExcelLinkedConfigSplitDesign.md) | 描述 Excel 行数据拆分为主配置和关联配置、类型识别、二进制导出和关联恢复 |
+| [EasyConfig Editor Excel 数据访问设计](Design/EasyConfigEditorExcelDataAccessDesign.md) | 描述 Editor 工具从 `Library/ExcelCache` 懒加载 Excel JSON 缓存并注册热刷新类型 |
+| [EasyConfig Excel 编辑器热刷新设计](Design/EasyConfigExcelHotReloadDesign.md) | 描述 Excel 缓存更新后已注册 Editor 配置类型的刷新派发和关联恢复顺序 |
 
 ### 编辑器子系统
 
