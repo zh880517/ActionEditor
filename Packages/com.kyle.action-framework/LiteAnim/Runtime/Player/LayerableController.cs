@@ -212,11 +212,31 @@ namespace LiteAnim
             var layer = asset.Layers[layerIndex];
             if (layer.Additive)
             {
+                if (transitions.Exists(it => it.LayerIndex == layerIndex))
+                    return false;
                 layerMixerPlayable.DisconnectInput(layerIndex);
                 layerMixerPlayable.SetInputWeight(layerIndex, 0);
                 return true;
             }
             return false;
+        }
+
+        protected override void OnDestroyController()
+        {
+            if (layerMixerPlayable.IsValid())
+            {
+                for (int i = 0; i < layerMixerPlayable.GetInputCount(); i++)
+                {
+                    layerMixerPlayable.DisconnectInput(i);
+                    layerMixerPlayable.SetInputWeight(i, 0);
+                }
+            }
+            base.OnDestroyController();
+            graph.DisConnect(rootIndex);
+            if (layerMixerPlayable.IsValid())
+                layerMixerPlayable.Destroy();
+            rootIndex = -1;
+            layerFades.Clear();
         }
 
     }

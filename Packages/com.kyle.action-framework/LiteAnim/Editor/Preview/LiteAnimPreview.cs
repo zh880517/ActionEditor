@@ -34,7 +34,6 @@ namespace LiteAnim.EditorView
                 ModelInScen = null;
                 Animator = null;
                 currentPrefab = null;
-                return;
             }
             if (!prefab || !enable)
                 return;

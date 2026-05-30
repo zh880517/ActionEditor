@@ -51,9 +51,24 @@ namespace LiteAnim
                 return 0;
             if(Type == MotionType.Clip)
             {
-                foreach (var clip in Clips)
+                double startTime = 0;
+                double endTime = 0;
+                for (int i = 0; i < Clips.Count; i++)
                 {
-                    length += clip.GetLength();
+                    var clip = Clips[i];
+                    var clipLength = clip.GetLength();
+                    if (i > 0)
+                    {
+                        var mixTime = clip.MixIn * clipLength;
+                        mixTime = Mathf.Min((float)mixTime, (float)(endTime - startTime));
+                        startTime = endTime - mixTime;
+                    }
+                    else
+                    {
+                        startTime = 0;
+                    }
+                    endTime = startTime + clipLength;
+                    length = (float)endTime;
                 }
             }
             else

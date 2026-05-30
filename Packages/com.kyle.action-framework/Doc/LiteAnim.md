@@ -164,8 +164,8 @@ public class CharacterAnim : MonoBehaviour, ILiteAnimPlayer
 
     void OnDestroy()
     {
-        if (graph.Graph.IsValid())
-            graph.Graph.Destroy();
+        controller?.Destroy();
+        graph?.Destroy();
     }
 }
 ```
@@ -219,6 +219,7 @@ Motion (Clip, 多段)
 ```
 
 总时长 = 各段有效时长之和（减去融合重叠部分）。
+运行时 `LiteAnimMotion.GetLength()` 与拼接状态的实际时间轴一致，会扣除每段 `MixIn` 造成的重叠时长。
 
 ### BlendTree 类型
 
@@ -248,6 +249,7 @@ Motion (BlendTree, Param="MoveSpeed")
 - 每层独立维护融合状态，互不干扰
 - 底层使用 `AnimationLayerMixerPlayable`，支持叠加层和 AvatarMask 遮罩
 - `StopLayer(layerIndex)` — 淡出指定层
+- 叠加层的非循环片段播放完成后会断开该层；如果同层仍在过渡中，会等过渡结束后再处理，避免误断目标状态
 
 ### 融合流程
 
@@ -326,6 +328,7 @@ float v = param.GetParam("MoveSpeed"); // 3.5f
 | `StopLayer(layerIndex)` | 停止指定层（`LayerableController` 专有） |
 | `Update(dt)` | 推进融合时间，需每帧调用 |
 | `SetWeight(weight)` | 设置该控制器在根混合器中的权重 |
+| `Destroy()` | 销毁控制器状态，并释放其在 PlayableGraph 中占用的连接和混合器 |
 | `Playing` | 当前正在播放的 `StatePlayInfo` 列表 |
 | `Transitions` | 当前进行中的 `TransitionInfo` 列表 |
 

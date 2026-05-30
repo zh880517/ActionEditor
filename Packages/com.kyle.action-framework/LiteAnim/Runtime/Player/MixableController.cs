@@ -101,7 +101,7 @@ namespace LiteAnim
                 for (int i = 0; i < transitions.Count; i++)
                 {
                     var t = transitions[i];
-                    float weight = Mathf.Clamp01(t.FadeTime / t.FadeDuration);
+                    float weight = t.FadeDuration > 0 ? Mathf.Clamp01(t.FadeTime / t.FadeDuration) : 1f;
                     graph.SetRootWeight(t.ToIndex, (weight) * Weight);
                     graph.SetRootWeight(t.FromIndex, (1 - weight) * Weight);
                 }
@@ -121,6 +121,20 @@ namespace LiteAnim
         {
             graph.SetRootWeight(t.ToIndex, (percent) * Weight);
             graph.SetRootWeight(t.FromIndex, (1 - percent) * Weight);
+        }
+
+        protected override void OnDestroyController()
+        {
+            for (int i = 0; i < transitions.Count; i++)
+            {
+                graph.DisConnect(transitions[i].FromIndex);
+                graph.DisConnect(transitions[i].ToIndex);
+            }
+            for (int i = 0; i < playingStates.Count; i++)
+            {
+                graph.DisConnect(playingStates[i].InputIndex);
+            }
+            base.OnDestroyController();
         }
     }
 }

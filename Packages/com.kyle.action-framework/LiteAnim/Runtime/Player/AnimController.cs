@@ -158,18 +158,23 @@ namespace LiteAnim
 
         public virtual void Destroy()
         {
+            OnDestroyController();
             foreach (var state in states)
             {
                 state.Destroy();
             }
+            states.Clear();
+            playingStates.Clear();
+            transitions.Clear();
+        }
+
+        protected virtual void OnDestroyController()
+        {
             foreach (var item in transitions)
             {
                 if(item.Mixer.IsValid())
                     graph.RecycleMixerPlayable(item.Mixer);
             }
-            states.Clear();
-            playingStates.Clear();
-            transitions.Clear();
         }
 
         public static float GetStateTime(MotionState state, float time, out int loop)
