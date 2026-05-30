@@ -50,19 +50,25 @@ namespace EasyConfig.Editor
                 if (!modifySheets.Contains(sheetName))
                     modifySheets.Add(sheetName);
             });
+            UpdateByModify();
         }
         public void UpdateByModify()
         {
             if (modifySheets.Count == 0)
                 return;
+            var sheetNames = new List<string>(modifySheets);
             foreach (var collector in collectors)
             {
-                if (modifySheets.Contains(collector.SheetName))
+                if (sheetNames.Contains(collector.SheetName))
                 {
                     var files = GetSheetFiles(collector);
                     if (files.Length > 0)
                         collector.ReadFromFiles(files);
                 }
+            }
+            foreach (var sheetName in sheetNames)
+            {
+                EditorExcelConfigReloadDispatcher.NotifyModify(sheetName);
             }
             modifySheets.Clear();
         }

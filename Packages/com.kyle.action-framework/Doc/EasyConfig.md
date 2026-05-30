@@ -285,6 +285,27 @@ IReadOnlyDictionary<object, ItemConfig> allItems = EditorDictionaryConfig<ItemCo
 - `LinkedDictionaryConfig` 按相同 Key 从主配置 Collector 查找。
 - 主配置 Collector 未提前读取或缺失对应项时输出错误日志，不会隐式跨类型加载主配置。
 
+### 2.5 Editor Excel 缓存热刷新
+
+`ExcelDataManager` 监听到 Excel 文件变化后，会先调用 `ExcelToCache` 重新导出 `Library/ExcelCache` 下的 JSON 缓存，再按变化页签刷新已经创建的 `ExcelDataCollector`，最后通过 `EditorExcelConfigReloadDispatcher` 派发给已经注册过的 Editor 配置类型。
+
+热刷新只影响通过 `EditorListConfig<T>` / `EditorDictionaryConfig<T>` 首次成功读取并注册过的类型。未注册类型不会被自动读取，也不会改变 Runtime 二进制加载流程。
+
+同一页签内的刷新顺序固定为：
+
+1. 先刷新普通 `ListConfig` / `DictionaryConfig` Collector。
+2. 再刷新 `LinkedListConfig` / `LinkedDictionaryConfig` Collector。
+3. 关联配置刷新后重新恢复 `Primary`。
+
+如果关联配置的主配置 Collector 尚未提前读取，热刷新会沿用关联配置的严格模式输出错误日志，不会跨页签或跨类型隐式加载主配置。
+
+```csharp
+// 业务侧通常不需要手动调用；首次访问入口会自动注册。
+EditorExcelConfigReloadDispatcher.RegisterConfigType(typeof(SkillCoreConfig));
+EditorExcelConfigReloadDispatcher.UnregisterConfigType(typeof(SkillCoreConfig));
+EditorExcelConfigReloadDispatcher.Clear();
+```
+
 ---
 
 ## 三、运行时加载器（ConfigLoader）
