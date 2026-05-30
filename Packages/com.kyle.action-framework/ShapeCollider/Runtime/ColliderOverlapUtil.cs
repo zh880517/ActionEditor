@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 namespace ShapeCollider
 {
     public static class ColliderOverlapUtil
@@ -84,44 +85,43 @@ namespace ShapeCollider
             return new ShapeAABB { Center = Vector3.zero, Extents = Abs(box.Extern) };
         }
 
-        private static Vector2[] GetBoxCorners2D(in ShapeBox box)
+        private static void GetBoxCorners2D(in ShapeBox box, Span<Vector2> corners)
         {
             Vector3 extents = Abs(box.Extern);
             Vector2 right = ShapeSDFUtil.Rotate(new Vector2(1, 0), box.YDegree) * extents.x;
             Vector2 forward = ShapeSDFUtil.Rotate(new Vector2(0, 1), box.YDegree) * extents.z;
             Vector2 center = box.Position.ToV2();
-            return new[]
-            {
-                center - right - forward,
-                center + right - forward,
-                center + right + forward,
-                center - right + forward,
-            };
+            corners[0] = center - right - forward;
+            corners[1] = center + right - forward;
+            corners[2] = center + right + forward;
+            corners[3] = center - right + forward;
         }
 
         private static bool OverlapOBB2D(in ShapeBox c1, in ShapeBox c2)
         {
-            Vector2[] corners1 = GetBoxCorners2D(c1);
-            Vector2[] corners2 = GetBoxCorners2D(c2);
+            Span<Vector2> corners1 = stackalloc Vector2[4];
+            Span<Vector2> corners2 = stackalloc Vector2[4];
+            GetBoxCorners2D(c1, corners1);
+            GetBoxCorners2D(c2, corners2);
             return OverlapOnBoxAxes(corners1, c1.YDegree, corners2)
                 && OverlapOnBoxAxes(corners1, c2.YDegree, corners2);
         }
 
-        private static bool OverlapOnBoxAxes(Vector2[] corners1, float yDegree, Vector2[] corners2)
+        private static bool OverlapOnBoxAxes(ReadOnlySpan<Vector2> corners1, float yDegree, ReadOnlySpan<Vector2> corners2)
         {
             Vector2 axisX = ShapeSDFUtil.Rotate(new Vector2(1, 0), yDegree);
             Vector2 axisZ = ShapeSDFUtil.Rotate(new Vector2(0, 1), yDegree);
             return OverlapProjection(corners1, corners2, axisX) && OverlapProjection(corners1, corners2, axisZ);
         }
 
-        private static bool OverlapProjection(Vector2[] corners1, Vector2[] corners2, Vector2 axis)
+        private static bool OverlapProjection(ReadOnlySpan<Vector2> corners1, ReadOnlySpan<Vector2> corners2, Vector2 axis)
         {
             Project(corners1, axis, out float min1, out float max1);
             Project(corners2, axis, out float min2, out float max2);
             return max1 >= min2 && min1 <= max2;
         }
 
-        private static void Project(Vector2[] corners, Vector2 axis, out float min, out float max)
+        private static void Project(ReadOnlySpan<Vector2> corners, Vector2 axis, out float min, out float max)
         {
             min = Vector2.Dot(corners[0], axis);
             max = min;
@@ -140,7 +140,7 @@ namespace ShapeCollider
 
         private static bool IsPointInSector(Vector2 point, in ShapePie pie)
         {
-            return ShapeSDFUtil.SectorSDF(point, pie.Position.ToV2(), pie.YDegree, pie.Angle, pie.Radius) <= Epsilon;
+            return ShapeSDFUtil.SectorSDF(point, pie.Position.ToV2(), pie.YDegree, pie.Angle, Mathf.Max(0, pie.Radius)) <= Epsilon;
         }
 
         private static bool SegmentIntersectsSector(Vector2 start, Vector2 end, in ShapePie pie)
@@ -155,8 +155,9 @@ namespace ShapeCollider
             float halfAngle = pie.Angle * 0.5f;
             Vector2 leftDir = ShapeSDFUtil.Rotate(new Vector2(0, 1), pie.YDegree - halfAngle);
             Vector2 rightDir = ShapeSDFUtil.Rotate(new Vector2(0, 1), pie.YDegree + halfAngle);
-            Vector2 leftEnd = center + leftDir * pie.Radius;
-            Vector2 rightEnd = center + rightDir * pie.Radius;
+            float radius = Mathf.Max(0, pie.Radius);
+            Vector2 leftEnd = center + leftDir * radius;
+            Vector2 rightEnd = center + rightDir * radius;
             if (SegmentSegmentSqrDistance2D(start, end, center, leftEnd) <= Epsilon)
                 return true;
             if (SegmentSegmentSqrDistance2D(start, end, center, rightEnd) <= Epsilon)
@@ -175,7 +176,8 @@ namespace ShapeCollider
 
             Vector2 f = start - center;
             float b = 2 * Vector2.Dot(f, d);
-            float c = Vector2.Dot(f, f) - pie.Radius * pie.Radius;
+            float radius = Mathf.Max(0, pie.Radius);
+            float c = Vector2.Dot(f, f) - radius * radius;
             float discriminant = b * b - 4 * a * c;
             if (discriminant < 0)
                 return false;
@@ -263,7 +265,8 @@ namespace ShapeCollider
 
         private static bool OverlapSectorOBB2D(in ShapePie pie, in ShapeBox box)
         {
-            Vector2[] corners = GetBoxCorners2D(box);
+            Span<Vector2> corners = stackalloc Vector2[4];
+            GetBoxCorners2D(box, corners);
             if (IsPointInSector(corners[0], pie) || IsPointInSector(corners[1], pie) || IsPointInSector(corners[2], pie) || IsPointInSector(corners[3], pie))
                 return true;
 
@@ -287,8 +290,8 @@ namespace ShapeCollider
             if (distance <= Epsilon)
                 return false;
 
-            float radius1 = c1.Radius;
-            float radius2 = c2.Radius;
+            float radius1 = Mathf.Max(0, c1.Radius);
+            float radius2 = Mathf.Max(0, c2.Radius);
             if (distance > radius1 + radius2 || distance < Mathf.Abs(radius1 - radius2))
                 return false;
 
@@ -306,16 +309,9 @@ namespace ShapeCollider
                 || (IsPointInSector(p2, c1) && IsPointInSector(p2, c2));
         }
 
-        private static bool OverlapPieCapsuleBySamples(in ShapePie pie, Vector3 start, Vector3 end, float radius)
+        private static bool OverlapPieCapsuleByDistance(in ShapePie pie, Vector3 start, Vector3 end, float radius)
         {
-            Vector3 segment = end - start;
-            return OverlapPieCapsuleSample(pie, start, radius)
-                || OverlapPieCapsuleSample(pie, end, radius)
-                || OverlapPieCapsuleSample(pie, ClosestPoint(start, end, pie.Position), radius)
-                || OverlapPieCapsuleYBoundarySample(pie, start, segment, pie.Position.y, radius)
-                || OverlapPieCapsuleYBoundarySample(pie, start, segment, pie.Position.y + pie.Height, radius)
-                || OverlapPieCapsuleYBoundarySample(pie, start, segment, pie.Position.y - radius, radius)
-                || OverlapPieCapsuleYBoundarySample(pie, start, segment, pie.Position.y + pie.Height + radius, radius);
+            return SqrDistanceSegmentPie(start, end, pie) <= radius * radius;
         }
 
         private static bool OverlapPieCapsuleYBoundarySample(in ShapePie pie, Vector3 start, Vector3 segment, float y, float radius)
@@ -333,7 +329,7 @@ namespace ShapeCollider
         private static bool OverlapPieCapsuleSample(in ShapePie pie, Vector3 point, float radius)
         {
             float bottom = pie.Position.y;
-            float top = pie.Position.y + pie.Height;
+            float top = pie.Position.y + Mathf.Max(0, pie.Height);
             float offsetY = 0;
             if (point.y < bottom)
                 offsetY = bottom - point.y;
@@ -344,7 +340,7 @@ namespace ShapeCollider
                 return false;
 
             float horizontalRadius = Mathf.Sqrt(Mathf.Max(0, radius * radius - offsetY * offsetY));
-            float sdf = ShapeSDFUtil.SectorSDF(point.ToV2(), pie.Position.ToV2(), pie.YDegree, pie.Angle, pie.Radius);
+            float sdf = ShapeSDFUtil.SectorSDF(point.ToV2(), pie.Position.ToV2(), pie.YDegree, pie.Angle, Mathf.Max(0, pie.Radius));
             return sdf <= horizontalRadius;
         }
 
@@ -406,32 +402,226 @@ namespace ShapeCollider
             if (Overlap(segment, aabb))
                 return 0;
 
-            float sqrDistance = Mathf.Min(SqrDistancePointAABB(start, aabb), SqrDistancePointAABB(end, aabb));
             Vector3 extents = Abs(aabb.Extents);
             Vector3 min = aabb.Center - extents;
             Vector3 max = aabb.Center + extents;
+            Vector3 direction = end - start;
+            Span<float> candidates = stackalloc float[8];
+            int count = 0;
+            AddCandidate(candidates, ref count, 0);
+            AddCandidate(candidates, ref count, 1);
+            AddAxisBoundaries(candidates, ref count, start.x, direction.x, min.x, max.x);
+            AddAxisBoundaries(candidates, ref count, start.y, direction.y, min.y, max.y);
+            AddAxisBoundaries(candidates, ref count, start.z, direction.z, min.z, max.z);
+            SortCandidates(candidates.Slice(0, count));
 
-            Vector3 p000 = new Vector3(min.x, min.y, min.z);
-            Vector3 p001 = new Vector3(min.x, min.y, max.z);
-            Vector3 p010 = new Vector3(min.x, max.y, min.z);
-            Vector3 p011 = new Vector3(min.x, max.y, max.z);
-            Vector3 p100 = new Vector3(max.x, min.y, min.z);
-            Vector3 p101 = new Vector3(max.x, min.y, max.z);
-            Vector3 p110 = new Vector3(max.x, max.y, min.z);
-            Vector3 p111 = new Vector3(max.x, max.y, max.z);
+            float sqrDistance = float.MaxValue;
+            for (int i = 0; i < count; i++)
+                sqrDistance = Mathf.Min(sqrDistance, SqrDistancePointAABB(start + direction * candidates[i], aabb));
 
-            sqrDistance = Mathf.Min(sqrDistance, SegmentSegmentSqrDistance(start, end, p000, p001));
-            sqrDistance = Mathf.Min(sqrDistance, SegmentSegmentSqrDistance(start, end, p010, p011));
-            sqrDistance = Mathf.Min(sqrDistance, SegmentSegmentSqrDistance(start, end, p100, p101));
-            sqrDistance = Mathf.Min(sqrDistance, SegmentSegmentSqrDistance(start, end, p110, p111));
-            sqrDistance = Mathf.Min(sqrDistance, SegmentSegmentSqrDistance(start, end, p000, p010));
-            sqrDistance = Mathf.Min(sqrDistance, SegmentSegmentSqrDistance(start, end, p001, p011));
-            sqrDistance = Mathf.Min(sqrDistance, SegmentSegmentSqrDistance(start, end, p100, p110));
-            sqrDistance = Mathf.Min(sqrDistance, SegmentSegmentSqrDistance(start, end, p101, p111));
-            sqrDistance = Mathf.Min(sqrDistance, SegmentSegmentSqrDistance(start, end, p000, p100));
-            sqrDistance = Mathf.Min(sqrDistance, SegmentSegmentSqrDistance(start, end, p001, p101));
-            sqrDistance = Mathf.Min(sqrDistance, SegmentSegmentSqrDistance(start, end, p010, p110));
-            sqrDistance = Mathf.Min(sqrDistance, SegmentSegmentSqrDistance(start, end, p011, p111));
+            for (int i = 0; i < count - 1; i++)
+            {
+                float from = candidates[i];
+                float to = candidates[i + 1];
+                if (to - from <= Epsilon)
+                    continue;
+
+                float mid = (from + to) * 0.5f;
+                if (TryGetSegmentAABBIntervalMinimum(start, direction, min, max, mid, from, to, out float t))
+                    sqrDistance = Mathf.Min(sqrDistance, SqrDistancePointAABB(start + direction * t, aabb));
+            }
+
+            return sqrDistance;
+        }
+
+        private static void AddAxisBoundaries(Span<float> candidates, ref int count, float origin, float direction, float min, float max)
+        {
+            if (Mathf.Abs(direction) <= Epsilon)
+                return;
+
+            AddCandidate(candidates, ref count, (min - origin) / direction);
+            AddCandidate(candidates, ref count, (max - origin) / direction);
+        }
+
+        private static void AddCandidate(Span<float> candidates, ref int count, float t)
+        {
+            if (t < 0 || t > 1)
+                return;
+
+            t = Mathf.Clamp01(t);
+            for (int i = 0; i < count; i++)
+            {
+                if (Mathf.Abs(candidates[i] - t) <= Epsilon)
+                    return;
+            }
+
+            candidates[count++] = t;
+        }
+
+        private static void SortCandidates(Span<float> candidates)
+        {
+            for (int i = 1; i < candidates.Length; i++)
+            {
+                float value = candidates[i];
+                int j = i - 1;
+                while (j >= 0 && candidates[j] > value)
+                {
+                    candidates[j + 1] = candidates[j];
+                    j--;
+                }
+
+                candidates[j + 1] = value;
+            }
+        }
+
+        private static bool TryGetSegmentAABBIntervalMinimum(Vector3 start, Vector3 direction, Vector3 min, Vector3 max, float sampleT, float from, float to, out float t)
+        {
+            Vector3 point = start + direction * sampleT;
+            float numerator = 0;
+            float denominator = 0;
+            AddIntervalAxisMinimum(point.x, start.x, direction.x, min.x, max.x, ref numerator, ref denominator);
+            AddIntervalAxisMinimum(point.y, start.y, direction.y, min.y, max.y, ref numerator, ref denominator);
+            AddIntervalAxisMinimum(point.z, start.z, direction.z, min.z, max.z, ref numerator, ref denominator);
+            if (denominator <= Epsilon)
+            {
+                t = 0;
+                return false;
+            }
+
+            t = Mathf.Clamp(-numerator / denominator, from, to);
+            return true;
+        }
+
+        private static void AddIntervalAxisMinimum(float sample, float origin, float direction, float min, float max, ref float numerator, ref float denominator)
+        {
+            float target;
+            if (sample < min)
+                target = min;
+            else if (sample > max)
+                target = max;
+            else
+                return;
+
+            numerator += direction * (origin - target);
+            denominator += direction * direction;
+        }
+
+        private static bool TryGetClosestSegmentSegment2DParameters(Vector2 p1, Vector2 q1, Vector2 p2, Vector2 q2, out float s, out float t)
+        {
+            Vector2 d1 = q1 - p1;
+            Vector2 d2 = q2 - p2;
+            Vector2 r = p1 - p2;
+            float a = Vector2.Dot(d1, d1);
+            float e = Vector2.Dot(d2, d2);
+            float f = Vector2.Dot(d2, r);
+
+            if (a <= Epsilon && e <= Epsilon)
+            {
+                s = 0;
+                t = 0;
+                return false;
+            }
+
+            if (a <= Epsilon)
+            {
+                s = 0;
+                t = Mathf.Clamp01(f / e);
+                return false;
+            }
+
+            float c = Vector2.Dot(d1, r);
+            if (e <= Epsilon)
+            {
+                t = 0;
+                s = Mathf.Clamp01(-c / a);
+                return true;
+            }
+
+            float b = Vector2.Dot(d1, d2);
+            float denom = a * e - b * b;
+            s = denom > Epsilon ? Mathf.Clamp01((b * f - c * e) / denom) : 0;
+            t = (b * s + f) / e;
+
+            if (t < 0)
+            {
+                t = 0;
+                s = Mathf.Clamp01(-c / a);
+            }
+            else if (t > 1)
+            {
+                t = 1;
+                s = Mathf.Clamp01((b - c) / a);
+            }
+
+            return true;
+        }
+
+        private static float SqrDistancePointPie(Vector3 point, in ShapePie pie)
+        {
+            float bottom = pie.Position.y;
+            float top = pie.Position.y + Mathf.Max(0, pie.Height);
+            float offsetY = 0;
+            if (point.y < bottom)
+                offsetY = bottom - point.y;
+            else if (point.y > top)
+                offsetY = point.y - top;
+
+            float sdf = ShapeSDFUtil.SectorSDF(point.ToV2(), pie.Position.ToV2(), pie.YDegree, pie.Angle, Mathf.Max(0, pie.Radius));
+            float offsetXZ = Mathf.Max(0, sdf);
+            return offsetXZ * offsetXZ + offsetY * offsetY;
+        }
+
+        private static void AddSegmentCircleCandidates(Span<float> candidates, ref int count, Vector2 start, Vector2 direction, Vector2 center, float radius)
+        {
+            float a = Vector2.Dot(direction, direction);
+            if (a <= Epsilon)
+                return;
+
+            Vector2 f = start - center;
+            float b = 2 * Vector2.Dot(f, direction);
+            float c = Vector2.Dot(f, f) - radius * radius;
+            float discriminant = b * b - 4 * a * c;
+            if (discriminant < 0)
+                return;
+
+            float sqrt = Mathf.Sqrt(discriminant);
+            float inv = 1 / (2 * a);
+            AddCandidate(candidates, ref count, (-b - sqrt) * inv);
+            AddCandidate(candidates, ref count, (-b + sqrt) * inv);
+        }
+
+        private static float SqrDistanceSegmentPie(Vector3 start, Vector3 end, in ShapePie pie)
+        {
+            Vector3 segment = end - start;
+            Vector2 start2D = start.ToV2();
+            Vector2 segment2D = segment.ToV2();
+            Vector2 center = pie.Position.ToV2();
+            float halfAngle = pie.Angle * 0.5f;
+            float radius = Mathf.Max(0, pie.Radius);
+            Vector2 leftEnd = center + ShapeSDFUtil.Rotate(new Vector2(0, 1), pie.YDegree - halfAngle) * radius;
+            Vector2 rightEnd = center + ShapeSDFUtil.Rotate(new Vector2(0, 1), pie.YDegree + halfAngle) * radius;
+            Span<float> candidates = stackalloc float[16];
+            int count = 0;
+            AddCandidate(candidates, ref count, 0);
+            AddCandidate(candidates, ref count, 1);
+            AddAxisBoundaries(candidates, ref count, start.y, segment.y, pie.Position.y, pie.Position.y + Mathf.Max(0, pie.Height));
+
+            float segment2DSqr = Vector2.Dot(segment2D, segment2D);
+            if (segment2DSqr > Epsilon)
+                AddCandidate(candidates, ref count, Vector2.Dot(center - start2D, segment2D) / segment2DSqr);
+
+            if (TryGetClosestSegmentSegment2DParameters(start2D, start2D + segment2D, center, leftEnd, out float leftT, out _))
+                AddCandidate(candidates, ref count, leftT);
+            if (TryGetClosestSegmentSegment2DParameters(start2D, start2D + segment2D, center, rightEnd, out float rightT, out _))
+                AddCandidate(candidates, ref count, rightT);
+
+            AddSegmentCircleCandidates(candidates, ref count, start2D, segment2D, center, radius);
+            SortCandidates(candidates.Slice(0, count));
+
+            float sqrDistance = float.MaxValue;
+            for (int i = 0; i < count; i++)
+                sqrDistance = Mathf.Min(sqrDistance, SqrDistancePointPie(start + segment * candidates[i], pie));
+
             return sqrDistance;
         }
 
@@ -551,7 +741,7 @@ namespace ShapeCollider
         #region 球形
         public static bool Overlap(in ShapeSphere c1, in ShapeSphere c2)
         {
-            float sqrRadius = c1.Radius + c2.Radius;
+            float sqrRadius = Mathf.Max(0, c1.Radius) + Mathf.Max(0, c2.Radius);
             sqrRadius *= sqrRadius;
             return Vector3.SqrMagnitude(c1.Position - c2.Position) <= sqrRadius;
         }
@@ -562,85 +752,91 @@ namespace ShapeCollider
         //判断圆与
         public static bool Overlap(in ShapeSphere c1, in ShapeCylinder c2)
         {
-            float radius = c1.Radius;
+            float radius = Mathf.Max(0, c1.Radius);
+            float cylinderRadius = Mathf.Max(0, c2.Radius);
+            float cylinderHeight = Mathf.Max(0, c2.Height);
             if (c1.Position.y < c2.Position.y)
             {//球在下方
                 //不相接
-                if (c1.Position.y + c1.Radius <= c2.Position.y)
+                if (c1.Position.y + radius < c2.Position.y)
                     return false;
                 //计算球与底部相交的圆半径
                 radius = ProjectRadius(radius, c2.Position.y - c1.Position.y);
             }
-            else if (c1.Position.y > (c2.Position.y + c2.Height))
+            else if (c1.Position.y > (c2.Position.y + cylinderHeight))
             {//在上方
                 //不相接
-                if (c1.Position.y - c1.Radius >= (c2.Position.y + c2.Height))
+                if (c1.Position.y - radius > (c2.Position.y + cylinderHeight))
                     return false;
                 //计算球与顶部相交的圆半径
-                radius = ProjectRadius(radius, c1.Position.y - (c2.Position.y + c2.Height));
+                radius = ProjectRadius(radius, c1.Position.y - (c2.Position.y + cylinderHeight));
             }
-            float sqrRadius = radius + c2.Radius;
+            float sqrRadius = radius + cylinderRadius;
             sqrRadius *= sqrRadius;
-            return sqrRadius > Vector2.SqrMagnitude(c1.Position.ToV2() - c2.Position.ToV2());
+            return sqrRadius >= Vector2.SqrMagnitude(c1.Position.ToV2() - c2.Position.ToV2());
         }
         
         public static bool Overlap(in ShapeSphere c1, in ShapeBox c2)
         {
-            float radius = c1.Radius;
-            if (c1.Position.y < c2.Position.y - c2.Extern.y)
+            float radius = Mathf.Max(0, c1.Radius);
+            Vector3 extents = Abs(c2.Extern);
+            if (c1.Position.y < c2.Position.y - extents.y)
             {//球在下方
                 //不相接
-                if (c1.Position.y + c1.Radius <= (c2.Position.y - c2.Extern.y))
+                if (c1.Position.y + radius < (c2.Position.y - extents.y))
                     return false;
                 //计算球与底部相交的圆半径
-                radius = ProjectRadius(radius, (c2.Position.y - c2.Extern.y) - c1.Position.y);
+                radius = ProjectRadius(radius, (c2.Position.y - extents.y) - c1.Position.y);
             }
-            else if (c1.Position.y > (c2.Position.y + c2.Extern.y))
+            else if (c1.Position.y > (c2.Position.y + extents.y))
             {//在上方
                 //不相接
-                if ((c1.Position.y - c1.Radius) >= (c2.Position.y + c2.Extern.y))
+                if ((c1.Position.y - radius) > (c2.Position.y + extents.y))
                     return false;
                 //计算球与顶部相交的圆半径
-                radius = ProjectRadius(radius, c1.Position.y - (c2.Position.y + c2.Extern.y));
+                radius = ProjectRadius(radius, c1.Position.y - (c2.Position.y + extents.y));
             }
-            float sdf = ShapeSDFUtil.OrientedBoxSDF(c1.Position.ToV2(), c2.Position.ToV2(), c2.YDegree, c2.Extern.ToV2());
+            float sdf = ShapeSDFUtil.OrientedBoxSDF(c1.Position.ToV2(), c2.Position.ToV2(), c2.YDegree, extents.ToV2());
             return sdf <= radius;
         }
         public static bool Overlap(in ShapeSphere c1, in ShapePie c2)
         {
-            float radius = c1.Radius;
+            float radius = Mathf.Max(0, c1.Radius);
+            float pieHeight = Mathf.Max(0, c2.Height);
             if (c1.Position.y < c2.Position.y)
             {//球在下方
                 //不相接
-                if (c1.Position.y + c1.Radius <= c2.Position.y)
+                if (c1.Position.y + radius < c2.Position.y)
                     return false;
                 //计算球与底部相交的圆半径
                 radius = ProjectRadius(radius, c2.Position.y - c1.Position.y);
             }
-            else if (c1.Position.y > (c2.Position.y + c2.Height))
+            else if (c1.Position.y > (c2.Position.y + pieHeight))
             {//在上方
                 //不相接
-                if (c1.Position.y - c1.Radius >= (c2.Position.y + c2.Height))
+                if (c1.Position.y - radius > (c2.Position.y + pieHeight))
                     return false;
                 //计算球与顶部相交的圆半径
-                radius = ProjectRadius(radius, c1.Position.y - (c2.Position.y + c2.Height));
+                radius = ProjectRadius(radius, c1.Position.y - (c2.Position.y + pieHeight));
             }
-            float sdf = ShapeSDFUtil.SectorSDF(c1.Position.ToV2(), c2.Position.ToV2(), c2.YDegree, c2.Angle, c2.Radius);
+            float sdf = ShapeSDFUtil.SectorSDF(c1.Position.ToV2(), c2.Position.ToV2(), c2.YDegree, c2.Angle, Mathf.Max(0, c2.Radius));
             return sdf <= radius;
         }
         public static bool Overlap(in ShapeSphere c1, in ShapeCapsule c2)
         {
             TryGetCapsuleSegment(c2, out Vector3 start, out Vector3 end);
-            float radius = c1.Radius + c2.Radius;
+            float radius = Mathf.Max(0, c1.Radius) + Mathf.Max(0, c2.Radius);
             return Vector3.SqrMagnitude(ClosestPoint(start, end, c1.Position) - c1.Position) <= radius * radius;
         }
         public static bool Overlap(in ShapeSphere c1, in ShapeSegment c2)
         {
-            return Vector3.SqrMagnitude(ClosestPoint(c2.Start, c2.End, c1.Position) - c1.Position) <= c1.Radius * c1.Radius;
+            float radius = Mathf.Max(0, c1.Radius);
+            return Vector3.SqrMagnitude(ClosestPoint(c2.Start, c2.End, c1.Position) - c1.Position) <= radius * radius;
         }
         public static bool Overlap(in ShapeSphere c1, in ShapeAABB c2)
         {
-            return SqrDistancePointAABB(c1.Position, c2) <= c1.Radius * c1.Radius;
+            float radius = Mathf.Max(0, c1.Radius);
+            return SqrDistancePointAABB(c1.Position, c2) <= radius * radius;
         }
 
         public static bool Overlap(in ShapeBox c1, in ShapeSphere c2) { return Overlap(c2, c1); }
@@ -687,7 +883,7 @@ namespace ShapeCollider
         public static bool Overlap(in ShapeBox c1, in ShapePie c2)
         {
             if (!OverlapHeight(c1.Position.y - Mathf.Abs(c1.Extern.y), c1.Position.y + Mathf.Abs(c1.Extern.y),
-                c2.Position.y, c2.Position.y + c2.Height))
+                c2.Position.y, c2.Position.y + Mathf.Max(0, c2.Height)))
                 return false;
 
             return OverlapSectorOBB2D(c2, c1);
@@ -715,34 +911,40 @@ namespace ShapeCollider
         public static bool Overlap(in ShapeCylinder c1, in ShapeSphere c2) { return Overlap(c2, c1); }
         public static bool Overlap(in ShapeCylinder c1, in ShapeCylinder c2)
         {
-            if (c1.Position.y + c1.Height < c2.Position.y)
+            float height1 = Mathf.Max(0, c1.Height);
+            float height2 = Mathf.Max(0, c2.Height);
+            if (c1.Position.y + height1 < c2.Position.y)
                 return false;
-            if (c1.Position.y > (c2.Position.y + c2.Height))
+            if (c1.Position.y > (c2.Position.y + height2))
                 return false;
 
-            float sqrRadius = c1.Radius + c2.Radius;
+            float sqrRadius = Mathf.Max(0, c1.Radius) + Mathf.Max(0, c2.Radius);
             sqrRadius *= sqrRadius;
             return sqrRadius >= Vector2.SqrMagnitude(c1.Position.ToV2() - c2.Position.ToV2());
         }
         //圆柱跟矩形，计算出点到一个矩形的距离，如果这个距离小于圆柱的半径，就证明是会发生碰撞的
         public static bool Overlap(in ShapeCylinder c1, in ShapeBox c2)
         {
-            if (c1.Position.y + c1.Height < c2.Position.y - c2.Extern.y)
+            Vector3 extents = Abs(c2.Extern);
+            float height = Mathf.Max(0, c1.Height);
+            if (c1.Position.y + height < c2.Position.y - extents.y)
                 return false;
-            if (c1.Position.y > c2.Position.y + c2.Extern.y)
+            if (c1.Position.y > c2.Position.y + extents.y)
                 return false;
 
-            float sdf = ShapeSDFUtil.OrientedBoxSDF(c1.Position.ToV2(), c2.Position.ToV2(), c2.YDegree, c2.Extern.ToV2());
-            return sdf <= c1.Radius;
+            float sdf = ShapeSDFUtil.OrientedBoxSDF(c1.Position.ToV2(), c2.Position.ToV2(), c2.YDegree, extents.ToV2());
+            return sdf <= Mathf.Max(0, c1.Radius);
         }
         public static bool Overlap(in ShapeCylinder c1, in ShapePie c2)
         {
-            if (c1.Position.y + c1.Height < c2.Position.y)
+            float height = Mathf.Max(0, c1.Height);
+            float pieHeight = Mathf.Max(0, c2.Height);
+            if (c1.Position.y + height < c2.Position.y)
                 return false;
-            if (c1.Position.y > c2.Position.y + c2.Height)
+            if (c1.Position.y > c2.Position.y + pieHeight)
                 return false;
-            float sdf = ShapeSDFUtil.SectorSDF(c1.Position.ToV2(), c2.Position.ToV2(), c2.YDegree, c2.Angle, c2.Radius);
-            return sdf <= c1.Radius;
+            float sdf = ShapeSDFUtil.SectorSDF(c1.Position.ToV2(), c2.Position.ToV2(), c2.YDegree, c2.Angle, Mathf.Max(0, c2.Radius));
+            return sdf <= Mathf.Max(0, c1.Radius);
         }
         public static bool Overlap(in ShapeCylinder c1, in ShapeRay c2, out float t)
         {
@@ -753,7 +955,7 @@ namespace ShapeCollider
             if (IsPointInCylinder(c2.Position, c1))
                 return true;
 
-            float top = c1.Position.y + c1.Height;
+            float top = c1.Position.y + Mathf.Max(0, c1.Height);
             float bottom = c1.Position.y;
             if (length <= Epsilon)
                 return false;
@@ -763,7 +965,8 @@ namespace ShapeCollider
                 return false;
             if (c2.Position.y > top && end.y > top)
                 return false;
-            float radiusSquare = c1.Radius * c1.Radius;
+            float radius = Mathf.Max(0, c1.Radius);
+            float radiusSquare = radius * radius;
             Vector2 center = c1.Position.ToV2();
             Vector2 lineStart = c2.Position.ToV2();
             Vector2 lineEnd = end.ToV2();
@@ -856,8 +1059,8 @@ namespace ShapeCollider
             ShapeCylinder expanded = new ShapeCylinder
             {
                 Position = c1.Position - Vector3.up * radius,
-                Radius = c1.Radius + radius,
-                Height = c1.Height + radius * 2,
+                Radius = Mathf.Max(0, c1.Radius) + radius,
+                Height = Mathf.Max(0, c1.Height) + radius * 2,
             };
             ShapeRay segmentRay = new ShapeRay { Position = start, Direction = end - start, Length = (end - start).magnitude };
             return Overlap(expanded, segmentRay, out _);
@@ -871,22 +1074,24 @@ namespace ShapeCollider
         public static bool Overlap(in ShapeCylinder c1, in ShapeAABB c2)
         {
             Vector3 extents = Abs(c2.Extents);
-            if (!OverlapHeight(c1.Position.y, c1.Position.y + c1.Height, c2.Center.y - extents.y, c2.Center.y + extents.y))
+            if (!OverlapHeight(c1.Position.y, c1.Position.y + Mathf.Max(0, c1.Height), c2.Center.y - extents.y, c2.Center.y + extents.y))
                 return false;
 
             Vector2 d = new Vector2(
                 Mathf.Max(Mathf.Abs(c1.Position.x - c2.Center.x) - extents.x, 0),
                 Mathf.Max(Mathf.Abs(c1.Position.z - c2.Center.z) - extents.z, 0));
-            return d.sqrMagnitude <= c1.Radius * c1.Radius;
+            float radius = Mathf.Max(0, c1.Radius);
+            return d.sqrMagnitude <= radius * radius;
         }
 
         private static bool IsPointInCylinder(Vector3 point, in ShapeCylinder cylinder)
         {
-            float top = cylinder.Position.y + cylinder.Height;
+            float top = cylinder.Position.y + Mathf.Max(0, cylinder.Height);
             if (point.y < cylinder.Position.y || point.y > top)
                 return false;
 
-            return Vector2.SqrMagnitude(point.ToV2() - cylinder.Position.ToV2()) <= cylinder.Radius * cylinder.Radius;
+            float radius = Mathf.Max(0, cylinder.Radius);
+            return Vector2.SqrMagnitude(point.ToV2() - cylinder.Position.ToV2()) <= radius * radius;
         }
 
         public static bool Overlap(in ShapeBox c1, in ShapeCylinder c2) { return Overlap(c2, c1); }
@@ -900,7 +1105,9 @@ namespace ShapeCollider
         #region 扇形柱
         public static bool Overlap(in ShapePie c1, in ShapePie c2)
         {
-            if (!OverlapHeight(c1.Position.y, c1.Position.y + c1.Height, c2.Position.y, c2.Position.y + c2.Height))
+            float height1 = Mathf.Max(0, c1.Height);
+            float height2 = Mathf.Max(0, c2.Height);
+            if (!OverlapHeight(c1.Position.y, c1.Position.y + height1, c2.Position.y, c2.Position.y + height2))
                 return false;
 
             Vector2 center1 = c1.Position.ToV2();
@@ -910,10 +1117,12 @@ namespace ShapeCollider
 
             float half1 = c1.Angle * 0.5f;
             float half2 = c2.Angle * 0.5f;
-            Vector2 c1Left = center1 + ShapeSDFUtil.Rotate(new Vector2(0, 1), c1.YDegree - half1) * c1.Radius;
-            Vector2 c1Right = center1 + ShapeSDFUtil.Rotate(new Vector2(0, 1), c1.YDegree + half1) * c1.Radius;
-            Vector2 c2Left = center2 + ShapeSDFUtil.Rotate(new Vector2(0, 1), c2.YDegree - half2) * c2.Radius;
-            Vector2 c2Right = center2 + ShapeSDFUtil.Rotate(new Vector2(0, 1), c2.YDegree + half2) * c2.Radius;
+            float radius1 = Mathf.Max(0, c1.Radius);
+            float radius2 = Mathf.Max(0, c2.Radius);
+            Vector2 c1Left = center1 + ShapeSDFUtil.Rotate(new Vector2(0, 1), c1.YDegree - half1) * radius1;
+            Vector2 c1Right = center1 + ShapeSDFUtil.Rotate(new Vector2(0, 1), c1.YDegree + half1) * radius1;
+            Vector2 c2Left = center2 + ShapeSDFUtil.Rotate(new Vector2(0, 1), c2.YDegree - half2) * radius2;
+            Vector2 c2Right = center2 + ShapeSDFUtil.Rotate(new Vector2(0, 1), c2.YDegree + half2) * radius2;
 
             return SegmentIntersectsSector(center1, c1Left, c2)
                 || SegmentIntersectsSector(center1, c1Right, c2)
@@ -925,7 +1134,7 @@ namespace ShapeCollider
         {
             Vector3 extents = new Vector3(Mathf.Abs(c2.Extents.x), Mathf.Abs(c2.Extents.y), Mathf.Abs(c2.Extents.z));
             float pieBottom = c1.Position.y;
-            float pieTop = c1.Position.y + c1.Height;
+            float pieTop = c1.Position.y + Mathf.Max(0, c1.Height);
             if (!OverlapHeight(pieBottom, pieTop, c2.Center.y - extents.y, c2.Center.y + extents.y))
                 return false;
 
@@ -943,13 +1152,14 @@ namespace ShapeCollider
             if (Overlap(startSphere, c1) || Overlap(endSphere, c1))
                 return true;
 
-            return OverlapPieCapsuleBySamples(c1, start, end, radius);
+            return OverlapPieCapsuleByDistance(c1, start, end, radius);
         }
         public static bool Overlap(in ShapePie c1, in ShapeSegment c2)
         {
             float minY = Mathf.Min(c2.Start.y, c2.End.y);
             float maxY = Mathf.Max(c2.Start.y, c2.End.y);
-            if (!OverlapHeight(c1.Position.y, c1.Position.y + c1.Height, minY, maxY))
+            float height = Mathf.Max(0, c1.Height);
+            if (!OverlapHeight(c1.Position.y, c1.Position.y + height, minY, maxY))
                 return false;
 
             if (OverlapPieCapsuleSample(c1, c2.Start, 0) || OverlapPieCapsuleSample(c1, c2.End, 0))
@@ -957,7 +1167,7 @@ namespace ShapeCollider
 
             Vector3 segment = c2.End - c2.Start;
             if (OverlapPieCapsuleYBoundarySample(c1, c2.Start, segment, c1.Position.y, 0)
-                || OverlapPieCapsuleYBoundarySample(c1, c2.Start, segment, c1.Position.y + c1.Height, 0))
+                || OverlapPieCapsuleYBoundarySample(c1, c2.Start, segment, c1.Position.y + height, 0))
                 return true;
 
             return SegmentIntersectsSector(c2.Start.ToV2(), c2.End.ToV2(), c1);
@@ -973,13 +1183,14 @@ namespace ShapeCollider
         {
             TryGetCapsuleSegment(c1, out Vector3 start1, out Vector3 end1);
             TryGetCapsuleSegment(c2, out Vector3 start2, out Vector3 end2);
-            float radius = c1.Radius + c2.Radius;
+            float radius = Mathf.Max(0, c1.Radius) + Mathf.Max(0, c2.Radius);
             return SegmentSegmentSqrDistance(start1, end1, start2, end2) <= radius * radius;
         }
         public static bool Overlap(in ShapeCapsule c1, in ShapeSegment c2)
         {
             TryGetCapsuleSegment(c1, out Vector3 start, out Vector3 end);
-            return SegmentSegmentSqrDistance(start, end, c2.Start, c2.End) <= c1.Radius * c1.Radius;
+            float radius = Mathf.Max(0, c1.Radius);
+            return SegmentSegmentSqrDistance(start, end, c2.Start, c2.End) <= radius * radius;
         }
         public static bool Overlap(in ShapeCapsule c1, in ShapeRay c2, out float t)
         {

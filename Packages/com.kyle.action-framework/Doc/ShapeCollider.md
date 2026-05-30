@@ -48,12 +48,12 @@ ShapeCollider 是一组轻量级几何碰撞工具，用于在不依赖 Unity Ph
 | 圆柱 / 线段 | 线段作为有限射线复用圆柱射线检测 |
 | 圆柱 / AABB | 高度区间和 XZ 圆 / AABB 矩形距离检测 |
 | 扇形柱 / AABB | 高度区间和 XZ 平面扇形 / 矩形检测 |
-| 扇形柱 / 胶囊体 | 胶囊端点球体与中轴关键点对扇形柱检测 |
+| 扇形柱 / 胶囊体 | 胶囊中轴线段到扇形柱的最近距离检测 |
 | 扇形柱 / 线段 | 高度区间和 XZ 平面线段 / 扇形检测 |
 | 扇形柱 / 扇形柱 | 高度区间和 XZ 平面扇形边界检测 |
 | 胶囊体 / 胶囊体 | 两条胶囊中轴线段的最近距离检测 |
 | 胶囊体 / 线段 | 线段到胶囊中轴线段的最近距离检测 |
-| 胶囊体 / AABB | 胶囊中轴线段到 AABB 的最近距离检测 |
+| 胶囊体 / AABB | 胶囊中轴线段到 AABB 的精确最近距离检测 |
 | 线段 / 线段 | 两条线段距离为 `0` 时视为相交 |
 | 线段 / AABB | 线段作为有限射线做 AABB 检测 |
 | 线段 / 射线 | 线段与有限射线线段的最近距离检测 |
@@ -64,6 +64,8 @@ ShapeCollider 是一组轻量级几何碰撞工具，用于在不依赖 Unity Ph
 | AABB / 射线 | 有限射线命中轴对齐包围盒，返回首次命中距离 `t` |
 
 射线重载的 `out float t` 表示从射线起点沿归一化方向前进的世界距离。若射线起点已经在体积内部，`Overlap` 返回 `true` 且 `t` 为 `0`。
+
+普通体积检测会把边界接触视为重叠，例如球体刚好贴到圆柱底面、盒体侧面或扇形柱上下表面时返回 `true`。
 
 ```csharp
 using ShapeCollider;
@@ -159,5 +161,6 @@ void OnDrawGizmos()
 - 所有圆柱和扇形柱都使用世界 Y 轴作为高度方向。
 - `ShapeCylinder.Position` 和 `ShapePie.Position` 表示底部中心，`ShapeBox.Position` 和 `ShapeSphere.Position` 表示几何中心。
 - `ShapeCapsule.Position` 表示起点球心，终点球心为 `Position + Direction.normalized * Length`。
-- `Radius`、`Height`、`Length` 建议传入非负值；射线和胶囊体检测会把负 `Length` 按 `0` 处理。
+- `Radius`、`Height`、`Length` 建议传入非负值；碰撞检测会把负半径和负高度按 `0` 处理，射线和胶囊体检测会把负 `Length` 按 `0` 处理。
+- `ShapeBox.Extern` 与 `ShapeAABB.Extents` 会按绝对值参与检测和 Gizmos 绘制，调用侧仍建议传入非负半尺寸以保持 Inspector 数据直观。
 - 当前模块不提供 `ShapePie / ShapeRay` 和 `ShapeRay / ShapeRay` 重载；这两类检测通常需要更明确的命中参数约定。

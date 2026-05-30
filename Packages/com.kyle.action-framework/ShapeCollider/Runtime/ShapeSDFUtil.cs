@@ -28,6 +28,7 @@ namespace ShapeCollider
             //将point转换到目标坐标系
             point -= center;
             point = Rotate(point, -yDegree);
+            halfSize = halfSize.Abs();
             Vector2 d = point.Abs() - halfSize;
             return Vector2.Max(d, Vector2.zero).magnitude + Mathf.Min(Mathf.Max(d.x, d.y), 0);
         }
@@ -45,6 +46,10 @@ namespace ShapeCollider
             //将point转换到目标坐标系
             point -= pos;
             point = Rotate(point, yDegree);
+            angle = Mathf.Clamp(angle, 0, 360);
+            radius = Mathf.Max(0, radius);
+            if (angle >= 360)
+                return point.magnitude - radius;
             //计算sdf https://zhuanlan.zhihu.com/p/427587359
             //原点在圆心图形以y轴为对称轴
             float d = (angle * 0.5f) * Mathf.Deg2Rad;

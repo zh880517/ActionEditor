@@ -20,13 +20,13 @@ namespace ShapeCollider
             var matrix = Gizmos.matrix;
             Quaternion r = Quaternion.Euler(0, box.YDegree, 0);
             Gizmos.matrix = Matrix4x4.TRS(box.Position, r, Vector3.one);
-            Gizmos.DrawWireCube(Vector3.zero, box.Extern * 2);
+            Gizmos.DrawWireCube(Vector3.zero, new Vector3(Mathf.Abs(box.Extern.x), Mathf.Abs(box.Extern.y), Mathf.Abs(box.Extern.z)) * 2);
             Gizmos.matrix = matrix;
         }
 
         public static void DrawAABB(ShapeAABB box)
         {
-            Gizmos.DrawWireCube(box.Center, box.Extents * 2);
+            Gizmos.DrawWireCube(box.Center, new Vector3(Mathf.Abs(box.Extents.x), Mathf.Abs(box.Extents.y), Mathf.Abs(box.Extents.z)) * 2);
         }
 
         public static void DrawLine(ShapeRay ray)
@@ -84,10 +84,8 @@ namespace ShapeCollider
         {
             if (radius <= 0.001 || height <= 0)
                 return;
-            if (radius <= 0.001)
-                return;
             float perimeter = 2 * radius * Mathf.PI;
-            int count = Mathf.CeilToInt(perimeter * 2);
+            int count = Mathf.Min(Mathf.CeilToInt(perimeter * 2), 96);
             //分成偶数段
             if (count % 2 == 1)
                 count++;
@@ -133,7 +131,7 @@ namespace ShapeCollider
             if (radius <= 0.001)
                 return;
             float perimeter = 2 * radius * Mathf.PI;
-            int count = Mathf.CeilToInt(perimeter * 2);
+            int count = Mathf.Min(Mathf.CeilToInt(perimeter * 2), 96);
             //分成偶数段
             if (count % 2 == 1)
                 count++;
@@ -161,7 +159,9 @@ namespace ShapeCollider
                 return;
 
             float perimeter = 2 * radius * Mathf.PI * (angle / 360);
-            int count = Mathf.CeilToInt(perimeter * 2);
+            int count = Mathf.Min(Mathf.CeilToInt(perimeter * 2), 96);
+            if (count < 1)
+                count = 1;
             Vector3 heightOffset = new Vector3(0, height, 0);
             Vector3 center = pos;
             //右侧开始
