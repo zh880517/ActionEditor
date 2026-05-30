@@ -21,6 +21,7 @@
 | **GOAP** | 面向目标的行动规划系统（Goal-Oriented Action Planning），用于 NPC AI 自动规划行动序列 | [GOAP 用户手册](GOAP.md) |
 | **LiteAnim** | 基于 PlayableGraph 的轻量动画图，支持多层叠加、Clip 拼接、混合树与状态过渡 | [LiteAnim 用户手册](LiteAnim.md) |
 | **ECS** | 轻量实体组件系统，包含纯逻辑 `LiteECS` 与绑定 `GameObject` 的 `ViewECS`，支持组件扫描、代码生成、Group 遍历和 Reactive 更新 | [ECS 用户手册](ECS.md) |
+| **ShapeCollider** | 轻量级几何碰撞工具，支持球体、竖直圆柱、有向盒、扇形柱和有限射线检测，并提供 Gizmos 调试绘制 | [ShapeCollider 使用手册](ShapeCollider.md) |
 
 ### 配置与资源管理
 
@@ -57,6 +58,7 @@ com.kyle.action-framework/
 ├── ECS/             # 轻量实体组件系统（Editor + Runtime）
 ├── EasyConfig/      # 配置管理（Editor + Runtime）
 ├── NamedAsset/      # 资源管理（Editor + Runtime）
+├── ShapeCollider/   # 几何碰撞与 Gizmos 调试（Runtime）
 ├── VisualShape/     # 调试绘制（Editor + Runtime）
 ├── Common/          # 公共基础库（PropertyEditor、DataVisit、Serialization 等）
 └── Doc/             # 文档目录（当前位置）
