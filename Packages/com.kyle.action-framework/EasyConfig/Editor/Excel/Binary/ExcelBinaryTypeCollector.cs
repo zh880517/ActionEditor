@@ -131,6 +131,11 @@ namespace EasyConfig.Editor
             return new List<ConfigGroupData>(groupMap.Values);
         }
 
+        public static bool TryCreateTypeData(Type type, out ConfigTypeData typeData)
+        {
+            return TryCreateTypeData(type, null, out typeData);
+        }
+
         private static bool TryCreateTypeData(Type type, Type groupAttrType, out ConfigTypeData typeData)
         {
             typeData = null;
@@ -211,7 +216,8 @@ namespace EasyConfig.Editor
 
             if (!kind.HasValue)
             {
-                Debug.LogError($"[ExcelBinaryTypeCollector] Type {type.FullName} has ConfigGroupAttribute [{groupAttrType.Name}] but does not inherit ListConfig<{type.Name}>, DictionaryConfig<TKey, {type.Name}>, LinkedListConfig<{type.Name}, TPrimary> or LinkedDictionaryConfig<TKey, {type.Name}, TPrimary>. Skipping.");
+                string groupMessage = groupAttrType == null ? string.Empty : $" has ConfigGroupAttribute [{groupAttrType.Name}] but";
+                Debug.LogError($"[ExcelBinaryTypeCollector] Type {type.FullName}{groupMessage} does not inherit ListConfig<{type.Name}>, DictionaryConfig<TKey, {type.Name}>, LinkedListConfig<{type.Name}, TPrimary> or LinkedDictionaryConfig<TKey, {type.Name}, TPrimary>. Skipping.");
                 return false;
             }
 

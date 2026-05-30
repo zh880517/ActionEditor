@@ -23,8 +23,9 @@
 ## 文档任务
 
 - [x] `EasyConfigExcelLinkedConfigSplitDesign.md`：实现关联配置拆分、类型识别、二进制导出和关联恢复。
-  - 执行情况：完成；开发 Agent：Huygens；Review Agent：Carson；验证：dotnet build smoke test、生成器 smoke test、git diff --check、Markdown LF 检查、asmdef 变更检查通过，Unity Editor 编译未在命令行环境运行；变更：新增关联配置模板类，扩展类型识别、二进制导出和生成代码 LinkAll 关联恢复，并同步文档；提交：92cde4e
-- [ ] `EasyConfigEditorExcelDataAccessDesign.md`：实现 Editor Excel JSON 缓存访问入口和首次读取注册。
+  - 执行情况：完成；开发 Agent：Huygens；Review Agent：Carson；验证：dotnet build smoke test、生成器 smoke test、git diff --check、Markdown LF 检查、asmdef 变更检查通过，Unity Editor 编译未在命令行环境运行；变更：新增关联配置模板类，扩展类型识别、二进制导出和生成代码 LinkAll 关联恢复，并同步文档；提交：bcde123
+- [x] `EasyConfigEditorExcelDataAccessDesign.md`：实现 Editor Excel JSON 缓存访问入口和首次读取注册。
+  - 执行情况：完成；开发 Agent：Peirce；Review Agent：Euler；验证：`dotnet build EasyConfig.Editor.csproj`、`git diff --check`、新增 `.asmdef` 检查、Markdown LF 检查通过；Unity Editor 实例中的实际 Excel 缓存读取未在命令行环境运行；变更：新增 Editor List/Dictionary JSON 缓存懒加载访问入口、首次读取注册、关联配置 Primary 恢复，并同步 `Doc/EasyConfig.md`；提交：3921df3
 - [ ] `EasyConfigExcelHotReloadDesign.md`：实现 Editor Excel 缓存热刷新派发和刷新顺序。
 - [ ] `Doc/EasyConfig.md`：补充关联配置、Editor 数据访问和热刷新用法。
 

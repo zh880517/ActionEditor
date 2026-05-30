@@ -48,6 +48,9 @@ EasyConfig/
     │   ├── SheetData.cs / RowData.cs   # 中间 JSON 数据结构
     │   ├── IExcelExportFilter.cs       # 页签/文件名过滤接口
     │   ├── ExportUtil.cs               # 从缓存 JSON 填充 Collector 的工具
+    │   ├── EditorListConfig.cs         # Editor 专用 List JSON 缓存访问入口
+    │   ├── EditorDictionaryConfig.cs   # Editor 专用 Dictionary JSON 缓存访问入口
+    │   ├── EditorExcelConfigReloadDispatcher.cs # Editor 首次读取注册入口
     │   ├── Monitor/
     │   │   ├── ExcelDataManager.cs     # 文件监听 & 热更新调度（ScriptableSingleton）
     │   │   ├── ExcelDataCollector.cs   # 数据收集器抽象基类
@@ -257,6 +260,30 @@ IReadOnlyList<KeyValuePair<int, string>> list = ItemDataCollector.SearchList;
 ExportUtil.Read<SkillConfig>(cachePath);
 ExportUtil.Read<int, ItemConfig>(cachePath);
 ```
+
+### 2.4 EditorListConfig / EditorDictionaryConfig — 工具侧懒加载访问
+
+Editor 工具、Inspector、下拉选择器或校验工具可以通过 `EditorListConfig<T>` 和 `EditorDictionaryConfig<T>` 直接访问 `Library/ExcelCache` 下的 JSON 缓存。该入口只存在于 Editor 编译范围，不调用运行时二进制生成类 `LoadAll`，也不依赖 `ConfigLoaderManager` / `IDataProvider`。
+
+```csharp
+// List 配置：首次访问会读取 Library/ExcelCache 并填充 ConfigListCollector<SkillConfig>
+int count = EditorListConfig<SkillConfig>.Count;
+SkillConfig skill = EditorListConfig<SkillConfig>.Get(0);
+SkillConfig fire = EditorListConfig<SkillConfig>.Find(it => it.Name == "火球");
+
+// Dictionary 配置：Key 在运行时校验，类型不匹配会输出错误日志
+ItemConfig item = EditorDictionaryConfig<ItemConfig>.Get(1001);
+bool hasItem = EditorDictionaryConfig<ItemConfig>.Contains(1001);
+IReadOnlyDictionary<object, ItemConfig> allItems = EditorDictionaryConfig<ItemConfig>.Configs;
+```
+
+首次成功读取后，访问入口会调用 `EditorExcelConfigReloadDispatcher.RegisterConfigType(typeof(T))` 记录已读取类型，供后续 Excel 缓存热刷新流程使用。重复访问同一配置类型会直接读取现有 Collector，不重复读取 JSON，也不重复注册。
+
+关联配置继承 `LinkedListConfig<TLinked, TPrimary>` 或 `LinkedDictionaryConfig<TKey, TLinked, TPrimary>` 时，Editor 首次读取会按运行时生成代码同源的规则恢复 `Primary` 引用：
+
+- `LinkedListConfig` 按相同行索引从主配置 Collector 查找。
+- `LinkedDictionaryConfig` 按相同 Key 从主配置 Collector 查找。
+- 主配置 Collector 未提前读取或缺失对应项时输出错误日志，不会隐式跨类型加载主配置。
 
 ---
 

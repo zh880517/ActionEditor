@@ -14,7 +14,7 @@ namespace EasyConfig.Editor
 
         public static string ExcelPath;
         public IExcelExportFilter ExportFilter;
-        private static string CachePath => Path.Combine(Directory.GetCurrentDirectory(), "Library", "ExcelCache");
+        internal static string CachePath => Path.Combine(Directory.GetCurrentDirectory(), "Library", "ExcelCache");
         private FileSystemWatcher watcher;
         private bool waitRefresh;
         public void OnDataCollectorCreate(ExcelDataCollector collector)
