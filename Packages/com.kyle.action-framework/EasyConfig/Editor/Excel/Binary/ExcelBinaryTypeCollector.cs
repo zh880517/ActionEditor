@@ -1,14 +1,28 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using UnityEngine;
 
 namespace EasyConfig.Editor
 {
+    public enum ConfigKind
+    {
+        List,
+        Dictionary,
+        LinkedList,
+        LinkedDictionary,
+    }
+
     public class ConfigTypeData
     {
         public Type Type;
-        public bool IsListConfig;
+        public ConfigKind Kind;
         public Type KeyType;
+        public Type PrimaryType;
+        public string SheetName;
+
+        public bool IsListConfig => Kind == ConfigKind.List || Kind == ConfigKind.LinkedList;
+        public bool IsLinkedConfig => Kind == ConfigKind.LinkedList || Kind == ConfigKind.LinkedDictionary;
     }
 
     public class ConfigGroupData
@@ -25,6 +39,8 @@ namespace EasyConfig.Editor
     {
         private static readonly Type ListConfigOpenType = typeof(ListConfig<>);
         private static readonly Type DictionaryConfigOpenType = typeof(DictionaryConfig<,>);
+        private static readonly Type LinkedListConfigOpenType = typeof(LinkedListConfig<,>);
+        private static readonly Type LinkedDictionaryConfigOpenType = typeof(LinkedDictionaryConfig<,,>);
 
         public static List<ConfigGroupData> Collect()
         {
@@ -76,46 +92,8 @@ namespace EasyConfig.Editor
                     continue;
                 }
 
-                bool isListConfig = false;
-                bool isDictConfig = false;
-                Type keyType = null;
-
-                var baseType = type.BaseType;
-                while (baseType != null)
+                if (!TryCreateTypeData(type, groupAttrType, out var typeData))
                 {
-                    if (baseType.IsGenericType)
-                    {
-                        var genericDef = baseType.GetGenericTypeDefinition();
-                        if (genericDef == ListConfigOpenType)
-                        {
-                            var genericArg = baseType.GetGenericArguments()[0];
-                            if (genericArg == type)
-                                isListConfig = true;
-                            else
-                                Debug.LogWarning($"[ExcelBinaryTypeCollector] Type {type.FullName} extends ListConfig<{genericArg.Name}> but expected ListConfig<{type.Name}>.");
-                            break;
-                        }
-                        else if (genericDef == DictionaryConfigOpenType)
-                        {
-                            var genericArgs = baseType.GetGenericArguments();
-                            if (genericArgs[1] == type)
-                            {
-                                isDictConfig = true;
-                                keyType = genericArgs[0];
-                            }
-                            else
-                            {
-                                Debug.LogWarning($"[ExcelBinaryTypeCollector] Type {type.FullName} extends DictionaryConfig<{genericArgs[0].Name}, {genericArgs[1].Name}> but expected DictionaryConfig<TKey, {type.Name}>.");
-                            }
-                            break;
-                        }
-                    }
-                    baseType = baseType.BaseType;
-                }
-
-                if (!isListConfig && !isDictConfig)
-                {
-                    Debug.LogError($"[ExcelBinaryTypeCollector] Type {type.FullName} has ConfigGroupAttribute [{groupAttrType.Name}] but does not inherit ListConfig<{type.Name}> or DictionaryConfig<TKey, {type.Name}>. Skipping.");
                     continue;
                 }
 
@@ -132,12 +110,7 @@ namespace EasyConfig.Editor
                     groupMap[groupAttrType] = groupData;
                 }
 
-                groupData.Types.Add(new ConfigTypeData
-                {
-                    Type = type,
-                    IsListConfig = isListConfig,
-                    KeyType = keyType,
-                });
+                groupData.Types.Add(typeData);
             }
 
             // Check for duplicate file names within each group
@@ -156,6 +129,125 @@ namespace EasyConfig.Editor
             }
 
             return new List<ConfigGroupData>(groupMap.Values);
+        }
+
+        private static bool TryCreateTypeData(Type type, Type groupAttrType, out ConfigTypeData typeData)
+        {
+            typeData = null;
+            Type keyType = null;
+            Type primaryType = null;
+            ConfigKind? kind = null;
+
+            var baseType = type.BaseType;
+            while (baseType != null)
+            {
+                if (baseType.IsGenericType)
+                {
+                    var genericDef = baseType.GetGenericTypeDefinition();
+                    var genericArgs = baseType.GetGenericArguments();
+                    if (genericDef == LinkedListConfigOpenType)
+                    {
+                        if (genericArgs[0] != type)
+                        {
+                            Debug.LogError($"[ExcelBinaryTypeCollector] Type {type.FullName} extends LinkedListConfig<{genericArgs[0].Name}, {genericArgs[1].Name}> but expected LinkedListConfig<{type.Name}, TPrimary>. Skipping.");
+                            return false;
+                        }
+
+                        primaryType = genericArgs[1];
+                        if (!IsPrimaryListConfig(primaryType))
+                        {
+                            Debug.LogError($"[ExcelBinaryTypeCollector] Type {type.FullName} linked primary type {primaryType.FullName} must inherit ListConfig<{primaryType.Name}>. Skipping.");
+                            return false;
+                        }
+
+                        kind = ConfigKind.LinkedList;
+                        break;
+                    }
+                    if (genericDef == LinkedDictionaryConfigOpenType)
+                    {
+                        if (genericArgs[1] != type)
+                        {
+                            Debug.LogError($"[ExcelBinaryTypeCollector] Type {type.FullName} extends LinkedDictionaryConfig<{genericArgs[0].Name}, {genericArgs[1].Name}, {genericArgs[2].Name}> but expected LinkedDictionaryConfig<TKey, {type.Name}, TPrimary>. Skipping.");
+                            return false;
+                        }
+
+                        keyType = genericArgs[0];
+                        primaryType = genericArgs[2];
+                        if (!IsPrimaryDictionaryConfig(primaryType, keyType))
+                        {
+                            Debug.LogError($"[ExcelBinaryTypeCollector] Type {type.FullName} linked primary type {primaryType.FullName} must inherit DictionaryConfig<{keyType.Name}, {primaryType.Name}>. Skipping.");
+                            return false;
+                        }
+
+                        kind = ConfigKind.LinkedDictionary;
+                        break;
+                    }
+                    if (genericDef == ListConfigOpenType)
+                    {
+                        if (genericArgs[0] != type)
+                        {
+                            Debug.LogError($"[ExcelBinaryTypeCollector] Type {type.FullName} extends ListConfig<{genericArgs[0].Name}> but expected ListConfig<{type.Name}>. Skipping.");
+                            return false;
+                        }
+
+                        kind = ConfigKind.List;
+                        break;
+                    }
+                    if (genericDef == DictionaryConfigOpenType)
+                    {
+                        if (genericArgs[1] != type)
+                        {
+                            Debug.LogError($"[ExcelBinaryTypeCollector] Type {type.FullName} extends DictionaryConfig<{genericArgs[0].Name}, {genericArgs[1].Name}> but expected DictionaryConfig<TKey, {type.Name}>. Skipping.");
+                            return false;
+                        }
+
+                        keyType = genericArgs[0];
+                        kind = ConfigKind.Dictionary;
+                        break;
+                    }
+                }
+                baseType = baseType.BaseType;
+            }
+
+            if (!kind.HasValue)
+            {
+                Debug.LogError($"[ExcelBinaryTypeCollector] Type {type.FullName} has ConfigGroupAttribute [{groupAttrType.Name}] but does not inherit ListConfig<{type.Name}>, DictionaryConfig<TKey, {type.Name}>, LinkedListConfig<{type.Name}, TPrimary> or LinkedDictionaryConfig<TKey, {type.Name}, TPrimary>. Skipping.");
+                return false;
+            }
+
+            typeData = new ConfigTypeData
+            {
+                Type = type,
+                Kind = kind.Value,
+                KeyType = keyType,
+                PrimaryType = primaryType,
+                SheetName = type.GetCustomAttribute<ExcelSheetAttribute>()?.Name,
+            };
+            return true;
+        }
+
+        private static bool IsPrimaryListConfig(Type primaryType)
+        {
+            return HasGenericConfigBase(primaryType, ListConfigOpenType, args => args[0] == primaryType);
+        }
+
+        private static bool IsPrimaryDictionaryConfig(Type primaryType, Type keyType)
+        {
+            return HasGenericConfigBase(primaryType, DictionaryConfigOpenType, args => args[0] == keyType && args[1] == primaryType);
+        }
+
+        private static bool HasGenericConfigBase(Type type, Type openType, Predicate<Type[]> match)
+        {
+            var baseType = type.BaseType;
+            while (baseType != null)
+            {
+                if (baseType.IsGenericType && baseType.GetGenericTypeDefinition() == openType)
+                {
+                    return match(baseType.GetGenericArguments());
+                }
+                baseType = baseType.BaseType;
+            }
+            return false;
         }
     }
 }

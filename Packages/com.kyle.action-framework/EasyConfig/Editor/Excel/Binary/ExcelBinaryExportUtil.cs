@@ -51,7 +51,7 @@ namespace EasyConfig.Editor
         {
             try
             {
-                if (typeData.IsListConfig)
+                if (typeData.Kind == ConfigKind.List || typeData.Kind == ConfigKind.LinkedList)
                 {
                     // typeof(ConfigListCollector<>).MakeGenericType(configType)
                     Type collectorType = typeof(ConfigListCollector<>).MakeGenericType(typeData.Type);

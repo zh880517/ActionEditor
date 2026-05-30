@@ -241,37 +241,37 @@ for i in ConfigListCollector<TLinked>.Configs
 
 ### Runtime 模板类
 
-- [ ] 新增 `LinkedDictionaryConfig<TKey, TLinked, TPrimary>`。
-- [ ] 新增 `LinkedListConfig<TLinked, TPrimary>`。
-- [ ] `Primary` 属性使用 `internal set`，避免业务侧在外部随意改写关联。
-- [ ] 确认 Runtime 模板类不引用 `UnityEditor`。
+- [x] 新增 `LinkedDictionaryConfig<TKey, TLinked, TPrimary>`。
+- [x] 新增 `LinkedListConfig<TLinked, TPrimary>`。
+- [x] `Primary` 属性使用 `internal set`，避免业务侧在外部随意改写关联。
+- [x] 确认 Runtime 模板类不引用 `UnityEditor`。
 
 ### 类型识别
 
-- [ ] 新增或扩展 `ConfigKind`：`List`、`Dictionary`、`LinkedList`、`LinkedDictionary`。
-- [ ] 扩展配置类型元数据，包含 `Type`、`Kind`、`KeyType`、`PrimaryType`、`SheetName`。
-- [ ] 识别 `LinkedListConfig<TLinked, TPrimary>`，并校验 `TLinked` 为自身。
-- [ ] 识别 `LinkedDictionaryConfig<TKey, TLinked, TPrimary>`，并校验 `TLinked` 为自身。
-- [ ] 校验 `LinkedList` 的 `PrimaryType` 继承 `ListConfig<TPrimary>`。
-- [ ] 校验 `LinkedDictionary` 的 `PrimaryType` 继承相同 `TKey` 的 `DictionaryConfig<TKey, TPrimary>`。
-- [ ] 类型校验失败时输出 `Debug.LogError`，并跳过该类型。
+- [x] 新增或扩展 `ConfigKind`：`List`、`Dictionary`、`LinkedList`、`LinkedDictionary`。
+- [x] 扩展配置类型元数据，包含 `Type`、`Kind`、`KeyType`、`PrimaryType`、`SheetName`。
+- [x] 识别 `LinkedListConfig<TLinked, TPrimary>`，并校验 `TLinked` 为自身。
+- [x] 识别 `LinkedDictionaryConfig<TKey, TLinked, TPrimary>`，并校验 `TLinked` 为自身。
+- [x] 校验 `LinkedList` 的 `PrimaryType` 继承 `ListConfig<TPrimary>`。
+- [x] 校验 `LinkedDictionary` 的 `PrimaryType` 继承相同 `TKey` 的 `DictionaryConfig<TKey, TPrimary>`。
+- [x] 类型校验失败时输出 `Debug.LogError`，并跳过该类型。
 
 ### 二进制导出
 
-- [ ] `LinkedList` 继续按 `ConfigListCollector<TLinked>.Configs` 导出。
-- [ ] `LinkedDictionary` 继续按 `ConfigDictionaryCollector<TKey, TLinked>.Configs` 导出。
-- [ ] 确认 `Primary` 不进入关联配置二进制数据。
-- [ ] 确认同一 Excel 页签可以被主配置和关联配置分别读取。
+- [x] `LinkedList` 继续按 `ConfigListCollector<TLinked>.Configs` 导出。
+- [x] `LinkedDictionary` 继续按 `ConfigDictionaryCollector<TKey, TLinked>.Configs` 导出。
+- [x] 确认 `Primary` 不进入关联配置二进制数据。
+- [x] 确认同一 Excel 页签可以被主配置和关联配置分别读取。
 
 ### 生成代码和关联恢复
 
-- [ ] 扩展 `ExcelBinaryCodeGenerator`，在包含关联配置的分组中生成 `LinkAll`。
-- [ ] `LoadAll` 在当前分组反序列化完成后自动调用 `LinkAll`。
-- [ ] 没有关联配置的分组不生成 `LinkAll`。
-- [ ] `LinkedDictionary` 按相同 Key 从主配置 Collector 查找并写入 `Primary`。
-- [ ] `LinkedList` 按相同行索引从主配置 Collector 查找并写入 `Primary`。
-- [ ] 关联失败时输出错误，缺失项的 `Primary` 保持默认值。
-- [ ] 跨分组主配置尚未加载时，保持严格错误提示，不自动加载主配置分组。
+- [x] 扩展 `ExcelBinaryCodeGenerator`，在包含关联配置的分组中生成 `LinkAll`。
+- [x] `LoadAll` 在当前分组反序列化完成后自动调用 `LinkAll`。
+- [x] 没有关联配置的分组不生成 `LinkAll`。
+- [x] `LinkedDictionary` 按相同 Key 从主配置 Collector 查找并写入 `Primary`。
+- [x] `LinkedList` 按相同行索引从主配置 Collector 查找并写入 `Primary`。
+- [x] 关联失败时输出错误，缺失项的 `Primary` 保持默认值。
+- [x] 跨分组主配置尚未加载时，保持严格错误提示，不自动加载主配置分组。
 
 ### 验证
 

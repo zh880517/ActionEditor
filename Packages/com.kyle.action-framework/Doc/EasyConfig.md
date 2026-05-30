@@ -19,6 +19,8 @@ EasyConfig/
 │   │   ├── IConfig.cs                  # IListConfig / IDictionaryConfig 接口
 │   │   ├── ListConfig.cs               # List 配置访问基类
 │   │   ├── DictionaryConfig.cs         # Dictionary 配置访问基类
+│   │   ├── LinkedListConfig.cs         # List 关联配置访问基类
+│   │   ├── LinkedDictionaryConfig.cs   # Dictionary 关联配置访问基类
 │   │   ├── ConfigListCollector.cs      # List 配置全局容器
 │   │   ├── ConfigDictionaryCollector.cs# Dictionary 配置全局容器
 │   │   └── Attribute/
@@ -141,7 +143,42 @@ bool has = ItemConfig.Contains(1001);
 IReadOnlyDictionary<int, ItemConfig> all = ItemConfig.Configs;
 ```
 
-### 1.4 动态列表（DynimaicListAttribute）
+### 1.4 关联配置拆分
+
+当同一个 Excel 页签的一行数据需要拆分为多份独立二进制配置时，可以让关联配置继承 `LinkedListConfig<TLinked, TPrimary>` 或 `LinkedDictionaryConfig<TKey, TLinked, TPrimary>`。
+
+```csharp
+[ExcelSheet("Skill")]
+[KeyColumn("Id")]
+[GameConfigGroup]
+public class SkillCoreConfig : DictionaryConfig<int, SkillCoreConfig>
+{
+    public int Id;
+    public int Damage;
+}
+
+[ExcelSheet("Skill")]
+[KeyColumn("Id")]
+[GameExtraConfigGroup]
+public class SkillDisplayConfig : LinkedDictionaryConfig<int, SkillDisplayConfig, SkillCoreConfig>
+{
+    public int Id;
+    public string Icon;
+    public string DisplayName;
+}
+```
+
+运行时二进制导出仍然按配置类型输出独立文件，`SkillCoreConfig` 和 `SkillDisplayConfig` 会分别序列化自己的 Collector 数据。加载包含关联配置的生成分组时，生成代码会在 `LoadAll` 末尾自动恢复 `Primary` 引用：
+
+- `LinkedDictionaryConfig` 按相同 Key 从主配置 Collector 查找。
+- `LinkedListConfig` 按相同行索引从主配置 Collector 查找。
+- 主配置缺失时输出错误日志，关联项的 `Primary` 保持默认值。
+
+主配置和关联配置可以位于不同生成分组。应用层需要先调用主配置分组的 `LoadAll`，再调用关联配置分组的 `LoadAll`；框架不会跨分组自动排序或加载主配置。
+
+关联配置的 `Primary` 是属性引用，不参与 Excel 字段读取和二进制字段序列化。业务代码只读取 `Primary`，不要手动改写关联关系。
+
+### 1.5 动态列表（DynimaicListAttribute）
 
 当 List 内每个元素有多个字段、且行数不固定时，使用 `[DynimaicList]`：
 

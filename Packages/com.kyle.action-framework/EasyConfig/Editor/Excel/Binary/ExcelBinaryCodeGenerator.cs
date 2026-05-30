@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 using CodeGen;
 using UnityEditor;
 
@@ -33,6 +34,11 @@ namespace EasyConfig.Editor
                 using (new CSharpCodeWriter.Scop(writer, $"public static class {group.ClassName}"))
                 {
                     GenerateLoadAll(writer, group);
+                    if (group.Types.Any(it => it.IsLinkedConfig))
+                    {
+                        writer.NewLine();
+                        GenerateLinkAll(writer, group);
+                    }
                     writer.NewLine();
                     GenerateClear(writer, group);
                 }
@@ -71,6 +77,79 @@ namespace EasyConfig.Editor
                                 writer.WriteLine($"ConfigDictionaryCollector<{keyTypeName}, {typeName}>.Configs.Add(kv.Key, kv.Value);");
                             }
                         }
+                    }
+                }
+
+                if (group.Types.Any(it => it.IsLinkedConfig))
+                {
+                    writer.WriteLine("LinkAll();");
+                }
+            }
+        }
+
+        private static void GenerateLinkAll(CSharpCodeWriter writer, ConfigGroupData group)
+        {
+            using (new CSharpCodeWriter.Scop(writer, "private static void LinkAll()"))
+            {
+                foreach (var typeData in group.Types)
+                {
+                    if (!typeData.IsLinkedConfig)
+                        continue;
+
+                    if (typeData.Kind == ConfigKind.LinkedList)
+                    {
+                        GenerateLinkedListLink(writer, group, typeData);
+                    }
+                    else if (typeData.Kind == ConfigKind.LinkedDictionary)
+                    {
+                        GenerateLinkedDictionaryLink(writer, group, typeData);
+                    }
+                }
+            }
+        }
+
+        private static void GenerateLinkedListLink(CSharpCodeWriter writer, ConfigGroupData group, ConfigTypeData typeData)
+        {
+            string typeName = GeneratorUtils.TypeToName(typeData.Type, group.Namespace);
+            string primaryTypeName = GeneratorUtils.TypeToName(typeData.PrimaryType, group.Namespace);
+
+            using (new CSharpCodeWriter.Scop(writer))
+            {
+                writer.WriteLine($"var linkedConfigs = ConfigListCollector<{typeName}>.Configs;");
+                writer.WriteLine($"var primaryConfigs = ConfigListCollector<{primaryTypeName}>.Configs;");
+                using (new CSharpCodeWriter.Scop(writer, "for (int i = 0; i < linkedConfigs.Count; i++)"))
+                {
+                    using (new CSharpCodeWriter.Scop(writer, "if (i < primaryConfigs.Count)"))
+                    {
+                        writer.WriteLine($"LinkedListConfig<{typeName}, {primaryTypeName}>.LinkPrimary(linkedConfigs[i], primaryConfigs[i]);");
+                    }
+                    using (new CSharpCodeWriter.Scop(writer, "else"))
+                    {
+                        writer.WriteLine($"UnityEngine.Debug.LogError($\"[ExcelBinaryCodeGenerator] 关联配置 {typeName} 第 {{i}} 行缺少主配置 {primaryTypeName}。\");");
+                    }
+                }
+            }
+        }
+
+        private static void GenerateLinkedDictionaryLink(CSharpCodeWriter writer, ConfigGroupData group, ConfigTypeData typeData)
+        {
+            string typeName = GeneratorUtils.TypeToName(typeData.Type, group.Namespace);
+            string keyTypeName = GeneratorUtils.TypeToName(typeData.KeyType, group.Namespace);
+            string primaryTypeName = GeneratorUtils.TypeToName(typeData.PrimaryType, group.Namespace);
+
+            using (new CSharpCodeWriter.Scop(writer))
+            {
+                writer.WriteLine($"var linkedConfigs = ConfigDictionaryCollector<{keyTypeName}, {typeName}>.Configs;");
+                writer.WriteLine($"var primaryConfigs = ConfigDictionaryCollector<{keyTypeName}, {primaryTypeName}>.Configs;");
+                using (new CSharpCodeWriter.Scop(writer, "foreach (var kv in linkedConfigs)"))
+                {
+                    using (new CSharpCodeWriter.Scop(writer, "if (primaryConfigs.TryGetValue(kv.Key, out var primary))"))
+                    {
+                        writer.WriteLine($"LinkedDictionaryConfig<{keyTypeName}, {typeName}, {primaryTypeName}>.LinkPrimary(kv.Value, primary);");
+                    }
+                    using (new CSharpCodeWriter.Scop(writer, "else"))
+                    {
+                        writer.WriteLine($"UnityEngine.Debug.LogError($\"[ExcelBinaryCodeGenerator] 关联配置 {typeName} Key={{kv.Key}} 缺少主配置 {primaryTypeName}。\");");
                     }
                 }
             }
