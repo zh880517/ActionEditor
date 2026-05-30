@@ -274,16 +274,57 @@ FileSystemWatcher 发现 xlsx 变化
 
 生成代码的 `Clear()` 仍只负责清理 Collector，不强制清理热刷新注册表。是否调用派发器 `Clear()` 由 Editor 初始化和生命周期管理决定。
 
-## 任务拆分
+## 开发任务
 
-1. Editor 增加 `EditorExcelConfigReloadDispatcher`。
-2. 抽出或复用与 `ExcelBinaryTypeCollector` 一致的配置类型元数据识别逻辑。
-3. 增加 `List` / `Dictionary` / `LinkedList` / `LinkedDictionary` 的刷新执行器。
-4. 将 `ExcelDataManager.CachePath` 暴露为 Editor 程序集内可访问的只读入口。
-5. 扩展 `ExcelDataManager.UpdateByModify()`，在 JSON 重新导出后派发页签变更。
-6. 扩展 `ExcelBinaryCodeGenerator`，生成 Editor 侧热刷新注册入口或元数据注册代码。
-7. 提供关联配置 `Primary` 恢复的可复用入口，供 Runtime 加载、Editor 首次读取和 Editor 热刷新共同调用。
-8. 更新 `Doc/EasyConfig.md`，补充 Editor Excel 数据访问和热刷新协作方式。
+### 热刷新派发器
+
+- [ ] 新增 `EditorExcelConfigReloadDispatcher`，位于 Editor 编译范围。
+- [ ] 实现 `RegisterConfigType(Type configType)`。
+- [ ] 实现 `UnregisterConfigType(Type configType)`。
+- [ ] 实现 `NotifyModify(string sheetName)`。
+- [ ] 实现 `Clear()`。
+- [ ] 注册时按 `Type` 去重。
+- [ ] 注册时按 `ExcelSheetAttribute` 建立页签到配置类型的映射。
+
+### 刷新执行器
+
+- [ ] 为 `List` 创建刷新执行器，调用 `ExportUtil.Read<T>(CachePath)`。
+- [ ] 为 `LinkedList` 创建刷新执行器，调用 `ExportUtil.Read<T>(CachePath)` 后恢复 `Primary`。
+- [ ] 为 `Dictionary` 创建刷新执行器，调用 `ExportUtil.Read<TKey, T>(CachePath)`。
+- [ ] 为 `LinkedDictionary` 创建刷新执行器，调用 `ExportUtil.Read<TKey, T>(CachePath)` 后恢复 `Primary`。
+- [ ] 刷新失败时保留 `ExportUtil` 当前错误语义，并输出足够定位类型的信息。
+
+### 刷新顺序
+
+- [ ] 同一页签内先刷新 `List` / `Dictionary`。
+- [ ] 同一页签内后刷新 `LinkedList` / `LinkedDictionary`。
+- [ ] 关联配置刷新后重新恢复 `Primary`。
+- [ ] 跨页签主配置未加载时按严格模式输出错误。
+
+### ExcelDataManager 接入
+
+- [ ] `ExcelToCache.Export` 完成后再触发热刷新派发。
+- [ ] 扩展 `ExcelDataManager.UpdateByModify()`。
+- [ ] 先刷新已有 `ExcelDataCollector`。
+- [ ] 再对每个变化页签调用 `EditorExcelConfigReloadDispatcher.NotifyModify(sheetName)`。
+- [ ] 最后清理 `modifySheets`。
+- [ ] `ExcelDataManager` 不理解主配置和关联配置排序，排序由派发器负责。
+
+### 生成代码协作
+
+- [ ] 评估是否由 `ExcelBinaryCodeGenerator` 输出 Editor 注册入口。
+- [ ] Editor 注册入口只注册类型或元数据，不主动读取配置。
+- [ ] Runtime 生成文件不引用 `UnityEditor`。
+- [ ] 没有生成注册入口时，Editor 访问模板类首次访问注册仍能工作。
+
+### 验证
+
+- [ ] 修改 Excel 后，缓存导出完成再触发派发。
+- [ ] 未注册配置类型不会被热刷新读取。
+- [ ] 已注册普通配置在页签变化后重新读取 Collector。
+- [ ] 已注册关联配置在页签变化后重新读取 Collector 并恢复 `Primary`。
+- [ ] 重复注册不会导致同一类型被重复刷新。
+- [ ] Runtime 二进制加载流程不受影响。
 
 ## 兼容性和迁移
 
