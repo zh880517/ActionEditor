@@ -27,13 +27,19 @@
 - [x] `EasyConfigEditorExcelDataAccessDesign.md`：实现 Editor Excel JSON 缓存访问入口和首次读取注册。
   - 执行情况：完成；开发 Agent：Peirce；Review Agent：Euler；验证：`dotnet build EasyConfig.Editor.csproj`、`git diff --check`、新增 `.asmdef` 检查、Markdown LF 检查通过；Unity Editor 实例中的实际 Excel 缓存读取未在命令行环境运行；变更：新增 Editor List/Dictionary JSON 缓存懒加载访问入口、首次读取注册、关联配置 Primary 恢复，并同步 `Doc/EasyConfig.md`；提交：6249f71
 - [x] `EasyConfigExcelHotReloadDesign.md`：实现 Editor Excel 缓存热刷新派发和刷新顺序。
-  - 执行情况：完成；开发 Agent：Godel；Review Agent：Galileo；验证：`dotnet build EasyConfig.Editor.csproj`、`git diff --check`、新增 `.asmdef` 检查、Markdown LF 检查、Runtime 引用检查通过；Unity Editor 实例中的实际 Excel 文件监听与缓存热刷新未在命令行环境运行；变更：补全 Editor 热刷新派发器、接入 `ExcelDataManager.UpdateByModify()` 刷新顺序，并同步 `Doc/EasyConfig.md`；提交：4c1b66b
-- [ ] `Doc/EasyConfig.md`：补充关联配置、Editor 数据访问和热刷新用法。
+  - 执行情况：完成；开发 Agent：Godel；Review Agent：Galileo；验证：`dotnet build EasyConfig.Editor.csproj`、`git diff --check`、新增 `.asmdef` 检查、Markdown LF 检查、Runtime 引用检查通过；Unity Editor 实例中的实际 Excel 文件监听与缓存热刷新未在命令行环境运行；变更：补全 Editor 热刷新派发器、接入 `ExcelDataManager.UpdateByModify()` 刷新顺序，并同步 `Doc/EasyConfig.md`；提交：7ea6f4a
+- [x] `Doc/EasyConfig.md`：补充关联配置、Editor 数据访问和热刷新用法。
+  - 执行情况：完成；执行方式：按用户要求独立执行，不使用子任务；验证：确认 `Doc/EasyConfig.md` 已包含关联配置拆分、Editor JSON 缓存访问和 Editor Excel 缓存热刷新用法说明；变更：更新本 TODO 的完成状态。
 
 ## 收尾检查
 
 - [ ] 检查 `Doc/Readme.md` 是否需要增加设计文档入口。
+  - 执行情况：未执行；原因：收尾检查项没有独立任务文档，缺少 develop-loop 要求的任务说明和验收标准。
 - [ ] 检查所有新增注释和文档字符串使用中文。
+  - 执行情况：未执行；原因：收尾检查项没有独立任务文档，缺少 develop-loop 要求的任务说明和验收标准；前三项 Review 已覆盖对应任务范围。
 - [ ] 检查没有新增 `.asmdef` 文件。
+  - 执行情况：未执行；原因：收尾检查项没有独立任务文档，缺少 develop-loop 要求的任务说明和验收标准；前三项验证均确认未新增 `.asmdef` 文件。
 - [ ] 检查 Markdown 使用 LF line endings。
+  - 执行情况：未执行；原因：收尾检查项没有独立任务文档，缺少 develop-loop 要求的任务说明和验收标准；前三项验证均包含已编辑 Markdown 的 LF 检查。
 - [ ] 记录无法通过命令行验证的 Unity Editor 验证项。
+  - 执行情况：未执行；原因：收尾检查项没有独立任务文档，缺少 develop-loop 要求的任务说明和验收标准；前三项执行记录已分别记录未运行的 Unity Editor 验证项。
