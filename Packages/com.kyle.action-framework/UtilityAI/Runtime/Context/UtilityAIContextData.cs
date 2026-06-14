@@ -1,65 +1,6 @@
 namespace UtilityAI
 {
-    /// <summary>
-    /// UtilityAI 动作配置基类，承载通用标识和显示类型名。
-    /// </summary>
-    [System.Serializable]
-    public abstract class UtilityActionConfig
-    {
-        public string ActionId;
-        public abstract string ActionType { get; }
-    }
-
-    /// <summary>
-    /// Terminal 主动作配置基类，每次决策最多选择一个 Terminal。
-    /// </summary>
-    [System.Serializable]
-    public abstract class TerminalActionConfig : UtilityActionConfig
-    {
-    }
-
-    /// <summary>
-    /// Support 支援动作配置基类，用于描述依附 Terminal 的通道占用和最短保持时间。
-    /// </summary>
-    [System.Serializable]
-    public abstract class SupportActionConfig : UtilityActionConfig
-    {
-        public UtilitySupportChannel[] Channels;
-        public int MinHoldTicks;
-    }
-
-    /// <summary>
-    /// UtilityAI 运行时配置，包含 Terminal、Support 和全局仲裁参数。
-    /// </summary>
-    public sealed class UtilityAIConfig
-    {
-        public TerminalActionConfig[] TerminalActions;
-        public SupportActionConfig[] SupportActions;
-        public int MaxSupportCount;
-        public float RepositionMargin;
-        public float IntentStickiness;
-        public int PreparationTimeoutTicks;
-    }
-
-    /// <summary>
-    /// 由业务上下文实现，用于在每轮意图构建前清理强类型意图状态。
-    /// </summary>
-    public interface IUtilityIntentState
-    {
-        void ResetUtilityIntentState();
-    }
-
-    /// <summary>
-    /// 由业务上下文实现，用于向 Runtime 暴露 Support 的 required、allowed 和 forbidden 约束。
-    /// </summary>
-    public interface IUtilitySupportConstraintProvider
-    {
-        bool IsSupportRequired(SupportActionConfig config, int supportIndex);
-        bool IsSupportAllowed(SupportActionConfig config, int supportIndex);
-        bool IsSupportForbidden(SupportActionConfig config, int supportIndex);
-    }
-
-    /// <summary>
+/// <summary>
     /// 一次 Execute 调用的整体执行结果。
     /// </summary>
     public enum UtilityExecutionStatus
@@ -70,7 +11,7 @@ namespace UtilityAI
         PartialFailed
     }
 
-    /// <summary>
+/// <summary>
     /// Runtime 对一次 Execute 调用返回的结果数据。
     /// </summary>
     public struct UtilityExecutionResult
@@ -78,7 +19,7 @@ namespace UtilityAI
         public UtilityExecutionStatus Status;
     }
 
-    /// <summary>
+/// <summary>
     /// 当前决策的意图模式，决定 Execute 阶段调用 Terminal 或 Support 的方式。
     /// </summary>
     public enum UtilityIntentMode
@@ -90,7 +31,7 @@ namespace UtilityAI
         Emergency
     }
 
-    /// <summary>
+/// <summary>
     /// Evaluate 产出的轻量决策结果，不暴露内部 Support 选择数组所有权。
     /// </summary>
     public struct UtilityDecisionResult
@@ -101,7 +42,7 @@ namespace UtilityAI
         public int SelectedSupportCount;
     }
 
-    /// <summary>
+/// <summary>
     /// 单个 Terminal 或 Support 动作在执行阶段返回的状态。
     /// </summary>
     public enum UtilityActionExecutionStatus
@@ -111,7 +52,7 @@ namespace UtilityAI
         Rejected
     }
 
-    /// <summary>
+/// <summary>
     /// Terminal 或 Support 在意图构建阶段返回的状态。
     /// </summary>
     public enum UtilityIntentBuildStatus
@@ -120,19 +61,7 @@ namespace UtilityAI
         Failed
     }
 
-    /// <summary>
-    /// Support 占用的默认仲裁通道。
-    /// </summary>
-    public enum UtilitySupportChannel
-    {
-        Movement,
-        Facing,
-        Positioning,
-        Validation,
-        Modifier
-    }
-
-    /// <summary>
+/// <summary>
     /// 业务层传入 Runtime 的时间信息，Runtime 不直接读取 Unity 时间。
     /// </summary>
     public struct UtilityTickInfo
@@ -142,7 +71,7 @@ namespace UtilityAI
         public int TickIndex;
     }
 
-    /// <summary>
+/// <summary>
     /// Terminal 评分结果，描述执行、准备、紧急和提交锁定能力。
     /// </summary>
     public struct TerminalScore
@@ -157,7 +86,7 @@ namespace UtilityAI
         public bool CanInterruptCommitted;
     }
 
-    /// <summary>
+/// <summary>
     /// Support 评分结果，描述是否可参与仲裁以及 required 约束是否满足。
     /// </summary>
     public struct SupportScore
@@ -167,7 +96,7 @@ namespace UtilityAI
         public bool IsRequiredSatisfied;
     }
 
-    /// <summary>
+/// <summary>
     /// 传入 Terminal Score 的上下文数据。
     /// </summary>
     public struct TerminalScoreInput
@@ -179,7 +108,7 @@ namespace UtilityAI
         public int CommittedTerminalIndex;
     }
 
-    /// <summary>
+/// <summary>
     /// 传入 Terminal BuildIntent 的上下文数据。
     /// </summary>
     public struct TerminalIntentBuildInput
@@ -191,7 +120,7 @@ namespace UtilityAI
         public TerminalScore Score;
     }
 
-    /// <summary>
+/// <summary>
     /// 传入 Terminal Execute 的上下文数据。
     /// </summary>
     public struct TerminalExecuteInput
@@ -203,7 +132,7 @@ namespace UtilityAI
         public TerminalScore Score;
     }
 
-    /// <summary>
+/// <summary>
     /// 传入当前 committed Terminal 打断判断的上下文数据。
     /// </summary>
     public struct TerminalInterruptInput
@@ -216,7 +145,7 @@ namespace UtilityAI
         public TerminalScore Score;
     }
 
-    /// <summary>
+/// <summary>
     /// 传入当前 committed Terminal 完成判断的上下文数据。
     /// </summary>
     public struct TerminalCommitInput
@@ -229,7 +158,7 @@ namespace UtilityAI
         public TerminalScore Score;
     }
 
-    /// <summary>
+/// <summary>
     /// 传入 Support Score 的上下文数据。
     /// </summary>
     public struct SupportScoreInput
@@ -243,7 +172,7 @@ namespace UtilityAI
         public bool IsAllowed;
     }
 
-    /// <summary>
+/// <summary>
     /// 传入 Support BuildIntent 的上下文数据。
     /// </summary>
     public struct SupportIntentBuildInput
@@ -257,7 +186,7 @@ namespace UtilityAI
         public SupportScore Score;
     }
 
-    /// <summary>
+/// <summary>
     /// 传入 Support Execute 的上下文数据。
     /// </summary>
     public struct SupportExecuteInput
@@ -271,7 +200,7 @@ namespace UtilityAI
         public SupportScore Score;
     }
 
-    /// <summary>
+/// <summary>
     /// Runtime 缓存后的 Terminal 动作数据，避免 Tick 中重新查询注册表。
     /// </summary>
     public struct TerminalActionRuntime<TContext>
@@ -282,7 +211,7 @@ namespace UtilityAI
         public int LastSelectedTick;
     }
 
-    /// <summary>
+/// <summary>
     /// Runtime 缓存后的 Support 动作数据，记录评分、激活状态和 MinHold 记忆。
     /// </summary>
     public struct SupportActionRuntime<TContext>

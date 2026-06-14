@@ -57,7 +57,18 @@ var result = runtime.Execute(context, decision, tickInfo);
 
 `Evaluate` 每次都会递增 `DecisionVersion`，包括 `Mode.None`。`Execute` 只接受当前版本且未执行过的 decision；同一个 decision 重复执行会返回 `Rejected`。`UtilityDecisionResult` 不暴露 Support 数组，调用方可用 `GetSelectedSupportIndex(slot)` 查看当前选择。
 
-Runtime 内部状态按职责分组保存：`UtilityAISelectionBuffer` 负责候选列表和 Support 选择缓冲，`UtilityAIDecisionState` 负责当前决策版本和快照，`UtilityAICommitState` 负责 committed Terminal 的锁定信息，`UtilityAINormalSelectionState` 负责普通选择的粘性和准备超时记忆。这些类型是 `internal struct`，便于后续拆分到独立文件。
+Runtime 内部状态按职责分组保存：`UtilityAISelectionBuffer` 负责候选列表和 Support 选择缓冲，`UtilityAIDecisionState` 负责当前决策版本和快照，`UtilityAICommitState` 负责 committed Terminal 的锁定信息，`UtilityAINormalSelectionState` 负责普通选择的粘性和准备超时记忆。这些类型是 `internal struct`，集中放在 `Runtime/UtilityAIRuntimeTypes.cs`。
+
+## 文件结构
+
+UtilityAI Runtime 按职责拆分文件：
+
+- `Runtime/ConfigData/` 保存用户自定义配置数据，一个类型一个文件。
+- `Runtime/Context/` 保存业务上下文接口，以及评分结果、输入参数、决策结果等运行时上下文数据。
+- `Runtime/Handler/` 保存 Terminal、Support 的 Handler 基类和内部 Invoker。
+- `Runtime/UtilityAIRuntimeTypes.cs` 保存 Runtime 内部使用的 `internal struct`。
+- `Runtime/UtilityAIRuntimeFactory.cs` 保存 Runtime 创建入口。
+- `Runtime/UtilityAIRuntime.cs` 保存决策执行流程。
 
 ## Terminal 选择
 
