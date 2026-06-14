@@ -116,39 +116,135 @@ namespace UtilityAI
     }
 
     /// <summary>
+    /// Terminal 候选的临时排序数据。
+    /// </summary>
+    internal struct UtilityAITerminalCandidate
+    {
+        public int Index;
+        public UtilityIntentMode Mode;
+        public TerminalScore Score;
+        public float EffectiveScore;
+    }
+
+    /// <summary>
+    /// Support 候选的临时排序数据。
+    /// </summary>
+    internal struct UtilityAISupportCandidate
+    {
+        public int Index;
+        public bool IsRequired;
+        public bool HasMinHold;
+        public SupportScore Score;
+    }
+
+    /// <summary>
+    /// 已选 Support 的构建顺序数据。
+    /// </summary>
+    internal struct UtilityAIBuiltSupport
+    {
+        public int Index;
+        public bool IsRequired;
+        public SupportScore Score;
+    }
+
+    /// <summary>
+    /// 单次决策过程中复用的候选和选择缓冲区。
+    /// </summary>
+    internal struct UtilityAISelectionBuffer
+    {
+        public readonly int[] SelectedSupportIndices;
+        public readonly bool[] SelectedSupportRequired;
+        public readonly List<UtilityAITerminalCandidate> TerminalCandidates;
+        public readonly List<UtilityAISupportCandidate> SupportCandidates;
+        public readonly List<UtilityAISupportCandidate> AllowedSupportCandidates;
+        public readonly UtilityAIBuiltSupport[] BuiltSupports;
+        public readonly bool[] SingleOwnerOccupied;
+        public readonly bool[] ExcludedAllowedSupportBuildFailures;
+
+        public UtilityAISelectionBuffer(int terminalCount, int supportCount)
+        {
+            SelectedSupportIndices = new int[Math.Max(1, supportCount)];
+            SelectedSupportRequired = new bool[Math.Max(1, supportCount)];
+            TerminalCandidates = new List<UtilityAITerminalCandidate>(terminalCount);
+            SupportCandidates = new List<UtilityAISupportCandidate>(supportCount);
+            AllowedSupportCandidates = new List<UtilityAISupportCandidate>(supportCount);
+            BuiltSupports = new UtilityAIBuiltSupport[Math.Max(1, supportCount)];
+            SingleOwnerOccupied = new bool[3];
+            ExcludedAllowedSupportBuildFailures = new bool[Math.Max(1, supportCount)];
+        }
+    }
+
+    /// <summary>
+    /// Evaluate 与 Execute 之间共享的当前决策状态。
+    /// </summary>
+    internal struct UtilityAIDecisionState
+    {
+        public int CurrentDecisionVersion;
+        public int LastExecutedDecisionVersion;
+        public int CurrentSelectedSupportCount;
+        public UtilityDecisionResult CurrentDecision;
+        public bool HasCurrentDecision;
+
+        public static UtilityAIDecisionState Create()
+        {
+            return new UtilityAIDecisionState
+            {
+                LastExecutedDecisionVersion = -1
+            };
+        }
+    }
+
+    /// <summary>
+    /// Terminal 提交锁定状态。
+    /// </summary>
+    internal struct UtilityAICommitState
+    {
+        public int TerminalIndex;
+        public int StartTick;
+        public int UntilTick;
+
+        public static UtilityAICommitState CreateEmpty()
+        {
+            return new UtilityAICommitState
+            {
+                TerminalIndex = -1,
+                StartTick = -1,
+                UntilTick = -1
+            };
+        }
+    }
+
+    /// <summary>
+    /// 普通 Terminal 选择的历史状态，用于粘性分和准备超时。
+    /// </summary>
+    internal struct UtilityAINormalSelectionState
+    {
+        public readonly int[] PrepareStartTicks;
+        public int PreviousTerminalIndex;
+        public UtilityIntentMode PreviousMode;
+
+        public UtilityAINormalSelectionState(int terminalCount)
+        {
+            PrepareStartTicks = new int[terminalCount];
+            PreviousTerminalIndex = -1;
+            PreviousMode = UtilityIntentMode.None;
+
+            for (int i = 0; i < PrepareStartTicks.Length; i++)
+                PrepareStartTicks[i] = -1;
+        }
+    }
+
+    /// <summary>
     /// UtilityAI 决策运行时，驱动 Evaluate 和 Execute 两阶段流程。
     /// </summary>
     public sealed class UtilityAIRuntime<TContext>
         where TContext : IUtilityIntentState, IUtilitySupportConstraintProvider
     {
-        private struct TerminalCandidate
-        {
-            public int Index;
-            public UtilityIntentMode Mode;
-            public TerminalScore Score;
-            public float EffectiveScore;
-        }
-
-        private struct SupportCandidate
-        {
-            public int Index;
-            public bool IsRequired;
-            public bool HasMinHold;
-            public SupportScore Score;
-        }
-
-        private struct BuiltSupport
-        {
-            public int Index;
-            public bool IsRequired;
-            public SupportScore Score;
-        }
-
-        private sealed class TerminalCandidateComparer : IComparer<TerminalCandidate>
+        private sealed class TerminalCandidateComparer : IComparer<UtilityAITerminalCandidate>
         {
             public static readonly TerminalCandidateComparer Instance = new TerminalCandidateComparer();
 
-            public int Compare(TerminalCandidate left, TerminalCandidate right)
+            public int Compare(UtilityAITerminalCandidate left, UtilityAITerminalCandidate right)
             {
                 int scoreCompare = right.EffectiveScore.CompareTo(left.EffectiveScore);
                 if (scoreCompare != 0)
@@ -157,11 +253,11 @@ namespace UtilityAI
             }
         }
 
-        private sealed class SupportCandidateComparer : IComparer<SupportCandidate>
+        private sealed class SupportCandidateComparer : IComparer<UtilityAISupportCandidate>
         {
             public static readonly SupportCandidateComparer Instance = new SupportCandidateComparer();
 
-            public int Compare(SupportCandidate left, SupportCandidate right)
+            public int Compare(UtilityAISupportCandidate left, UtilityAISupportCandidate right)
             {
                 if (left.IsRequired != right.IsRequired)
                     return left.IsRequired ? -1 : 1;
@@ -177,11 +273,11 @@ namespace UtilityAI
             }
         }
 
-        private sealed class BuiltSupportComparer : IComparer<BuiltSupport>
+        private sealed class BuiltSupportComparer : IComparer<UtilityAIBuiltSupport>
         {
             public static readonly BuiltSupportComparer Instance = new BuiltSupportComparer();
 
-            public int Compare(BuiltSupport left, BuiltSupport right)
+            public int Compare(UtilityAIBuiltSupport left, UtilityAIBuiltSupport right)
             {
                 if (left.IsRequired != right.IsRequired)
                     return left.IsRequired ? -1 : 1;
@@ -195,26 +291,10 @@ namespace UtilityAI
         public readonly TerminalActionRuntime<TContext>[] TerminalActions;
         public readonly SupportActionRuntime<TContext>[] SupportActions;
 
-        private readonly int[] _selectedSupportIndices;
-        private readonly bool[] _selectedSupportRequired;
-        private readonly int[] _prepareStartTicks;
-        private readonly List<TerminalCandidate> _terminalCandidates;
-        private readonly List<SupportCandidate> _supportCandidates;
-        private readonly List<SupportCandidate> _allowedSupportCandidates;
-        private readonly BuiltSupport[] _builtSupports;
-        private readonly bool[] _singleOwnerOccupied;
-        private readonly bool[] _excludedAllowedSupportBuildFailures;
-
-        private int _currentDecisionVersion;
-        private int _lastExecutedDecisionVersion = -1;
-        private int _currentSelectedSupportCount;
-        private UtilityDecisionResult _currentDecision;
-        private bool _hasCurrentDecision;
-        private int _committedTerminalIndex = NoTerminal;
-        private int _commitStartTick = -1;
-        private int _commitUntilTick = -1;
-        private int _previousNormalTerminalIndex = NoTerminal;
-        private UtilityIntentMode _previousNormalMode = UtilityIntentMode.None;
+        private readonly UtilityAISelectionBuffer _selection;
+        private UtilityAIDecisionState _decision;
+        private UtilityAICommitState _commit;
+        private UtilityAINormalSelectionState _normalSelection;
 
         internal UtilityAIRuntime(
             UtilityAIConfig config,
@@ -224,26 +304,19 @@ namespace UtilityAI
             Config = config;
             TerminalActions = terminalActions;
             SupportActions = supportActions;
-            _selectedSupportIndices = new int[Math.Max(1, supportActions.Length)];
-            _selectedSupportRequired = new bool[Math.Max(1, supportActions.Length)];
-            _prepareStartTicks = new int[terminalActions.Length];
-            _terminalCandidates = new List<TerminalCandidate>(terminalActions.Length);
-            _supportCandidates = new List<SupportCandidate>(supportActions.Length);
-            _allowedSupportCandidates = new List<SupportCandidate>(supportActions.Length);
-            _builtSupports = new BuiltSupport[Math.Max(1, supportActions.Length)];
-            _singleOwnerOccupied = new bool[3];
-            _excludedAllowedSupportBuildFailures = new bool[Math.Max(1, supportActions.Length)];
-            for (int i = 0; i < _prepareStartTicks.Length; i++)
-                _prepareStartTicks[i] = -1;
+            _selection = new UtilityAISelectionBuffer(terminalActions.Length, supportActions.Length);
+            _decision = UtilityAIDecisionState.Create();
+            _commit = UtilityAICommitState.CreateEmpty();
+            _normalSelection = new UtilityAINormalSelectionState(terminalActions.Length);
         }
 
         public UtilityDecisionResult Evaluate(TContext context, UtilityTickInfo tickInfo)
         {
-            _currentDecisionVersion++;
+            _decision.CurrentDecisionVersion++;
             ClearSelectedSupports();
             context.ResetUtilityIntentState();
 
-            if (_committedTerminalIndex != NoTerminal)
+            if (_commit.TerminalIndex != NoTerminal)
             {
                 if (IsCommittedFinished(context, tickInfo))
                 {
@@ -277,16 +350,16 @@ namespace UtilityAI
                 return normalDecision;
 
             ClearSupportActiveStates();
-            _previousNormalTerminalIndex = NoTerminal;
-            _previousNormalMode = UtilityIntentMode.None;
+            _normalSelection.PreviousTerminalIndex = NoTerminal;
+            _normalSelection.PreviousMode = UtilityIntentMode.None;
             return CreateDecision(UtilityIntentMode.None, NoTerminal, 0);
         }
 
         public UtilityExecutionResult Execute(TContext context, UtilityDecisionResult decision, UtilityTickInfo tickInfo)
         {
-            if (decision.DecisionVersion != _currentDecisionVersion ||
-                !_hasCurrentDecision ||
-                decision.DecisionVersion == _lastExecutedDecisionVersion)
+            if (decision.DecisionVersion != _decision.CurrentDecisionVersion ||
+                !_decision.HasCurrentDecision ||
+                decision.DecisionVersion == _decision.LastExecutedDecisionVersion)
                 return new UtilityExecutionResult { Status = UtilityExecutionStatus.Rejected };
 
             if (!IsKnownMode(decision.Mode) || !MatchesCurrentDecision(decision))
@@ -294,14 +367,14 @@ namespace UtilityAI
 
             if (decision.Mode == UtilityIntentMode.None)
             {
-                _lastExecutedDecisionVersion = decision.DecisionVersion;
+                _decision.LastExecutedDecisionVersion = decision.DecisionVersion;
                 return new UtilityExecutionResult { Status = UtilityExecutionStatus.Success };
             }
 
             if (decision.SelectedTerminalIndex < 0 || decision.SelectedTerminalIndex >= TerminalActions.Length)
                 return RejectCurrentDecision(decision);
 
-            if (decision.SelectedSupportCount != _currentSelectedSupportCount)
+            if (decision.SelectedSupportCount != _decision.CurrentSelectedSupportCount)
                 return RejectCurrentDecision(decision);
 
             if (decision.Mode == UtilityIntentMode.Execute || decision.Mode == UtilityIntentMode.Emergency)
@@ -313,7 +386,7 @@ namespace UtilityAI
                 if (terminalStatus != UtilityActionExecutionStatus.Success)
                 {
                     ClearSupportActiveStates();
-                    _lastExecutedDecisionVersion = decision.DecisionVersion;
+                    _decision.LastExecutedDecisionVersion = decision.DecisionVersion;
                     return new UtilityExecutionResult { Status = ToExecutionStatus(terminalStatus) };
                 }
 
@@ -325,26 +398,26 @@ namespace UtilityAI
             }
 
             var supportStatus = ExecuteSupports(context, decision, tickInfo);
-            _lastExecutedDecisionVersion = decision.DecisionVersion;
+            _decision.LastExecutedDecisionVersion = decision.DecisionVersion;
             return new UtilityExecutionResult { Status = supportStatus };
         }
 
         public int GetSelectedSupportIndex(int slot)
         {
-            if (slot < 0 || slot >= _currentSelectedSupportCount)
+            if (slot < 0 || slot >= _decision.CurrentSelectedSupportCount)
                 return -1;
-            return _selectedSupportIndices[slot];
+            return _selection.SelectedSupportIndices[slot];
         }
 
         private UtilityExecutionResult RejectCurrentDecision(UtilityDecisionResult decision)
         {
-            _lastExecutedDecisionVersion = decision.DecisionVersion;
+            _decision.LastExecutedDecisionVersion = decision.DecisionVersion;
             return new UtilityExecutionResult { Status = UtilityExecutionStatus.Rejected };
         }
 
         private bool TrySelectNormal(TContext context, UtilityTickInfo tickInfo, out UtilityDecisionResult decision)
         {
-            var candidates = _terminalCandidates;
+            var candidates = _selection.TerminalCandidates;
             candidates.Clear();
             for (int i = 0; i < TerminalActions.Length; i++)
             {
@@ -353,7 +426,7 @@ namespace UtilityAI
                 {
                     TickInfo = tickInfo,
                     TerminalIndex = i,
-                    DecisionVersion = _currentDecisionVersion,
+                    DecisionVersion = _decision.CurrentDecisionVersion,
                     HasCommittedTerminal = false,
                     CommittedTerminalIndex = NoTerminal
                 });
@@ -361,7 +434,7 @@ namespace UtilityAI
                 runtime.LastScore = score;
                 TerminalActions[i] = runtime;
 
-                TerminalCandidate candidate;
+                UtilityAITerminalCandidate candidate;
                 if (TryCreateNormalCandidate(i, score, tickInfo, out candidate))
                     candidates.Add(candidate);
             }
@@ -382,22 +455,22 @@ namespace UtilityAI
 
         private bool TrySelectEmergency(TContext context, UtilityTickInfo tickInfo, out UtilityDecisionResult decision)
         {
-            var candidates = _terminalCandidates;
+            var candidates = _selection.TerminalCandidates;
             candidates.Clear();
             for (int i = 0; i < TerminalActions.Length; i++)
             {
-                if (i == _committedTerminalIndex)
+                if (i == _commit.TerminalIndex)
                     continue;
 
                 var runtime = TerminalActions[i];
-                bool hasCommittedTerminal = _committedTerminalIndex != NoTerminal;
+                bool hasCommittedTerminal = _commit.TerminalIndex != NoTerminal;
                 var score = runtime.Handler.Score(context, runtime.Config, new TerminalScoreInput
                 {
                     TickInfo = tickInfo,
                     TerminalIndex = i,
-                    DecisionVersion = _currentDecisionVersion,
+                    DecisionVersion = _decision.CurrentDecisionVersion,
                     HasCommittedTerminal = hasCommittedTerminal,
-                    CommittedTerminalIndex = _committedTerminalIndex
+                    CommittedTerminalIndex = _commit.TerminalIndex
                 });
 
                 runtime.LastScore = score;
@@ -406,7 +479,7 @@ namespace UtilityAI
                 if (!score.IsEmergency || !IsFinite(score.EmergencyScore))
                     continue;
 
-                candidates.Add(new TerminalCandidate
+                candidates.Add(new UtilityAITerminalCandidate
                 {
                     Index = i,
                     Mode = UtilityIntentMode.Emergency,
@@ -428,13 +501,13 @@ namespace UtilityAI
 
         private bool TrySelectCommitted(TContext context, UtilityTickInfo tickInfo, out UtilityDecisionResult decision)
         {
-            var runtime = TerminalActions[_committedTerminalIndex];
+            var runtime = TerminalActions[_commit.TerminalIndex];
             context.ResetUtilityIntentState();
             var buildStatus = runtime.Handler.BuildIntent(context, runtime.Config, new TerminalIntentBuildInput
             {
                 TickInfo = tickInfo,
-                TerminalIndex = _committedTerminalIndex,
-                DecisionVersion = _currentDecisionVersion,
+                TerminalIndex = _commit.TerminalIndex,
+                DecisionVersion = _decision.CurrentDecisionVersion,
                 Mode = UtilityIntentMode.Committed,
                 Score = runtime.LastScore
             });
@@ -446,22 +519,22 @@ namespace UtilityAI
             }
 
             int builtCount;
-            if (!TryBuildSupports(context, tickInfo, _committedTerminalIndex, UtilityIntentMode.Committed, out builtCount))
+            if (!TryBuildSupports(context, tickInfo, _commit.TerminalIndex, UtilityIntentMode.Committed, out builtCount))
             {
                 decision = default(UtilityDecisionResult);
                 return false;
             }
 
             ApplySelectedSupports(tickInfo, builtCount);
-            MarkTerminalSelected(_committedTerminalIndex, tickInfo.TickIndex);
-            decision = CreateDecision(UtilityIntentMode.Committed, _committedTerminalIndex, builtCount);
+            MarkTerminalSelected(_commit.TerminalIndex, tickInfo.TickIndex);
+            decision = CreateDecision(UtilityIntentMode.Committed, _commit.TerminalIndex, builtCount);
             return true;
         }
 
         private bool TryBuildTerminalCandidate(
             TContext context,
             UtilityTickInfo tickInfo,
-            TerminalCandidate candidate,
+            UtilityAITerminalCandidate candidate,
             out UtilityDecisionResult decision)
         {
             context.ResetUtilityIntentState();
@@ -471,7 +544,7 @@ namespace UtilityAI
             {
                 TickInfo = tickInfo,
                 TerminalIndex = candidate.Index,
-                DecisionVersion = _currentDecisionVersion,
+                DecisionVersion = _decision.CurrentDecisionVersion,
                 Mode = candidate.Mode,
                 Score = candidate.Score
             });
@@ -511,7 +584,7 @@ namespace UtilityAI
                 return true;
             }
 
-            var candidates = _supportCandidates;
+            var candidates = _selection.SupportCandidates;
             candidates.Clear();
             for (int i = 0; i < SupportActions.Length; i++)
             {
@@ -535,7 +608,7 @@ namespace UtilityAI
                     TickInfo = tickInfo,
                     SupportIndex = i,
                     SelectedTerminalIndex = terminalIndex,
-                    DecisionVersion = _currentDecisionVersion,
+                    DecisionVersion = _decision.CurrentDecisionVersion,
                     Mode = mode,
                     IsRequired = required,
                     IsAllowed = allowed
@@ -554,7 +627,7 @@ namespace UtilityAI
                 if (required && !score.IsRequiredSatisfied)
                     return false;
 
-                candidates.Add(new SupportCandidate
+                candidates.Add(new UtilityAISupportCandidate
                 {
                     Index = i,
                     IsRequired = required,
@@ -584,7 +657,7 @@ namespace UtilityAI
                 if (failedAllowedSupportIndex < 0)
                     return false;
 
-                _excludedAllowedSupportBuildFailures[failedAllowedSupportIndex] = true;
+                _selection.ExcludedAllowedSupportBuildFailures[failedAllowedSupportIndex] = true;
                 rebuildTerminalIntent = true;
             }
         }
@@ -602,7 +675,7 @@ namespace UtilityAI
         }
 
         private bool SelectRequiredAndAllowedSupports(
-            List<SupportCandidate> candidates,
+            List<UtilityAISupportCandidate> candidates,
             out int selectedCount)
         {
             selectedCount = 0;
@@ -616,11 +689,11 @@ namespace UtilityAI
                 if (selectedCount >= Config.MaxSupportCount)
                     return false;
 
-                if (ConflictsWithSingleOwner(candidates[i].Index, _singleOwnerOccupied))
+                if (ConflictsWithSingleOwner(candidates[i].Index, _selection.SingleOwnerOccupied))
                     return false;
 
-                OccupySingleOwnerChannels(candidates[i].Index, _singleOwnerOccupied);
-                _builtSupports[selectedCount++] = new BuiltSupport
+                OccupySingleOwnerChannels(candidates[i].Index, _selection.SingleOwnerOccupied);
+                _selection.BuiltSupports[selectedCount++] = new UtilityAIBuiltSupport
                 {
                     Index = candidates[i].Index,
                     IsRequired = true,
@@ -628,14 +701,14 @@ namespace UtilityAI
                 };
             }
 
-            var allowedCandidates = _allowedSupportCandidates;
+            var allowedCandidates = _selection.AllowedSupportCandidates;
             allowedCandidates.Clear();
             for (int i = 0; i < candidates.Count; i++)
             {
                 if (candidates[i].IsRequired)
                     continue;
 
-                if (_excludedAllowedSupportBuildFailures[candidates[i].Index])
+                if (_selection.ExcludedAllowedSupportBuildFailures[candidates[i].Index])
                     continue;
 
                 allowedCandidates.Add(candidates[i]);
@@ -649,11 +722,11 @@ namespace UtilityAI
                 if (selectedCount >= Config.MaxSupportCount)
                     break;
 
-                if (ConflictsWithSingleOwner(candidate.Index, _singleOwnerOccupied))
+                if (ConflictsWithSingleOwner(candidate.Index, _selection.SingleOwnerOccupied))
                     continue;
 
-                OccupySingleOwnerChannels(candidate.Index, _singleOwnerOccupied);
-                _builtSupports[selectedCount++] = new BuiltSupport
+                OccupySingleOwnerChannels(candidate.Index, _selection.SingleOwnerOccupied);
+                _selection.BuiltSupports[selectedCount++] = new UtilityAIBuiltSupport
                 {
                     Index = candidate.Index,
                     IsRequired = false,
@@ -676,7 +749,7 @@ namespace UtilityAI
             failedAllowedSupportIndex = -1;
             for (int i = 0; i < supportCount; i++)
             {
-                var support = _builtSupports[i];
+                var support = _selection.BuiltSupports[i];
                 if (BuildSupportIntent(context, tickInfo, terminalIndex, mode, support))
                     continue;
 
@@ -695,7 +768,7 @@ namespace UtilityAI
             UtilityTickInfo tickInfo,
             int terminalIndex,
             UtilityIntentMode mode,
-            BuiltSupport support)
+            UtilityAIBuiltSupport support)
         {
             var runtime = SupportActions[support.Index];
             var status = runtime.Handler.BuildIntent(context, runtime.Config, new SupportIntentBuildInput
@@ -703,7 +776,7 @@ namespace UtilityAI
                 TickInfo = tickInfo,
                 SupportIndex = support.Index,
                 SelectedTerminalIndex = terminalIndex,
-                DecisionVersion = _currentDecisionVersion,
+                DecisionVersion = _decision.CurrentDecisionVersion,
                 Mode = mode,
                 IsRequired = support.IsRequired,
                 Score = support.Score
@@ -719,7 +792,7 @@ namespace UtilityAI
             {
                 TickInfo = tickInfo,
                 TerminalIndex = terminalIndex,
-                DecisionVersion = _currentDecisionVersion,
+                DecisionVersion = _decision.CurrentDecisionVersion,
                 Mode = mode,
                 Score = runtime.LastScore
             });
@@ -745,7 +818,7 @@ namespace UtilityAI
             bool hasFailure = false;
             for (int i = 0; i < decision.SelectedSupportCount; i++)
             {
-                int supportIndex = _selectedSupportIndices[i];
+                int supportIndex = _selection.SelectedSupportIndices[i];
                 var runtime = SupportActions[supportIndex];
                 var status = runtime.Handler.Execute(context, runtime.Config, new SupportExecuteInput
                 {
@@ -754,7 +827,7 @@ namespace UtilityAI
                     SelectedTerminalIndex = decision.SelectedTerminalIndex,
                     DecisionVersion = decision.DecisionVersion,
                     Mode = decision.Mode,
-                    IsRequired = _selectedSupportRequired[i],
+                    IsRequired = _selection.SelectedSupportRequired[i],
                     Score = runtime.LastScore
                 });
 
@@ -767,37 +840,37 @@ namespace UtilityAI
 
         private bool IsCommittedFinished(TContext context, UtilityTickInfo tickInfo)
         {
-            var runtime = TerminalActions[_committedTerminalIndex];
+            var runtime = TerminalActions[_commit.TerminalIndex];
             return runtime.Handler.IsCommitFinished(context, runtime.Config, new TerminalCommitInput
             {
                 TickInfo = tickInfo,
-                TerminalIndex = _committedTerminalIndex,
-                DecisionVersion = _currentDecisionVersion,
-                CommitStartTick = _commitStartTick,
-                CommitUntilTick = _commitUntilTick,
+                TerminalIndex = _commit.TerminalIndex,
+                DecisionVersion = _decision.CurrentDecisionVersion,
+                CommitStartTick = _commit.StartTick,
+                CommitUntilTick = _commit.UntilTick,
                 Score = runtime.LastScore
             });
         }
 
         private bool CanCommittedBeInterrupted(TContext context, UtilityTickInfo tickInfo)
         {
-            var runtime = TerminalActions[_committedTerminalIndex];
+            var runtime = TerminalActions[_commit.TerminalIndex];
             return runtime.Handler.CanBeInterrupted(context, runtime.Config, new TerminalInterruptInput
             {
                 TickInfo = tickInfo,
-                TerminalIndex = _committedTerminalIndex,
-                DecisionVersion = _currentDecisionVersion,
-                CommitStartTick = _commitStartTick,
-                CommitUntilTick = _commitUntilTick,
+                TerminalIndex = _commit.TerminalIndex,
+                DecisionVersion = _decision.CurrentDecisionVersion,
+                CommitStartTick = _commit.StartTick,
+                CommitUntilTick = _commit.UntilTick,
                 Score = runtime.LastScore
             });
         }
 
-        private bool TryCreateNormalCandidate(int index, TerminalScore score, UtilityTickInfo tickInfo, out TerminalCandidate candidate)
+        private bool TryCreateNormalCandidate(int index, TerminalScore score, UtilityTickInfo tickInfo, out UtilityAITerminalCandidate candidate)
         {
             bool canExecute = score.CanExecute && IsFinite(score.ExecutionScore);
             bool canPrepare = score.CanPrepare && IsFinite(score.PreparationScore);
-            candidate = default(TerminalCandidate);
+            candidate = default(UtilityAITerminalCandidate);
 
             if (!canExecute && !canPrepare)
                 return false;
@@ -838,10 +911,10 @@ namespace UtilityAI
             }
 
             float effectiveScore = baseScore;
-            if (index == _previousNormalTerminalIndex)
+            if (index == _normalSelection.PreviousTerminalIndex)
                 effectiveScore += Config.IntentStickiness;
 
-            candidate = new TerminalCandidate
+            candidate = new UtilityAITerminalCandidate
             {
                 Index = index,
                 Mode = mode,
@@ -856,27 +929,27 @@ namespace UtilityAI
             if (Config.PreparationTimeoutTicks <= 0)
                 return false;
 
-            if (_previousNormalTerminalIndex != terminalIndex || _previousNormalMode != UtilityIntentMode.Prepare)
+            if (_normalSelection.PreviousTerminalIndex != terminalIndex || _normalSelection.PreviousMode != UtilityIntentMode.Prepare)
                 return false;
 
-            int startTick = _prepareStartTicks[terminalIndex];
+            int startTick = _normalSelection.PrepareStartTicks[terminalIndex];
             return startTick >= 0 && tickIndex - startTick >= Config.PreparationTimeoutTicks;
         }
 
-        private void SetNormalSelectionMemory(TerminalCandidate candidate, UtilityTickInfo tickInfo)
+        private void SetNormalSelectionMemory(UtilityAITerminalCandidate candidate, UtilityTickInfo tickInfo)
         {
             if (candidate.Mode == UtilityIntentMode.Prepare)
             {
-                if (_previousNormalTerminalIndex != candidate.Index || _previousNormalMode != UtilityIntentMode.Prepare)
-                    _prepareStartTicks[candidate.Index] = tickInfo.TickIndex;
+                if (_normalSelection.PreviousTerminalIndex != candidate.Index || _normalSelection.PreviousMode != UtilityIntentMode.Prepare)
+                    _normalSelection.PrepareStartTicks[candidate.Index] = tickInfo.TickIndex;
             }
             else
             {
-                _prepareStartTicks[candidate.Index] = -1;
+                _normalSelection.PrepareStartTicks[candidate.Index] = -1;
             }
 
-            _previousNormalTerminalIndex = candidate.Index;
-            _previousNormalMode = candidate.Mode;
+            _normalSelection.PreviousTerminalIndex = candidate.Index;
+            _normalSelection.PreviousMode = candidate.Mode;
         }
 
         private void ApplySelectedSupports(UtilityTickInfo tickInfo, int supportCount)
@@ -886,9 +959,9 @@ namespace UtilityAI
 
             for (int i = 0; i < supportCount; i++)
             {
-                int supportIndex = _builtSupports[i].Index;
-                _selectedSupportIndices[i] = supportIndex;
-                _selectedSupportRequired[i] = _builtSupports[i].IsRequired;
+                int supportIndex = _selection.BuiltSupports[i].Index;
+                _selection.SelectedSupportIndices[i] = supportIndex;
+                _selection.SelectedSupportRequired[i] = _selection.BuiltSupports[i].IsRequired;
 
                 var runtime = SupportActions[supportIndex];
                 runtime.IsActive = true;
@@ -896,12 +969,12 @@ namespace UtilityAI
                 SupportActions[supportIndex] = runtime;
             }
 
-            _currentSelectedSupportCount = supportCount;
+            _decision.CurrentSelectedSupportCount = supportCount;
         }
 
         private void ClearSelectedSupports()
         {
-            _currentSelectedSupportCount = 0;
+            _decision.CurrentSelectedSupportCount = 0;
         }
 
         private void ClearSupportActiveStates()
@@ -923,37 +996,37 @@ namespace UtilityAI
 
         private void SetCommitted(int terminalIndex, int startTick, int lockTicks)
         {
-            _committedTerminalIndex = terminalIndex;
-            _commitStartTick = startTick;
-            _commitUntilTick = startTick + lockTicks;
+            _commit.TerminalIndex = terminalIndex;
+            _commit.StartTick = startTick;
+            _commit.UntilTick = startTick + lockTicks;
         }
 
         private void ClearCommitted()
         {
-            _committedTerminalIndex = NoTerminal;
-            _commitStartTick = -1;
-            _commitUntilTick = -1;
+            _commit.TerminalIndex = NoTerminal;
+            _commit.StartTick = -1;
+            _commit.UntilTick = -1;
         }
 
         private UtilityDecisionResult CreateDecision(UtilityIntentMode mode, int terminalIndex, int supportCount)
         {
-            _currentDecision = new UtilityDecisionResult
+            _decision.CurrentDecision = new UtilityDecisionResult
             {
-                DecisionVersion = _currentDecisionVersion,
+                DecisionVersion = _decision.CurrentDecisionVersion,
                 Mode = mode,
                 SelectedTerminalIndex = terminalIndex,
                 SelectedSupportCount = supportCount
             };
-            _hasCurrentDecision = true;
-            return _currentDecision;
+            _decision.HasCurrentDecision = true;
+            return _decision.CurrentDecision;
         }
 
         private bool MatchesCurrentDecision(UtilityDecisionResult decision)
         {
-            return decision.DecisionVersion == _currentDecision.DecisionVersion &&
-                   decision.Mode == _currentDecision.Mode &&
-                   decision.SelectedTerminalIndex == _currentDecision.SelectedTerminalIndex &&
-                   decision.SelectedSupportCount == _currentDecision.SelectedSupportCount;
+            return decision.DecisionVersion == _decision.CurrentDecision.DecisionVersion &&
+                   decision.Mode == _decision.CurrentDecision.Mode &&
+                   decision.SelectedTerminalIndex == _decision.CurrentDecision.SelectedTerminalIndex &&
+                   decision.SelectedSupportCount == _decision.CurrentDecision.SelectedSupportCount;
         }
 
         private static bool IsKnownMode(UtilityIntentMode mode)
@@ -973,19 +1046,19 @@ namespace UtilityAI
 
         private void ClearSingleOwnerOccupied()
         {
-            for (int i = 0; i < _singleOwnerOccupied.Length; i++)
-                _singleOwnerOccupied[i] = false;
+            for (int i = 0; i < _selection.SingleOwnerOccupied.Length; i++)
+                _selection.SingleOwnerOccupied[i] = false;
         }
 
         private void ClearExcludedAllowedSupportBuildFailures()
         {
-            for (int i = 0; i < _excludedAllowedSupportBuildFailures.Length; i++)
-                _excludedAllowedSupportBuildFailures[i] = false;
+            for (int i = 0; i < _selection.ExcludedAllowedSupportBuildFailures.Length; i++)
+                _selection.ExcludedAllowedSupportBuildFailures[i] = false;
         }
 
         private void SortBuiltSupports(int count)
         {
-            Array.Sort(_builtSupports, 0, count, BuiltSupportComparer.Instance);
+            Array.Sort(_selection.BuiltSupports, 0, count, BuiltSupportComparer.Instance);
         }
 
         private bool ConflictsWithSingleOwner(int supportIndex, bool[] occupied)

@@ -57,6 +57,8 @@ var result = runtime.Execute(context, decision, tickInfo);
 
 `Evaluate` 每次都会递增 `DecisionVersion`，包括 `Mode.None`。`Execute` 只接受当前版本且未执行过的 decision；同一个 decision 重复执行会返回 `Rejected`。`UtilityDecisionResult` 不暴露 Support 数组，调用方可用 `GetSelectedSupportIndex(slot)` 查看当前选择。
 
+Runtime 内部状态按职责分组保存：`UtilityAISelectionBuffer` 负责候选列表和 Support 选择缓冲，`UtilityAIDecisionState` 负责当前决策版本和快照，`UtilityAICommitState` 负责 committed Terminal 的锁定信息，`UtilityAINormalSelectionState` 负责普通选择的粘性和准备超时记忆。这些类型是 `internal struct`，便于后续拆分到独立文件。
+
 ## Terminal 选择
 
 Terminal 的 `Score` 可以同时给出执行、准备和紧急分数：
