@@ -22,6 +22,7 @@
 | **ActionLine** | 基于帧的时间轴/Clip 编辑器框架，支持多选、复制粘贴、撤销重做、资源变体继承和实时预览 | [ActionLine 用户手册](ActionLine.md) |
 | **FlowGraph** | 可视化脚本系统，支持数据流与控制流分离、嵌套子图、代码生成和运行时调试追踪 | [FlowGraph 用户手册](FlowGraph.md) |
 | **GOAP** | 面向目标的行动规划系统（Goal-Oriented Action Planning），用于 NPC AI 自动规划行动序列 | [GOAP 用户手册](GOAP.md) |
+| **UtilityAI** | 运行时效用 AI 决策框架，支持 Terminal/Support 动作评分、意图构建、提交锁定和支援通道仲裁 | [UtilityAI Runtime 手册](UtilityAI.md) |
 | **LiteAnim** | 基于 PlayableGraph 的轻量动画图，支持多层叠加、Clip 拼接、混合树与状态过渡 | [LiteAnim 用户手册](LiteAnim.md) |
 | **ECS** | 轻量实体组件系统，包含纯逻辑 `LiteECS` 与绑定 `GameObject` 的 `ViewECS`，支持组件扫描、代码生成、Group 遍历和 Reactive 更新 | [ECS 用户手册](ECS.md) |
 | **ShapeCollider** | 轻量级几何碰撞工具，支持球体、竖直圆柱、有向盒、扇形柱和有限射线检测，并提供 Gizmos 调试绘制 | [ShapeCollider 使用手册](ShapeCollider.md) |
@@ -58,6 +59,7 @@ com.kyle.action-framework/
 ├── FlowGraph/       # 可视化脚本（Editor + Runtime）
 ├── LiteAnim/        # 轻量级动画图，基于 PlayableGraph（Editor + Runtime）
 ├── GOAP/            # 目标规划 AI（Editor + Runtime）
+├── UtilityAI/       # 效用 AI 决策运行时（Runtime）
 ├── ECS/             # 轻量实体组件系统（Editor + Runtime）
 ├── EasyConfig/      # 配置管理（Editor + Runtime）
 ├── NamedAsset/      # 资源管理（Editor + Runtime）

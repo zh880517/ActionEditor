@@ -39,7 +39,7 @@ Handler 匹配主键是 `config.GetType()`。
 ## AI 配置
 
 ```csharp
-public sealed class UtilityAiConfig
+public sealed class UtilityAIConfig
 {
     public TerminalActionConfig[] TerminalActions;
     public SupportActionConfig[] SupportActions;
@@ -155,7 +155,7 @@ public interface IUtilitySupportConstraintProvider
 Runtime 泛型约束：
 
 ```csharp
-public sealed class UtilityAiRuntime<TContext>
+public sealed class UtilityAIRuntime<TContext>
     where TContext : IUtilityIntentState, IUtilitySupportConstraintProvider
 {
 }
@@ -192,9 +192,9 @@ Terminal 与 Support 注册表彼此独立。
 Registry 在 runtime 创建后仍可继续注册，但只影响之后创建的新 runtime，不影响已经创建好的 runtime。
 
 ```csharp
-public sealed class UtilityAiRuntime<TContext>
+public sealed class UtilityAIRuntime<TContext>
 {
-    public readonly UtilityAiConfig Config;
+    public readonly UtilityAIConfig Config;
     public readonly TerminalActionRuntime<TContext>[] TerminalActions;
     public readonly SupportActionRuntime<TContext>[] SupportActions;
 }
@@ -223,9 +223,9 @@ public struct SupportActionRuntime<TContext>
 
 ```csharp
 public static bool TryCreate<TContext>(
-    UtilityAiConfig config,
+    UtilityAIConfig config,
     UtilityActionRegistry<TContext> registry,
-    out UtilityAiRuntime<TContext> runtime)
+    out UtilityAIRuntime<TContext> runtime)
     where TContext : IUtilityIntentState, IUtilitySupportConstraintProvider;
 ```
 
